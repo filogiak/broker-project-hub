@@ -1,22 +1,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { signUp, assignRole, updateProfile } from './authService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
-export interface CreateBrokerageOwnerData {
+export interface AvailableOwner {
+  id: string;
   email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-}
-
-export interface CreateBrokerageData {
-  name: string;
-  description?: string;
-  ownerId: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
 }
 
 export interface BrokerageOwnerInfo {
@@ -30,132 +23,203 @@ export interface BrokerageOwnerInfo {
   owns_brokerage: boolean;
 }
 
-export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
-  console.log('Creating brokerage owner:', data.email);
+export interface BrokerageInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  phone: string | null;
+  website: string | null;
+  owner_id: string;
+  owner_email: string;
+  owner_first_name: string | null;
+  owner_last_name: string | null;
+  created_at: string;
+}
+
+export const createBrokerageOwner = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
+  console.log('Creating brokerage owner:', email);
   
-  try {
-    // Create the user account
-    const signUpResult = await signUp(data.email, data.password, data.firstName, data.lastName);
-    
-    if (!signUpResult.user) {
-      throw new Error('Failed to create user account');
-    }
+  // Create the user account
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true, // Auto-confirm email for admin-created users
+    user_metadata: {
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone,
+    },
+  });
 
-    // Assign brokerage_owner role
-    await assignRole(signUpResult.user.id, 'brokerage_owner');
-
-    // Update profile with additional info
-    const profileUpdates: any = {};
-    if (data.phone) profileUpdates.phone = data.phone;
-
-    if (Object.keys(profileUpdates).length > 0) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(profileUpdates)
-        .eq('id', signUpResult.user.id);
-
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-        throw profileError;
-      }
-    }
-
-    console.log('Brokerage owner created successfully');
-    return signUpResult.user;
-  } catch (error) {
-    console.error('Create brokerage owner error:', error);
-    throw error;
+  if (authError) {
+    console.error('Create user auth error:', authError);
+    throw authError;
   }
+
+  if (!authData.user) {
+    throw new Error('User creation failed');
+  }
+
+  // Assign the brokerage_owner role
+  const { error: roleError } = await supabase
+    .from('user_roles')
+    .insert([{ user_id: authData.user.id, role: 'brokerage_owner' }]);
+
+  if (roleError) {
+    console.error('Assign role error:', roleError);
+    throw roleError;
+  }
+
+  console.log('Brokerage owner created successfully:', authData.user.email);
+  return authData.user;
 };
 
-export const createBrokerageForOwner = async (data: CreateBrokerageData) => {
-  console.log('Creating brokerage for owner:', data.ownerId);
+export const createBrokerageForOwner = async (brokerageData: {
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  phone?: string;
+  website?: string;
+  ownerId: string;
+}) => {
+  console.log('Creating brokerage for owner:', brokerageData.ownerId);
   
-  try {
-    // Create the brokerage
-    const { data: brokerage, error: brokerageError } = await supabase
-      .from('brokerages')
-      .insert([{
-        name: data.name,
-        description: data.description,
-        owner_id: data.ownerId,
-      }])
-      .select()
-      .single();
+  // Create the brokerage
+  const { data: brokerage, error: brokerageError } = await supabase
+    .from('brokerages')
+    .insert([{
+      name: brokerageData.name,
+      description: brokerageData.description,
+      address: brokerageData.address,
+      city: brokerageData.city,
+      state: brokerageData.state,
+      zip_code: brokerageData.zipCode,
+      phone: brokerageData.phone,
+      website: brokerageData.website,
+      owner_id: brokerageData.ownerId,
+    }])
+    .select('*')
+    .single();
 
-    if (brokerageError) {
-      console.error('Create brokerage error:', brokerageError);
-      throw brokerageError;
-    }
-
-    // Update the owner's profile to link to this brokerage
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ brokerage_id: brokerage.id })
-      .eq('id', data.ownerId);
-
-    if (profileError) {
-      console.error('Update profile error:', profileError);
-      throw profileError;
-    }
-
-    console.log('Brokerage created and linked successfully');
-    return brokerage;
-  } catch (error) {
-    console.error('Create brokerage for owner error:', error);
-    throw error;
+  if (brokerageError) {
+    console.error('Create brokerage error:', brokerageError);
+    throw brokerageError;
   }
+
+  // Update the owner's profile to link to this brokerage
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ brokerage_id: brokerage.id })
+    .eq('id', brokerageData.ownerId);
+
+  if (profileError) {
+    console.error('Update profile error:', profileError);
+    throw profileError;
+  }
+
+  console.log('Brokerage created successfully:', brokerage.name);
+  return brokerage;
 };
 
-export const getAvailableBrokerageOwners = async () => {
+export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> => {
   console.log('Getting available brokerage owners');
   
   const { data, error } = await supabase
-    .rpc('get_available_brokerage_owners');
+    .from('profiles')
+    .select(`
+      id,
+      email,
+      first_name,
+      last_name,
+      phone,
+      user_roles!inner(role)
+    `)
+    .eq('user_roles.role', 'brokerage_owner')
+    .is('brokerage_id', null);
 
   if (error) {
     console.error('Get available brokerage owners error:', error);
     throw error;
   }
 
-  console.log('Available brokerage owners retrieved:', data);
-  return data;
+  return data || [];
 };
 
 export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => {
   console.log('Getting all brokerage owners');
   
   const { data, error } = await supabase
-    .rpc('get_all_brokerage_owners');
+    .from('profiles')
+    .select(`
+      id,
+      email,
+      first_name,
+      last_name,
+      phone,
+      brokerage_id,
+      brokerages(name),
+      user_roles!inner(role)
+    `)
+    .eq('user_roles.role', 'brokerage_owner');
 
   if (error) {
     console.error('Get all brokerage owners error:', error);
     throw error;
   }
 
-  console.log('All brokerage owners retrieved:', data);
-  return data;
+  return (data || []).map(owner => ({
+    id: owner.id,
+    email: owner.email,
+    first_name: owner.first_name,
+    last_name: owner.last_name,
+    phone: owner.phone,
+    brokerage_id: owner.brokerage_id,
+    brokerage_name: owner.brokerages?.[0]?.name || null,
+    owns_brokerage: !!owner.brokerage_id,
+  }));
 };
 
-export const getAllBrokerages = async () => {
+export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
   console.log('Getting all brokerages');
   
   const { data, error } = await supabase
     .from('brokerages')
     .select(`
       *,
-      profiles!brokerages_owner_id_fkey(
+      profiles!owner_id(
+        email,
         first_name,
-        last_name,
-        email
+        last_name
       )
-    `);
+    `)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Get all brokerages error:', error);
     throw error;
   }
 
-  console.log('All brokerages retrieved:', data);
-  return data;
+  return (data || []).map(brokerage => ({
+    id: brokerage.id,
+    name: brokerage.name,
+    description: brokerage.description,
+    address: brokerage.address,
+    city: brokerage.city,
+    state: brokerage.state,
+    zip_code: brokerage.zip_code,
+    phone: brokerage.phone,
+    website: brokerage.website,
+    owner_id: brokerage.owner_id,
+    owner_email: brokerage.profiles?.email || '',
+    owner_first_name: brokerage.profiles?.first_name || null,
+    owner_last_name: brokerage.profiles?.last_name || null,
+    created_at: brokerage.created_at,
+  }));
 };

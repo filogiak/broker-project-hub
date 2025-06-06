@@ -4,7 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Building, Settings, UserPlus, Plus } from 'lucide-react';
+import { Shield, Users, Building, Settings, UserPlus, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import CreateBrokerageOwnerForm from '@/components/admin/CreateBrokerageOwnerForm';
@@ -19,6 +19,8 @@ const AdminDashboard = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      // Force page refresh to ensure clean logout
+      window.location.href = '/auth';
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -40,10 +42,16 @@ const AdminDashboard = () => {
             <h1 className="text-3xl font-bold text-primary">System Administration</h1>
             <p className="text-muted-foreground">Manage users, brokerages, and system settings</p>
           </div>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            System Settings
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              System Settings
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Admin Stats */}
