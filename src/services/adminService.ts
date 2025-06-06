@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -27,12 +26,6 @@ export interface BrokerageInfo {
   id: string;
   name: string;
   description: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
-  phone: string | null;
-  website: string | null;
   owner_id: string;
   owner_email: string;
   owner_first_name: string | null;
@@ -81,12 +74,6 @@ export const createBrokerageOwner = async (email: string, password: string, firs
 export const createBrokerageForOwner = async (brokerageData: {
   name: string;
   description?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  phone?: string;
-  website?: string;
   ownerId: string;
 }) => {
   console.log('Creating brokerage for owner:', brokerageData.ownerId);
@@ -97,12 +84,6 @@ export const createBrokerageForOwner = async (brokerageData: {
     .insert([{
       name: brokerageData.name,
       description: brokerageData.description,
-      address: brokerageData.address,
-      city: brokerageData.city,
-      state: brokerageData.state,
-      zip_code: brokerageData.zipCode,
-      phone: brokerageData.phone,
-      website: brokerageData.website,
       owner_id: brokerageData.ownerId,
     }])
     .select('*')
@@ -210,12 +191,6 @@ export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
     id: brokerage.id,
     name: brokerage.name,
     description: brokerage.description,
-    address: brokerage.address,
-    city: brokerage.city,
-    state: brokerage.state,
-    zip_code: brokerage.zip_code,
-    phone: brokerage.phone,
-    website: brokerage.website,
     owner_id: brokerage.owner_id,
     owner_email: brokerage.profiles?.email || '',
     owner_first_name: brokerage.profiles?.first_name || null,
