@@ -2,10 +2,22 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { logout } from '@/services/authService';
 import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageForm';
+import MainLayout from '@/components/layout/MainLayout';
 
 const Dashboard = () => {
   const { user, loading, refreshUser } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Force page refresh to ensure clean logout
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -31,7 +43,15 @@ const Dashboard = () => {
         return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
       } else {
         // Show form to create brokerage
-        return <CreateOwnBrokerageForm onSuccess={refreshUser} />;
+        return (
+          <MainLayout 
+            title="Create Your Brokerage" 
+            userEmail={user.email}
+            onLogout={handleLogout}
+          >
+            <CreateOwnBrokerageForm onSuccess={refreshUser} />
+          </MainLayout>
+        );
       }
     case 'broker_assistant':
       if (user.brokerageId) {
@@ -47,16 +67,20 @@ const Dashboard = () => {
 
   // Fallback dashboard view
   return (
-    <div className="min-h-screen bg-background-cream p-6">
+    <MainLayout 
+      title="Dashboard" 
+      userEmail={user.email}
+      onLogout={handleLogout}
+    >
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-primary mb-6">Dashboard</h1>
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-background rounded-lg shadow-sm p-6">
           <p className="text-muted-foreground">
             Welcome {user.firstName} {user.lastName}! Your role: {user.roles.join(', ')}
           </p>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 

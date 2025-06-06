@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Building, Users, FileText } from 'lucide-react';
+import { Plus, Building, Users, FileText, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 
@@ -15,6 +15,8 @@ const BrokerageDashboard = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      // Force page refresh to ensure clean logout
+      window.location.href = '/auth';
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -33,10 +35,16 @@ const BrokerageDashboard = () => {
             <h1 className="text-3xl font-bold text-primary">Brokerage Dashboard</h1>
             <p className="text-muted-foreground">Brokerage ID: {brokerageId}</p>
           </div>
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}

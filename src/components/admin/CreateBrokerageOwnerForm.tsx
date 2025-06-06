@@ -4,11 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { createBrokerageOwner } from '@/services/adminService';
 
-const CreateBrokerageOwnerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
+interface CreateBrokerageOwnerFormProps {
+  onSuccess: () => void;
+}
+
+const CreateBrokerageOwnerForm = ({ onSuccess }: CreateBrokerageOwnerFormProps) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,30 +19,22 @@ const CreateBrokerageOwnerForm = ({ onSuccess }: { onSuccess?: () => void }) => 
     lastName: '',
     phone: '',
   });
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.email || !formData.password) {
-      toast({
-        title: "Error",
-        description: "Email and password are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
+
     try {
-      await createBrokerageOwner(formData);
-      
-      toast({
-        title: "Success",
-        description: "Brokerage owner created successfully",
-      });
-      
-      // Reset form
+      await createBrokerageOwner(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName,
+        formData.phone
+      );
+
+      toast.success('Brokerage owner created successfully!');
       setFormData({
         email: '',
         password: '',
@@ -47,22 +42,13 @@ const CreateBrokerageOwnerForm = ({ onSuccess }: { onSuccess?: () => void }) => 
         lastName: '',
         phone: '',
       });
-      
-      onSuccess?.();
+      onSuccess();
     } catch (error: any) {
       console.error('Create brokerage owner error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create brokerage owner",
-        variant: "destructive",
-      });
+      toast.error(error.message || 'Failed to create brokerage owner');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -70,61 +56,69 @@ const CreateBrokerageOwnerForm = ({ onSuccess }: { onSuccess?: () => void }) => 
       <CardHeader>
         <CardTitle>Create Brokerage Owner</CardTitle>
         <CardDescription>
-          Create a new brokerage owner account. They can later create their own brokerage.
+          Create a new brokerage owner account
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-            <div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="John"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Doe"
               />
             </div>
           </div>
           
-          <Button type="submit" disabled={isLoading}>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="john.doe@example.com"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Enter a secure password"
+              minLength={6}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? 'Creating...' : 'Create Brokerage Owner'}
           </Button>
         </form>

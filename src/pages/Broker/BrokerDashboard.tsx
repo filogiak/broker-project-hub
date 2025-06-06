@@ -3,12 +3,18 @@ import React from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Users, Clock } from 'lucide-react';
+import { Plus, FileText, Users, Clock, LogOut } from 'lucide-react';
+import { logout } from '@/services/authService';
 
 const BrokerDashboard = () => {
-  const handleLogout = () => {
-    // TODO: Implement logout logic when Supabase is connected
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Force page refresh to ensure clean logout
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -18,16 +24,26 @@ const BrokerDashboard = () => {
       onLogout={handleLogout}
     >
       <div className="space-y-6">
-        {/* Quick Actions */}
-        <div className="flex gap-4">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Invite Client
-          </Button>
+        {/* Header with actions */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-primary">Broker Dashboard</h1>
+            <p className="text-muted-foreground">Manage your mortgage projects and clients</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Invite Client
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}

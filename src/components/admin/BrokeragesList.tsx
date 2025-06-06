@@ -1,70 +1,44 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getAllBrokerages } from '@/services/adminService';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Building, MapPin, Phone, Globe, User } from 'lucide-react';
+import { getAllBrokerages, type BrokerageInfo } from '@/services/adminService';
+import { toast } from 'sonner';
 
-interface BrokerageWithOwner {
-  id: string;
-  name: string;
-  description: string | null;
-  created_at: string | null;
-  owner_id: string;
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string;
-  } | null;
+interface BrokeragesListProps {
+  refreshTrigger: number;
 }
 
-const BrokeragesList = ({ refreshTrigger }: { refreshTrigger?: number }) => {
-  const [brokerages, setBrokerages] = useState<BrokerageWithOwner[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+const BrokeragesList = ({ refreshTrigger }: BrokeragesListProps) => {
+  const [brokerages, setBrokerages] = useState<BrokerageInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadBrokerages();
+    const fetchBrokerages = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getAllBrokerages();
+        setBrokerages(data);
+      } catch (error: any) {
+        console.error('Fetch brokerages error:', error);
+        toast.error('Failed to load brokerages');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBrokerages();
   }, [refreshTrigger]);
 
-  const loadBrokerages = async () => {
-    try {
-      setLoading(true);
-      const data = await getAllBrokerages();
-      setBrokerages(data);
-    } catch (error) {
-      console.error('Load brokerages error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load brokerages",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getOwnerName = (brokerage: BrokerageWithOwner) => {
-    if (!brokerage.profiles) return 'Unknown';
-    const fullName = [brokerage.profiles.first_name, brokerage.profiles.last_name]
-      .filter(Boolean)
-      .join(' ');
-    return fullName || brokerage.profiles.email;
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Brokerages</CardTitle>
+          <CardTitle>All Brokerages</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4">Loading...</div>
+          <div className="text-center py-4">Loading brokerages...</div>
         </CardContent>
       </Card>
     );
@@ -73,37 +47,81 @@ const BrokeragesList = ({ refreshTrigger }: { refreshTrigger?: number }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Brokerages ({brokerages.length})</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Building className="h-5 w-5" />
+          All Brokerages ({brokerages.length})
+        </CardTitle>
+        <CardDescription>
+          Manage all brokerages in the system
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {brokerages.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground">
-            No brokerages found.
+          <div className="text-center py-8 text-muted-foreground">
+            No brokerages found
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Owner Email</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {brokerages.map((brokerage) => (
-                  <TableRow key={brokerage.id}>
-                    <TableCell className="font-medium">{brokerage.name}</TableCell>
-                    <TableCell>{brokerage.description || 'N/A'}</TableCell>
-                    <TableCell>{getOwnerName(brokerage)}</TableCell>
-                    <TableCell>{brokerage.profiles?.email || 'N/A'}</TableCell>
-                    <TableCell>{formatDate(brokerage.created_at)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-4">
+            {brokerages.map((brokerage) => (
+              <div key={brokerage.id} className="border border-form-border rounded-lg p-4 bg-form-beige">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-lg">{brokerage.name}</h3>
+                    {brokerage.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{brokerage.description}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Owner:</span>
+                      <span>{brokerage.owner_first_name} {brokerage.owner_last_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Email:</span>
+                      <span className="text-muted-foreground">{brokerage.owner_email}</span>
+                    </div>
+                    {brokerage.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{brokerage.phone}</span>
+                      </div>
+                    )}
+                    {brokerage.website && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        <a href={brokerage.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {brokerage.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(brokerage.address || brokerage.city || brokerage.state) && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          {brokerage.address && <div>{brokerage.address}</div>}
+                          {(brokerage.city || brokerage.state || brokerage.zip_code) && (
+                            <div>
+                              {brokerage.city}{brokerage.city && brokerage.state ? ', ' : ''}{brokerage.state} {brokerage.zip_code}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      Created: {new Date(brokerage.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
