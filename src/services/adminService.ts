@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -35,41 +34,39 @@ export interface BrokerageInfo {
 }
 
 export const createBrokerageOwner = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
-  console.log('Creating brokerage owner:', email);
+  console.log('Creating brokerage owner via Edge Function:', email);
   
-  // Create the user account
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true, // Auto-confirm email for admin-created users
-    user_metadata: {
-      first_name: firstName,
-      last_name: lastName,
-      phone: phone,
+  // Get the current session for authorization
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  // Call the Edge Function
+  const { data, error } = await supabase.functions.invoke('create-brokerage-owner', {
+    body: {
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+    },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
     },
   });
 
-  if (authError) {
-    console.error('Create user auth error:', authError);
-    throw authError;
+  if (error) {
+    console.error('Edge function error:', error);
+    throw new Error(error.message || 'Failed to create brokerage owner');
   }
 
-  if (!authData.user) {
-    throw new Error('User creation failed');
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to create brokerage owner');
   }
 
-  // Assign the brokerage_owner role
-  const { error: roleError } = await supabase
-    .from('user_roles')
-    .insert([{ user_id: authData.user.id, role: 'brokerage_owner' }]);
-
-  if (roleError) {
-    console.error('Assign role error:', roleError);
-    throw roleError;
-  }
-
-  console.log('Brokerage owner created successfully:', authData.user.email);
-  return authData.user;
+  console.log('Brokerage owner created successfully via Edge Function');
+  return data.user;
 };
 
 export const createBrokerageForOwner = async (brokerageData: {
