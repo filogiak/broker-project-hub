@@ -1,110 +1,90 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 type UserRole = Database['public']['Enums']['user_role'];
+
+export interface BrokerageOwnerInfo extends Profile {
+  owns_brokerage: boolean;
+  brokerage_name: string | null;
+}
+
+export interface BrokerageInfo extends Brokerage {
+  owner_email: string;
+  owner_first_name: string | null;
+  owner_last_name: string | null;
+}
 
 export interface AvailableOwner {
   id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
-  phone: string | null;
 }
 
-export interface BrokerageOwnerInfo {
-  id: string;
+export interface CreateBrokerageOwnerData {
   email: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  brokerage_id: string | null;
-  brokerage_name: string | null;
-  owns_brokerage: boolean;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 }
 
-export interface BrokerageInfo {
-  id: string;
-  name: string;
-  description: string | null;
-  owner_id: string;
-  owner_email: string;
-  owner_first_name: string | null;
-  owner_last_name: string | null;
-  created_at: string;
-}
-
-export const createBrokerageOwner = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
-  console.log('Creating brokerage owner via Edge Function:', email);
-  
-  // Get the current session for authorization
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    throw new Error('No active session');
-  }
-
-  // Call the Edge Function
-  const { data, error } = await supabase.functions.invoke('create-brokerage-owner', {
-    body: {
-      email,
-      password,
-      firstName,
-      lastName,
-      phone,
-    },
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-
-  if (error) {
-    console.error('Edge function error:', error);
-    throw new Error(error.message || 'Failed to create brokerage owner');
-  }
-
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to create brokerage owner');
-  }
-
-  console.log('Brokerage owner created successfully via Edge Function');
-  return data.user;
-};
-
-export const createBrokerageForOwner = async (brokerageData: {
+export interface CreateBrokerageData {
   name: string;
   description?: string;
   ownerId: string;
-}) => {
-  console.log('Creating brokerage for owner:', brokerageData.ownerId);
+}
+
+export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
+  console.log('Creating brokerage owner:', data.email);
   
-  // Create the brokerage
-  const { data: brokerage, error: brokerageError } = await supabase
-    .from('brokerages')
-    .insert([{
-      name: brokerageData.name,
-      description: brokerageData.description,
-      owner_id: brokerageData.ownerId,
-    }])
-    .select('*')
-    .single();
-
-  if (brokerageError) {
-    console.error('Create brokerage error:', brokerageError);
-    throw brokerageError;
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
   }
 
-  // Update the owner's profile to link to this brokerage
-  const { error: profileError } = await supabase
+  const response = await supabase.functions.invoke('create-brokerage-owner', {
+    body: data,
+  });
+
+  if (response.error) {
+    console.error('Create brokerage owner error:', response.error);
+    throw new Error(response.error.message || 'Failed to create brokerage owner');
+  }
+
+  console.log('Brokerage owner created successfully:', response.data);
+  return response.data;
+};
+
+export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => {
+  console.log('Getting all brokerage owners');
+  
+  const { data, error } = await supabase
     .from('profiles')
-    .update({ brokerage_id: brokerage.id })
-    .eq('id', brokerageData.ownerId);
+    .select(`
+      *,
+      user_roles!inner(role),
+      brokerages(name)
+    `)
+    .eq('user_roles.role', 'brokerage_owner');
 
-  if (profileError) {
-    console.error('Update profile error:', profileError);
-    throw profileError;
+  if (error) {
+    console.error('Get brokerage owners error:', error);
+    throw error;
   }
 
-  console.log('Brokerage created successfully:', brokerage.name);
-  return brokerage;
+  const brokerageOwners = data?.map((owner: any) => ({
+    ...owner,
+    owns_brokerage: owner.brokerages && owner.brokerages.length > 0,
+    brokerage_name: owner.brokerages?.[0]?.name || null,
+  })) || [];
+
+  console.log('Brokerage owners retrieved:', brokerageOwners);
+  return brokerageOwners;
 };
 
 export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> => {
@@ -117,7 +97,6 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
       email,
       first_name,
       last_name,
-      phone,
       user_roles!inner(role)
     `)
     .eq('user_roles.role', 'brokerage_owner')
@@ -128,41 +107,40 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
     throw error;
   }
 
+  console.log('Available brokerage owners retrieved:', data);
   return data || [];
 };
 
-export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => {
-  console.log('Getting all brokerage owners');
+export const createBrokerageForOwner = async (data: CreateBrokerageData) => {
+  console.log('Creating brokerage for owner:', data);
   
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      email,
-      first_name,
-      last_name,
-      phone,
-      brokerage_id,
-      brokerages(name),
-      user_roles!inner(role)
-    `)
-    .eq('user_roles.role', 'brokerage_owner');
+  const { data: brokerage, error: brokerageError } = await supabase
+    .from('brokerages')
+    .insert([{
+      name: data.name,
+      description: data.description,
+      owner_id: data.ownerId,
+    }])
+    .select()
+    .single();
 
-  if (error) {
-    console.error('Get all brokerage owners error:', error);
-    throw error;
+  if (brokerageError) {
+    console.error('Create brokerage error:', brokerageError);
+    throw brokerageError;
   }
 
-  return (data || []).map(owner => ({
-    id: owner.id,
-    email: owner.email,
-    first_name: owner.first_name,
-    last_name: owner.last_name,
-    phone: owner.phone,
-    brokerage_id: owner.brokerage_id,
-    brokerage_name: owner.brokerages?.[0]?.name || null,
-    owns_brokerage: !!owner.brokerage_id,
-  }));
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ brokerage_id: brokerage.id })
+    .eq('id', data.ownerId);
+
+  if (updateError) {
+    console.error('Update profile brokerage_id error:', updateError);
+    throw updateError;
+  }
+
+  console.log('Brokerage created successfully:', brokerage);
+  return brokerage;
 };
 
 export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
@@ -172,7 +150,7 @@ export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
     .from('brokerages')
     .select(`
       *,
-      profiles!owner_id(
+      profiles!brokerages_owner_id_fkey(
         email,
         first_name,
         last_name
@@ -181,63 +159,83 @@ export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Get all brokerages error:', error);
+    console.error('Get brokerages error:', error);
     throw error;
   }
 
-  return (data || []).map(brokerage => ({
-    id: brokerage.id,
-    name: brokerage.name,
-    description: brokerage.description,
-    owner_id: brokerage.owner_id,
-    owner_email: brokerage.profiles?.email || '',
-    owner_first_name: brokerage.profiles?.first_name || null,
-    owner_last_name: brokerage.profiles?.last_name || null,
-    created_at: brokerage.created_at,
-  }));
+  const brokerages = data?.map((brokerage: any) => ({
+    ...brokerage,
+    owner_email: brokerage.profiles?.email || 'N/A',
+    owner_first_name: brokerage.profiles?.first_name || '',
+    owner_last_name: brokerage.profiles?.last_name || '',
+  })) || [];
+
+  console.log('Brokerages retrieved:', brokerages);
+  return brokerages;
 };
 
 export const getTotalUsersCount = async (): Promise<number> => {
   console.log('Getting total users count');
   
-  const { count, error } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true });
+  try {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
 
-  if (error) {
-    console.error('Get total users count error:', error);
-    throw error;
+    if (error) {
+      console.error('Get total users count error:', error);
+      throw error;
+    }
+
+    console.log('Total users count:', count);
+    return count || 0;
+  } catch (error) {
+    console.error('getTotalUsersCount failed:', error);
+    // Return 0 as fallback instead of throwing
+    return 0;
   }
-
-  return count || 0;
 };
 
 export const getTotalBrokeragesCount = async (): Promise<number> => {
   console.log('Getting total brokerages count');
   
-  const { count, error } = await supabase
-    .from('brokerages')
-    .select('*', { count: 'exact', head: true });
+  try {
+    const { count, error } = await supabase
+      .from('brokerages')
+      .select('*', { count: 'exact', head: true });
 
-  if (error) {
-    console.error('Get total brokerages count error:', error);
-    throw error;
+    if (error) {
+      console.error('Get total brokerages count error:', error);
+      throw error;
+    }
+
+    console.log('Total brokerages count:', count);
+    return count || 0;
+  } catch (error) {
+    console.error('getTotalBrokeragesCount failed:', error);
+    // Return 0 as fallback instead of throwing
+    return 0;
   }
-
-  return count || 0;
 };
 
 export const getTotalProjectsCount = async (): Promise<number> => {
   console.log('Getting total projects count');
   
-  const { count, error } = await supabase
-    .from('projects')
-    .select('*', { count: 'exact', head: true });
+  try {
+    const { count, error } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true });
 
-  if (error) {
-    console.error('Get total projects count error:', error);
-    throw error;
+    if (error) {
+      console.error('Get total projects count error:', error);
+      throw error;
+    }
+
+    console.log('Total projects count:', count);
+    return count || 0;
+  } catch (error) {
+    console.error('getTotalProjectsCount failed:', error);
+    // Return 0 as fallback instead of throwing
+    return 0;
   }
-
-  return count || 0;
 };

@@ -302,6 +302,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_can_access_project: {
+        Args: { project_id: string; user_id?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role:

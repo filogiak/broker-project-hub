@@ -4,7 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building, Settings, UserPlus, LogOut, FolderOpen } from 'lucide-react';
+import { Users, Building, Settings, UserPlus, LogOut, FolderOpen, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getTotalUsersCount, getTotalBrokeragesCount, getTotalProjectsCount } from '@/services/adminService';
@@ -23,6 +23,7 @@ const AdminDashboard = () => {
     totalProjects: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   const handleLogout = async () => {
     try {
@@ -42,19 +43,38 @@ const AdminDashboard = () => {
   const loadStats = async () => {
     try {
       setLoadingStats(true);
-      const [usersCount, brokeragesCount, projectsCount] = await Promise.all([
+      setStatsError(null);
+      
+      console.log('Loading dashboard statistics...');
+      
+      const [usersCount, brokeragesCount, projectsCount] = await Promise.allSettled([
         getTotalUsersCount(),
         getTotalBrokeragesCount(),
         getTotalProjectsCount(),
       ]);
       
-      setStats({
-        totalUsers: usersCount,
-        totalBrokerages: brokeragesCount,
-        totalProjects: projectsCount,
-      });
+      const stats = {
+        totalUsers: usersCount.status === 'fulfilled' ? usersCount.value : 0,
+        totalBrokerages: brokeragesCount.status === 'fulfilled' ? brokeragesCount.value : 0,
+        totalProjects: projectsCount.status === 'fulfilled' ? projectsCount.value : 0,
+      };
+      
+      // Log any rejections for debugging
+      if (usersCount.status === 'rejected') {
+        console.error('Failed to load users count:', usersCount.reason);
+      }
+      if (brokeragesCount.status === 'rejected') {
+        console.error('Failed to load brokerages count:', brokeragesCount.reason);
+      }
+      if (projectsCount.status === 'rejected') {
+        console.error('Failed to load projects count:', projectsCount.reason);
+      }
+      
+      setStats(stats);
+      console.log('Dashboard statistics loaded successfully:', stats);
     } catch (error) {
       console.error('Load stats error:', error);
+      setStatsError('Failed to load some statistics. Please try refreshing.');
       toast.error('Failed to load dashboard statistics');
     } finally {
       setLoadingStats(false);
@@ -78,6 +98,15 @@ const AdminDashboard = () => {
             <p className="text-muted-foreground">Manage users, brokerages, and system settings</p>
           </div>
           <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={loadingStats}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button variant="outline" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               System Settings
@@ -88,6 +117,12 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </div>
+
+        {statsError && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <p className="text-destructive text-sm">{statsError}</p>
+          </div>
+        )}
 
         {/* Admin Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
