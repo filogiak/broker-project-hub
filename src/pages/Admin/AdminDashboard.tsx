@@ -1,20 +1,28 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Building, Settings, UserPlus, LogOut } from 'lucide-react';
+import { Users, Building, Settings, UserPlus, LogOut, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
+import { getTotalUsersCount, getTotalBrokeragesCount, getTotalProjectsCount } from '@/services/adminService';
 import CreateBrokerageOwnerForm from '@/components/admin/CreateBrokerageOwnerForm';
 import CreateBrokerageForm from '@/components/admin/CreateBrokerageForm';
 import BrokerageOwnersList from '@/components/admin/BrokerageOwnersList';
 import BrokeragesList from '@/components/admin/BrokeragesList';
+import { toast } from 'sonner';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalBrokerages: 0,
+    totalProjects: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const handleLogout = async () => {
     try {
@@ -28,7 +36,34 @@ const AdminDashboard = () => {
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
+    loadStats(); // Refresh stats as well
   };
+
+  const loadStats = async () => {
+    try {
+      setLoadingStats(true);
+      const [usersCount, brokeragesCount, projectsCount] = await Promise.all([
+        getTotalUsersCount(),
+        getTotalBrokeragesCount(),
+        getTotalProjectsCount(),
+      ]);
+      
+      setStats({
+        totalUsers: usersCount,
+        totalBrokerages: brokeragesCount,
+        totalProjects: projectsCount,
+      });
+    } catch (error) {
+      console.error('Load stats error:', error);
+      toast.error('Failed to load dashboard statistics');
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   return (
     <MainLayout 
@@ -62,35 +97,41 @@ const AdminDashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">147</div>
+              <div className="text-2xl font-bold">
+                {loadingStats ? '...' : stats.totalUsers}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +12 new this month
+                All registered users
               </p>
             </CardContent>
           </Card>
 
           <Card className="card-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Brokerages</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Brokerages</CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23</div>
+              <div className="text-2xl font-bold">
+                {loadingStats ? '...' : stats.totalBrokerages}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +3 new this quarter
+                Active organizations
               </p>
             </CardContent>
           </Card>
 
           <Card className="card-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Health</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+              <FolderOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">99.9%</div>
+              <div className="text-2xl font-bold">
+                {loadingStats ? '...' : stats.totalProjects}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Uptime this month
+                Active projects
               </p>
             </CardContent>
           </Card>

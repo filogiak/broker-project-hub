@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building } from 'lucide-react';
+import { Building, UserPlus } from 'lucide-react';
 import { createBrokerageForOwner, getAvailableBrokerageOwners, type AvailableOwner } from '@/services/adminService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,12 +18,6 @@ const CreateBrokerageForm = ({ onSuccess }: CreateBrokerageFormProps) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
-    website: '',
     ownerId: '',
   });
   const [availableOwners, setAvailableOwners] = useState<AvailableOwner[]>([]);
@@ -77,12 +71,6 @@ const CreateBrokerageForm = ({ onSuccess }: CreateBrokerageFormProps) => {
       setFormData({
         name: '',
         description: '',
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        phone: '',
-        website: '',
         ownerId: '',
       });
       
@@ -133,13 +121,17 @@ const CreateBrokerageForm = ({ onSuccess }: CreateBrokerageFormProps) => {
                     {getOwnerDisplayName(owner)}
                   </SelectItem>
                 ))}
-                {!loadingOwners && availableOwners.length === 0 && (
-                  <SelectItem value="" disabled>
-                    No available brokerage owners
-                  </SelectItem>
-                )}
               </SelectContent>
             </Select>
+            {!loadingOwners && availableOwners.length === 0 && (
+              <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserPlus className="h-4 w-4" />
+                  <span className="font-medium">No available brokerage owners</span>
+                </div>
+                <p>Create brokerage owners first using the "User Management" tab, then return here to assign them brokerages.</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -163,74 +155,6 @@ const CreateBrokerageForm = ({ onSuccess }: CreateBrokerageFormProps) => {
               placeholder="Brief description of the brokerage"
               rows={3}
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Street address"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="City"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                type="text"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                placeholder="State"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">ZIP Code</Label>
-              <Input
-                id="zipCode"
-                type="text"
-                value={formData.zipCode}
-                onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                placeholder="ZIP Code"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Business phone number"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                type="url"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                placeholder="https://example.com"
-              />
-            </div>
           </div>
 
           <Button 

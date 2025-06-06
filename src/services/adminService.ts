@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -197,4 +198,49 @@ export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
     owner_last_name: brokerage.profiles?.last_name || null,
     created_at: brokerage.created_at,
   }));
+};
+
+export const getTotalUsersCount = async (): Promise<number> => {
+  console.log('Getting total users count');
+  
+  const { count, error } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Get total users count error:', error);
+    throw error;
+  }
+
+  return count || 0;
+};
+
+export const getTotalBrokeragesCount = async (): Promise<number> => {
+  console.log('Getting total brokerages count');
+  
+  const { count, error } = await supabase
+    .from('brokerages')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Get total brokerages count error:', error);
+    throw error;
+  }
+
+  return count || 0;
+};
+
+export const getTotalProjectsCount = async (): Promise<number> => {
+  console.log('Getting total projects count');
+  
+  const { count, error } = await supabase
+    .from('projects')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Get total projects count error:', error);
+    throw error;
+  }
+
+  return count || 0;
 };

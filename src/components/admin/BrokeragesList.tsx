@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building, MapPin, Phone, Globe, User } from 'lucide-react';
+import { Building, User } from 'lucide-react';
 import { getAllBrokerages, type BrokerageInfo } from '@/services/adminService';
 import { toast } from 'sonner';
 
@@ -58,7 +58,9 @@ const BrokeragesList = ({ refreshTrigger }: BrokeragesListProps) => {
       <CardContent>
         {brokerages.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No brokerages found
+            <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No brokerages found</h3>
+            <p className="text-sm">Create brokerage owners first, then assign them brokerages using the form above.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -85,36 +87,9 @@ const BrokeragesList = ({ refreshTrigger }: BrokeragesListProps) => {
                       <span className="font-medium">Email:</span>
                       <span className="text-muted-foreground">{brokerage.owner_email}</span>
                     </div>
-                    {brokerage.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{brokerage.phone}</span>
-                      </div>
-                    )}
-                    {brokerage.website && (
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a href={brokerage.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {brokerage.website}
-                        </a>
-                      </div>
-                    )}
                   </div>
                   
                   <div className="space-y-2">
-                    {(brokerage.address || brokerage.city || brokerage.state) && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          {brokerage.address && <div>{brokerage.address}</div>}
-                          {(brokerage.city || brokerage.state || brokerage.zip_code) && (
-                            <div>
-                              {brokerage.city}{brokerage.city && brokerage.state ? ', ' : ''}{brokerage.state} {brokerage.zip_code}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                     <div className="text-xs text-muted-foreground">
                       Created: {new Date(brokerage.created_at).toLocaleDateString()}
                     </div>
