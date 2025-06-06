@@ -2,9 +2,10 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageForm';
 
 const Dashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
 
   if (loading) {
     return (
@@ -25,6 +26,13 @@ const Dashboard = () => {
     case 'superadmin':
       return <Navigate to="/admin" replace />;
     case 'brokerage_owner':
+      // Check if brokerage owner has a brokerage
+      if (user.brokerageId) {
+        return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
+      } else {
+        // Show form to create brokerage
+        return <CreateOwnBrokerageForm onSuccess={refreshUser} />;
+      }
     case 'broker_assistant':
       if (user.brokerageId) {
         return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
