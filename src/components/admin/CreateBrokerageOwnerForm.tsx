@@ -26,13 +26,7 @@ const CreateBrokerageOwnerForm = ({ onSuccess }: CreateBrokerageOwnerFormProps) 
     setIsLoading(true);
 
     try {
-      await createBrokerageOwner(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName,
-        formData.phone
-      );
+      await createBrokerageOwner(formData);
 
       toast.success('Brokerage owner created successfully!');
       setFormData({

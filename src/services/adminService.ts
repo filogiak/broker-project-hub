@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -63,52 +62,114 @@ export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
 export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => {
   console.log('Getting all brokerage owners');
   
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      user_roles!inner(role),
-      brokerages(name)
-    `)
-    .eq('user_roles.role', 'brokerage_owner');
+  try {
+    // Get all profiles that have the brokerage_owner role
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        user_roles!inner(role)
+      `)
+      .eq('user_roles.role', 'brokerage_owner');
 
-  if (error) {
-    console.error('Get brokerage owners error:', error);
+    if (profilesError) {
+      console.error('Get brokerage owners profiles error:', profilesError);
+      throw profilesError;
+    }
+
+    console.log('Raw profiles data:', profilesData);
+
+    if (!profilesData || profilesData.length === 0) {
+      console.log('No brokerage owners found');
+      return [];
+    }
+
+    // Get brokerage information for owners who have one
+    const profileIds = profilesData.map(p => p.id);
+    const { data: brokeragesData, error: brokeragesError } = await supabase
+      .from('brokerages')
+      .select('id, name, owner_id')
+      .in('owner_id', profileIds);
+
+    if (brokeragesError) {
+      console.error('Get brokerages error:', brokeragesError);
+      // Don't throw here, just log and continue without brokerage info
+    }
+
+    console.log('Brokerages data:', brokeragesData);
+
+    // Map profiles to brokerage owner info
+    const brokerageOwners = profilesData.map((profile: any) => {
+      const brokerage = brokeragesData?.find(b => b.owner_id === profile.id);
+      
+      return {
+        ...profile,
+        owns_brokerage: !!brokerage,
+        brokerage_name: brokerage?.name || null,
+      };
+    });
+
+    console.log('Processed brokerage owners:', brokerageOwners);
+    return brokerageOwners;
+  } catch (error) {
+    console.error('getAllBrokerageOwners failed:', error);
     throw error;
   }
-
-  const brokerageOwners = data?.map((owner: any) => ({
-    ...owner,
-    owns_brokerage: owner.brokerages && owner.brokerages.length > 0,
-    brokerage_name: owner.brokerages?.[0]?.name || null,
-  })) || [];
-
-  console.log('Brokerage owners retrieved:', brokerageOwners);
-  return brokerageOwners;
 };
 
 export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> => {
   console.log('Getting available brokerage owners');
   
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      email,
-      first_name,
-      last_name,
-      user_roles!inner(role)
-    `)
-    .eq('user_roles.role', 'brokerage_owner')
-    .is('brokerage_id', null);
+  try {
+    // First get all brokerage owners
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        email,
+        first_name,
+        last_name,
+        user_roles!inner(role)
+      `)
+      .eq('user_roles.role', 'brokerage_owner');
 
-  if (error) {
-    console.error('Get available brokerage owners error:', error);
+    if (profilesError) {
+      console.error('Get brokerage owner profiles error:', profilesError);
+      throw profilesError;
+    }
+
+    console.log('All brokerage owner profiles:', profilesData);
+
+    if (!profilesData || profilesData.length === 0) {
+      console.log('No brokerage owners found');
+      return [];
+    }
+
+    // Get existing brokerages to filter out owners who already have one
+    const { data: existingBrokerages, error: brokeragesError } = await supabase
+      .from('brokerages')
+      .select('owner_id');
+
+    if (brokeragesError) {
+      console.error('Get existing brokerages error:', brokeragesError);
+      throw brokeragesError;
+    }
+
+    console.log('Existing brokerages:', existingBrokerages);
+
+    const ownersWithBrokerages = new Set(existingBrokerages?.map(b => b.owner_id) || []);
+    
+    // Filter out owners who already have a brokerage
+    const availableOwners = profilesData.filter((profile: any) => 
+      !ownersWithBrokerages.has(profile.id)
+    );
+
+    console.log('Available brokerage owners:', availableOwners);
+    return availableOwners || [];
+  } catch (error) {
+    console.error('getAvailableBrokerageOwners failed:', error);
     throw error;
   }
-
-  console.log('Available brokerage owners retrieved:', data);
-  return data || [];
 };
 
 export const createBrokerageForOwner = async (data: CreateBrokerageData) => {
