@@ -55,6 +55,12 @@ export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
     throw new Error(response.error.message || 'Failed to create brokerage owner');
   }
 
+  // Parse the response data to get the actual error message
+  if (response.data && typeof response.data === 'object' && 'error' in response.data) {
+    console.error('Create brokerage owner API error:', response.data.error);
+    throw new Error(response.data.error as string);
+  }
+
   console.log('Brokerage owner created successfully:', response.data);
   return response.data;
 };

@@ -98,8 +98,17 @@ Deno.serve(async (req) => {
 
     if (authError) {
       console.error('Create user auth error:', authError);
+      
+      // Handle specific error cases with user-friendly messages
+      if (authError.message?.includes('already been registered')) {
+        return new Response(
+          JSON.stringify({ error: `A user with email ${email} already exists. Please use a different email address.` }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: authError.message || 'Failed to create user account' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
