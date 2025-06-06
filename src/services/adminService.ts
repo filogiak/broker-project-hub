@@ -89,6 +89,8 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
 
     // Step 2: Get profiles for those user IDs
     const userIds = userRolesData.map(ur => ur.user_id);
+    console.log('Looking for profiles with user IDs:', userIds);
+    
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
@@ -103,6 +105,17 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
 
     if (!profilesData || profilesData.length === 0) {
       console.log('No profiles found for brokerage owners');
+      
+      // Check if profiles exist at all for debugging
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .limit(5);
+      
+      if (!allProfilesError) {
+        console.log('Sample of existing profiles in database:', allProfiles);
+      }
+      
       return [];
     }
 
