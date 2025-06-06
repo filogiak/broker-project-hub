@@ -120,6 +120,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('User created successfully:', authData.user.id);
+
+    // Explicitly create the profile (in case the trigger doesn't work)
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert([{
+        id: authData.user.id,
+        email: email,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null,
+      }]);
+
+    if (profileError) {
+      console.error('Create profile error:', profileError);
+      // Don't fail the whole operation, just log the error
+      console.log('Profile creation failed, but continuing with role assignment');
+    } else {
+      console.log('Profile created successfully for user:', authData.user.id);
+    }
+
     // Assign the brokerage_owner role
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
