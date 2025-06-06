@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,9 +30,8 @@ const Dashboard = () => {
         return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
       }
       break;
-    case 'external_broker':
-    case 'applicant':
-    case 'agent':
+    case 'mortgage_applicant':
+    case 'real_estate_agent':
       // These users should be redirected to specific projects they have access to
       // For now, we'll keep them on a general dashboard
       break;

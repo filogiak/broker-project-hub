@@ -69,7 +69,7 @@ const AppRouter = () => {
           path="/client/:projectId" 
           element={
             <ProtectedRoute>
-              <RoleBasedRoute allowedRoles={['applicant', 'agent', 'brokerage_owner', 'broker_assistant', 'superadmin']}>
+              <RoleBasedRoute allowedRoles={['mortgage_applicant', 'real_estate_agent', 'brokerage_owner', 'broker_assistant', 'superadmin']}>
                 <ClientPortal />
               </RoleBasedRoute>
             </ProtectedRoute>
@@ -81,7 +81,7 @@ const AppRouter = () => {
           path="/agent/:projectId" 
           element={
             <ProtectedRoute>
-              <RoleBasedRoute allowedRoles={['agent', 'external_broker', 'brokerage_owner', 'broker_assistant', 'superadmin']}>
+              <RoleBasedRoute allowedRoles={['real_estate_agent', 'broker_assistant', 'brokerage_owner', 'superadmin']}>
                 <AgentPortal />
               </RoleBasedRoute>
             </ProtectedRoute>
