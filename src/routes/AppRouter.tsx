@@ -1,41 +1,105 @@
 
 import React from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 
-// Import placeholder components
-import Login from '../pages/Login/Login';
-import TenantDashboard from '../pages/Tenant/TenantDashboard';
-import BrokerDashboard from '../pages/Broker/BrokerDashboard';
-import ProjectDashboard from '../pages/Project/ProjectDashboard';
-import ClientPortal from '../pages/Client/ClientPortal';
-import AgentPortal from '../pages/Agent/AgentPortal';
+// Import components
+import AuthPage from '@/pages/Auth/AuthPage';
+import Dashboard from '@/pages/Dashboard/Dashboard';
+import BrokerageDashboard from '@/pages/Brokerage/BrokerageDashboard';
+import AdminDashboard from '@/pages/Admin/AdminDashboard';
+import ProjectDashboard from '@/pages/Project/ProjectDashboard';
+import ClientPortal from '@/pages/Client/ClientPortal';
+import AgentPortal from '@/pages/Agent/AgentPortal';
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Authentication routes */}
-        <Route path="/login" element={<Login />} />
+        {/* Public routes */}
+        <Route path="/auth" element={<AuthPage />} />
         
-        {/* Tenant routes */}
-        <Route path="/tenant" element={<TenantDashboard />} />
-        <Route path="/tenant/:tenantId" element={<TenantDashboard />} />
+        {/* Protected routes */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
         
-        {/* Broker routes */}
-        <Route path="/broker" element={<BrokerDashboard />} />
-        <Route path="/broker/:brokerId" element={<BrokerDashboard />} />
+        {/* Brokerage routes - for brokerage owners and assistants */}
+        <Route 
+          path="/brokerage/:brokerageId" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedRoute allowedRoles={['superadmin', 'brokerage_owner', 'broker_assistant']}>
+                <BrokerageDashboard />
+              </RoleBasedRoute>
+            </ProtectedRoute>
+          } 
+        />
         
-        {/* Project routes */}
-        <Route path="/project/:id" element={<ProjectDashboard />} />
+        {/* Admin routes - superadmin only */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedRoute allowedRoles={['superadmin']}>
+                <AdminDashboard />
+              </RoleBasedRoute>
+            </ProtectedRoute>
+          } 
+        />
         
-        {/* Client portal routes */}
-        <Route path="/client/:projectId" element={<ClientPortal />} />
+        {/* Project routes - for project members */}
+        <Route 
+          path="/project/:id" 
+          element={
+            <ProtectedRoute>
+              <ProjectDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Client portal routes - for applicants and agents */}
+        <Route 
+          path="/client/:projectId" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedRoute allowedRoles={['applicant', 'agent', 'brokerage_owner', 'broker_assistant', 'superadmin']}>
+                <ClientPortal />
+              </RoleBasedRoute>
+            </ProtectedRoute>
+          } 
+        />
         
         {/* Agent portal routes */}
-        <Route path="/agent/:projectId" element={<AgentPortal />} />
+        <Route 
+          path="/agent/:projectId" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedRoute allowedRoles={['agent', 'external_broker', 'brokerage_owner', 'broker_assistant', 'superadmin']}>
+                <AgentPortal />
+              </RoleBasedRoute>
+            </ProtectedRoute>
+          } 
+        />
         
-        {/* Default route */}
-        <Route path="/" element={<Login />} />
+        {/* Redirect root to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Legacy route redirects */}
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/broker" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/broker/:brokerId" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/tenant" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/tenant/:tenantId" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
