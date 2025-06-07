@@ -280,6 +280,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_brokerage_owners: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          first_name: string
+          last_name: string
+          phone: string
+          created_at: string
+          updated_at: string
+          brokerage_id: string
+          owns_brokerage: boolean
+          brokerage_name: string
+        }[]
+      }
+      get_available_brokerage_owners: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          first_name: string
+          last_name: string
+        }[]
+      }
       get_brokerage_users: {
         Args: { brokerage_uuid: string }
         Returns: {
