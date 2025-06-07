@@ -90,79 +90,34 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
     const userIds = userRolesData.map(ur => ur.user_id);
     console.log('Looking for profiles with user IDs:', userIds);
     
-    // Step 2: Use a simpler query approach - join directly instead of using .in()
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        user_roles!inner(role)
-      `)
-      .eq('user_roles.role', 'brokerage_owner');
-
-    if (profilesError) {
-      console.error('Get profiles with roles error:', profilesError);
-      
-      // Fallback: try a different approach if join doesn't work
-      console.log('Trying fallback approach with individual queries...');
-      const profiles = [];
-      
-      for (const userId of userIds) {
-        const { data: profile, error: singleProfileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-          
-        if (singleProfileError) {
-          console.error(`Error fetching profile for user ${userId}:`, singleProfileError);
-          continue;
-        }
+    // Step 2: Fetch individual profiles for each user ID
+    const profiles = [];
+    
+    for (const userId of userIds) {
+      console.log('Fetching profile for user ID:', userId);
+      const { data: profile, error: singleProfileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
         
-        if (profile) {
-          profiles.push(profile);
-        }
+      if (singleProfileError) {
+        console.error(`Error fetching profile for user ${userId}:`, singleProfileError);
+        continue;
       }
       
-      if (profiles.length === 0) {
-        console.log('No profiles found even with fallback approach');
-        return [];
+      if (profile) {
+        console.log('Found profile:', profile);
+        profiles.push(profile);
+      } else {
+        console.log(`No profile found for user ${userId}`);
       }
-      
-      // Use the fallback profiles data
-      console.log('Fallback profiles data:', profiles);
-      
-      // Step 3: Get brokerage information for owners who have one
-      const { data: brokeragesData, error: brokeragesError } = await supabase
-        .from('brokerages')
-        .select('id, name, owner_id')
-        .in('owner_id', profiles.map(p => p.id));
-
-      if (brokeragesError) {
-        console.error('Get brokerages error:', brokeragesError);
-        // Don't throw here, just log and continue without brokerage info
-      }
-
-      console.log('Brokerages data:', brokeragesData);
-
-      // Step 4: Map profiles to brokerage owner info
-      const brokerageOwners = profiles.map((profile) => {
-        const brokerage = brokeragesData?.find(b => b.owner_id === profile.id);
-        
-        return {
-          ...profile,
-          owns_brokerage: !!brokerage,
-          brokerage_name: brokerage?.name || null,
-        };
-      });
-
-      console.log('Processed brokerage owners (fallback):', brokerageOwners);
-      return brokerageOwners;
     }
-
-    console.log('Profiles data from join:', profilesData);
-
-    if (!profilesData || profilesData.length === 0) {
-      console.log('No profiles found for brokerage owners from join query');
+    
+    console.log('All profiles found:', profiles);
+    
+    if (profiles.length === 0) {
+      console.log('No profiles found for brokerage owners');
       return [];
     }
 
@@ -170,7 +125,7 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
     const { data: brokeragesData, error: brokeragesError } = await supabase
       .from('brokerages')
       .select('id, name, owner_id')
-      .in('owner_id', profilesData.map(p => p.id));
+      .in('owner_id', profiles.map(p => p.id));
 
     if (brokeragesError) {
       console.error('Get brokerages error:', brokeragesError);
@@ -180,7 +135,7 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
     console.log('Brokerages data:', brokeragesData);
 
     // Step 4: Map profiles to brokerage owner info
-    const brokerageOwners = profilesData.map((profile) => {
+    const brokerageOwners = profiles.map((profile) => {
       const brokerage = brokeragesData?.find(b => b.owner_id === profile.id);
       
       return {
@@ -202,74 +157,50 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
   console.log('Getting available brokerage owners');
   
   try {
-    // Use the same improved approach as getAllBrokerageOwners
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        email,
-        first_name,
-        last_name,
-        user_roles!inner(role)
-      `)
-      .eq('user_roles.role', 'brokerage_owner');
+    // Step 1: Get all user IDs that have the brokerage_owner role
+    const { data: userRolesData, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'brokerage_owner');
 
-    if (profilesError) {
-      console.error('Get profiles with roles error:', profilesError);
-      
-      // Fallback approach
-      const { data: userRolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'brokerage_owner');
-
-      if (rolesError || !userRolesData) {
-        throw rolesError || new Error('No user roles found');
-      }
-
-      const profiles = [];
-      for (const userRole of userRolesData) {
-        const { data: profile, error: singleProfileError } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name')
-          .eq('id', userRole.user_id)
-          .maybeSingle();
-          
-        if (!singleProfileError && profile) {
-          profiles.push(profile);
-        }
-      }
-      
-      console.log('Fallback profiles for available owners:', profiles);
-      
-      if (profiles.length === 0) {
-        return [];
-      }
-      
-      // Get existing brokerages to filter out owners who already have one
-      const { data: existingBrokerages, error: brokeragesError } = await supabase
-        .from('brokerages')
-        .select('owner_id');
-
-      if (brokeragesError) {
-        console.error('Get existing brokerages error:', brokeragesError);
-        throw brokeragesError;
-      }
-
-      const ownersWithBrokerages = new Set(existingBrokerages?.map(b => b.owner_id) || []);
-      
-      const availableOwners = profiles.filter((profile) => 
-        !ownersWithBrokerages.has(profile.id)
-      );
-
-      console.log('Available brokerage owners (fallback):', availableOwners);
-      return availableOwners || [];
+    if (rolesError) {
+      console.error('Get user roles error:', rolesError);
+      throw rolesError;
     }
 
-    console.log('All brokerage owner profiles from join:', profilesData);
+    console.log('User roles data for available owners:', userRolesData);
 
-    if (!profilesData || profilesData.length === 0) {
-      console.log('No profiles found for brokerage owners');
+    if (!userRolesData || userRolesData.length === 0) {
+      console.log('No brokerage owners found');
+      return [];
+    }
+
+    // Step 2: Fetch individual profiles for each user ID
+    const profiles = [];
+    
+    for (const userRole of userRolesData) {
+      console.log('Fetching profile for available owner user ID:', userRole.user_id);
+      const { data: profile, error: singleProfileError } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name')
+        .eq('id', userRole.user_id)
+        .maybeSingle();
+        
+      if (singleProfileError) {
+        console.error(`Error fetching profile for user ${userRole.user_id}:`, singleProfileError);
+        continue;
+      }
+      
+      if (profile) {
+        console.log('Found available owner profile:', profile);
+        profiles.push(profile);
+      }
+    }
+    
+    console.log('All available owner profiles:', profiles);
+    
+    if (profiles.length === 0) {
+      console.log('No profiles found for available brokerage owners');
       return [];
     }
 
@@ -288,7 +219,7 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
     const ownersWithBrokerages = new Set(existingBrokerages?.map(b => b.owner_id) || []);
     
     // Step 4: Filter out owners who already have a brokerage
-    const availableOwners = profilesData.filter((profile) => 
+    const availableOwners = profiles.filter((profile) => 
       !ownersWithBrokerages.has(profile.id)
     );
 
