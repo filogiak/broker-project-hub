@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -55,7 +56,7 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
   const { data, error } = await supabase
     .from('project_members')
     .select(`
-      projects:project_id (
+      projects!inner (
         id,
         name,
         description,
@@ -68,7 +69,7 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
     `)
     .eq('user_id', user.id)
     .eq('projects.brokerage_id', brokerageId)
-    .order('projects.created_at', { ascending: false });
+    .order('created_at', { referencedTable: 'projects', ascending: false });
 
   if (error) {
     console.error('Get brokerage projects error:', error);
