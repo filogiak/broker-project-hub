@@ -122,6 +122,56 @@ export const deleteProject = async (projectId: string): Promise<void> => {
   console.log('✅ Project deleted successfully');
 };
 
+export const getUserProjectStats = async (userId: string): Promise<{
+  invitedUsers: number;
+}> => {
+  console.log('📊 Getting user project stats for user:', userId);
+  
+  try {
+    // Check authentication first
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      console.log('⚠️ No authenticated user, returning 0 stats');
+      return { invitedUsers: 0 };
+    }
+
+    // Get user's project IDs first
+    const { data: userProjects, error: projectsError } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', userId);
+
+    if (projectsError || !userProjects?.length) {
+      console.log('⚠️ No user projects found - returning 0 stats');
+      return { invitedUsers: 0 };
+    }
+
+    const projectIds = userProjects.map(p => p.project_id);
+
+    // Count unique invited users across user's projects
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('user_id')
+      .in('project_id', projectIds);
+
+    if (error) {
+      console.error('❌ Error loading project stats:', error);
+      return { invitedUsers: 0 };
+    }
+
+    // Count unique user IDs
+    const uniqueUserIds = new Set(data?.map(member => member.user_id) || []);
+    const invitedUsers = uniqueUserIds.size;
+
+    console.log('✅ User project stats retrieved:', { invitedUsers });
+    return { invitedUsers };
+  } catch (error) {
+    console.error('❌ Error in getUserProjectStats:', error);
+    return { invitedUsers: 0 };
+  }
+};
+
 export const getBrokerageProjectStats = async (brokerageId: string): Promise<{
   invitedUsers: number;
 }> => {

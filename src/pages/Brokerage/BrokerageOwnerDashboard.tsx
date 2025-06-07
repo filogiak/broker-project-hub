@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -10,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getBrokerageByOwner, getBrokerageProjects } from '@/services/brokerageService';
 import { createProject, deleteProject } from '@/services/projectService';
+import { getUserProjects } from '@/services/userProjectService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
@@ -107,21 +107,21 @@ const BrokerageOwnerDashboard = () => {
           setBrokerage(brokerageData);
           console.log('✅ Brokerage loaded:', brokerageData);
 
-          // Load projects using the same simple approach as admin dashboard
-          console.log('📋 Loading projects for brokerage:', brokerageData.id);
+          // Load projects using user-centric approach to avoid RLS recursion
+          console.log('📋 Loading user projects...');
           
           try {
-            const projectsData = await getBrokerageProjects(brokerageData.id);
+            const projectsData = await getUserProjects(user.id);
             setProjects(projectsData);
-            console.log('✅ Projects loaded successfully:', projectsData.length, 'projects');
+            console.log('✅ User projects loaded successfully:', projectsData.length, 'projects');
           } catch (projectError) {
-            console.error('❌ Failed to load projects:', projectError);
+            console.error('❌ Failed to load user projects:', projectError);
             // Set empty array but don't fail the whole dashboard
             setProjects([]);
             
             toast({
               title: "Projects Loading Issue",
-              description: "Could not load projects. Please refresh the page or contact support.",
+              description: "Could not load your projects. Please refresh the page or contact support.",
               variant: "destructive",
             });
           }

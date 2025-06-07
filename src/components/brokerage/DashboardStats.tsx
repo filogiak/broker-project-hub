@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Clock, Users } from 'lucide-react';
 import { getBrokerageProjectStats } from '@/services/projectService';
+import { getUserProjectStats } from '@/services/projectService';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -13,13 +14,20 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
+  const { user } = useAuth();
   const [invitedUsers, setInvitedUsers] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
+      if (!user?.id) {
+        setInvitedUsers(0);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const stats = await getBrokerageProjectStats(brokerageId);
+        const stats = await getUserProjectStats(user.id);
         setInvitedUsers(stats.invitedUsers);
       } catch (error) {
         console.error('Error loading stats:', error);
@@ -30,7 +38,7 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
     };
 
     loadStats();
-  }, [brokerageId, projects.length]); // Refresh when projects change
+  }, [user?.id, projects.length]); // Refresh when projects change
 
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const approvalsDue = projects.filter(p => p.status === 'pending_approval').length;
