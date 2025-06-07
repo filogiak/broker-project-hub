@@ -338,6 +338,10 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: boolean
       }
+      safe_create_project: {
+        Args: { p_name: string; p_brokerage_id: string; p_description?: string }
+        Returns: string
+      }
       user_can_access_project: {
         Args: { project_uuid: string; user_uuid?: string }
         Returns: boolean

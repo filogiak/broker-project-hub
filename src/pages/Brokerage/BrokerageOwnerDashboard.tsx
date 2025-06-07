@@ -108,28 +108,22 @@ const BrokerageOwnerDashboard = () => {
 
           // Load projects for the brokerage with improved error handling
           try {
+            console.log('📋 Loading projects for brokerage:', brokerageData.id);
             const projectsData = await getBrokerageProjects(brokerageData.id);
             setProjects(projectsData);
-            console.log('✅ Projects loaded:', projectsData);
+            console.log('✅ Projects loaded successfully:', projectsData.length, 'projects');
           } catch (projectError) {
-            console.error('⚠️ Error loading projects (non-fatal):', projectError);
+            console.error('⚠️ Error loading projects:', projectError);
             setProjects([]);
             
             const errorMessage = projectError instanceof Error ? projectError.message : 'Unknown error';
             
-            if (errorMessage.includes('row-level security') || errorMessage.includes('permission')) {
-              toast({
-                title: "Limited Access",
-                description: "Some project data could not be loaded due to permissions.",
-                variant: "default",
-              });
-            } else {
-              toast({
-                title: "Warning",
-                description: "Projects could not be loaded. Please refresh the page.",
-                variant: "default",
-              });
-            }
+            // Show a toast but don't fail the entire dashboard load
+            toast({
+              title: "Projects Load Warning",
+              description: "Some project data could not be loaded. The database has been updated, try refreshing the page.",
+              variant: "default",
+            });
           }
         } catch (brokerageError) {
           console.error('❌ Error loading brokerage:', brokerageError);

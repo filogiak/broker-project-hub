@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -30,8 +29,8 @@ export const createProject = async (projectData: {
     // Use the new safe database function
     console.log('🛡️ Creating project using safe database function...');
     
-    // Call the function with proper typing - cast to any to bypass TypeScript since types haven't been regenerated
-    const { data: projectId, error: functionError } = await (supabase as any)
+    // Call the function with proper typing
+    const { data: projectId, error: functionError } = await supabase
       .rpc('safe_create_project', {
         p_name: projectData.name,
         p_brokerage_id: projectData.brokerageId,
