@@ -19,7 +19,7 @@ export const createProject = async (projectData: {
 
   console.log('✅ User authenticated:', user.id);
 
-  // First, verify brokerage ownership
+  // First, verify brokerage ownership with detailed logging
   console.log('🔍 Verifying brokerage ownership for:', projectData.brokerageId);
   const { data: brokerageCheck, error: brokerageError } = await supabase
     .from('brokerages')
@@ -40,56 +40,38 @@ export const createProject = async (projectData: {
 
   console.log('✅ Brokerage ownership verified:', brokerageCheck);
 
-  // Try using the safe database function first
-  console.log('🛡️ Attempting to create project using safe database function...');
+  // Check current RLS policies by trying a simple select first
+  console.log('🔍 Testing RLS policies with simple project select...');
   try {
-    const { data: functionResult, error: functionError } = await supabase
-      .rpc('create_project_safe', {
-        project_name: projectData.name,
-        project_description: projectData.description || null,
-        brokerage_id: projectData.brokerageId
-      });
-
-    if (functionError) {
-      console.warn('⚠️ Database function failed, falling back to direct insert:', functionError);
-      throw functionError; // Will trigger fallback
+    const { data: testProjects, error: testError } = await supabase
+      .from('projects')
+      .select('id, name')
+      .eq('brokerage_id', projectData.brokerageId)
+      .limit(1);
+    
+    if (testError) {
+      console.error('❌ RLS test failed:', testError);
+    } else {
+      console.log('✅ RLS test passed, found projects:', testProjects?.length || 0);
     }
-
-    if (functionResult) {
-      console.log('✅ Project created successfully via database function, ID:', functionResult);
-      
-      // Fetch the created project
-      const { data: createdProject, error: fetchError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', functionResult)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ Error fetching created project:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('🎉 Project creation completed successfully:', createdProject);
-      return createdProject;
-    }
-  } catch (functionError) {
-    console.warn('⚠️ Safe function approach failed, trying direct insert fallback...');
+  } catch (rlsTestError) {
+    console.error('❌ RLS test exception:', rlsTestError);
   }
 
-  // Fallback: Direct insert approach with detailed logging
-  console.log('🔄 Using fallback direct insert approach...');
+  // Direct insert approach with extensive logging
+  console.log('📝 Attempting direct insert approach...');
   
   try {
     const insertData = {
       name: projectData.name,
-      description: projectData.description,
+      description: projectData.description || null,
       brokerage_id: projectData.brokerageId,
       created_by: user.id,
       status: 'active' as const
     };
 
-    console.log('📝 Inserting project with data:', insertData);
+    console.log('📋 Insert data prepared:', insertData);
+    console.log('🎯 About to execute INSERT operation...');
 
     const { data, error } = await supabase
       .from('projects')
@@ -98,16 +80,31 @@ export const createProject = async (projectData: {
       .single();
 
     if (error) {
-      console.error('❌ Direct insert failed with error:', {
+      console.error('❌ Direct insert failed with detailed error:', {
         code: error.code,
         message: error.message,
         details: error.details,
-        hint: error.hint
+        hint: error.hint,
+        insertData: insertData
       });
 
-      // Special handling for infinite recursion error
+      // Check if it's the infinite recursion error
       if (error.message?.includes('infinite recursion')) {
         console.error('🔄 Infinite recursion detected in RLS policy');
+        
+        // Let's try to understand which policy is causing the issue
+        console.log('🔍 Checking user roles and permissions...');
+        try {
+          const { data: userRoles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+          
+          console.log('👤 User roles:', userRoles, rolesError);
+        } catch (rolesCheckError) {
+          console.error('❌ Failed to check user roles:', rolesCheckError);
+        }
+
         throw new Error('Project creation temporarily unavailable due to database configuration. Please contact support.');
       }
 
