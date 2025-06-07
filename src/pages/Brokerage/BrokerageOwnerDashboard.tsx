@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -31,12 +30,19 @@ const BrokerageOwnerDashboard = () => {
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('No user found, redirecting to auth');
+        navigate('/auth');
+        return;
+      }
 
       try {
+        setLoading(true);
         setError(null);
         
-        // Load user profile from database
+        console.log('Loading dashboard data for user:', user.id);
+
+        // Load user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -45,27 +51,42 @@ const BrokerageOwnerDashboard = () => {
 
         if (profileError) {
           console.error('Error loading profile:', profileError);
-          setError('Failed to load user profile');
-        } else {
-          setUserProfile(profileData);
+          throw new Error(`Failed to load user profile: ${profileError.message}`);
         }
 
-        // Load user's brokerage (RLS will ensure they can only see their own)
+        if (!profileData) {
+          console.error('No profile found for user');
+          throw new Error('User profile not found. Please contact support.');
+        }
+
+        setUserProfile(profileData);
+        console.log('User profile loaded:', profileData);
+
+        // Load user's brokerage
         const brokerageData = await getBrokerageByOwner(user.id);
-        setBrokerage(brokerageData);
-
-        // Load projects if brokerage exists (RLS will ensure proper access)
-        if (brokerageData) {
-          const projectsData = await getBrokerageProjects(brokerageData.id);
-          setProjects(projectsData);
+        
+        if (!brokerageData) {
+          console.log('No brokerage found for user');
+          setError('No brokerage found for your account');
+          return;
         }
+
+        setBrokerage(brokerageData);
+        console.log('Brokerage loaded:', brokerageData);
+
+        // Load projects for the brokerage
+        const projectsData = await getBrokerageProjects(brokerageData.id);
+        setProjects(projectsData);
+        console.log('Projects loaded:', projectsData);
+
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         setError(errorMessage);
+        
         toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try refreshing the page.",
+          title: "Error Loading Dashboard",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -74,7 +95,7 @@ const BrokerageOwnerDashboard = () => {
     };
 
     loadDashboardData();
-  }, [user, toast]);
+  }, [user, navigate, toast]);
 
   const handleLogout = async () => {
     try {
@@ -82,6 +103,11 @@ const BrokerageOwnerDashboard = () => {
       window.location.href = '/auth';
     } catch (error) {
       console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "Failed to logout properly. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -104,6 +130,7 @@ const BrokerageOwnerDashboard = () => {
     }
 
     try {
+      console.log('Creating project:', projectData);
       const newProject = await createProject({
         name: projectData.name,
         description: projectData.description,
@@ -128,6 +155,7 @@ const BrokerageOwnerDashboard = () => {
 
   const handleDeleteProject = async (projectId: string) => {
     try {
+      console.log('Deleting project:', projectId);
       await deleteProject(projectId);
       setProjects(prev => prev.filter(project => project.id !== projectId));
       toast({
@@ -159,32 +187,23 @@ const BrokerageOwnerDashboard = () => {
     );
   }
 
-  if (error) {
+  if (error || !brokerage) {
     return (
       <MainLayout title="Brokerage Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2 text-destructive">Error Loading Dashboard</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <h2 className="text-xl font-semibold mb-2 text-destructive">
+              {error ? 'Error Loading Dashboard' : 'No Brokerage Found'}
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              {error || "You don't have a brokerage associated with your account or you don't have permission to access it."}
+            </p>
             <button 
               onClick={() => window.location.reload()} 
               className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
             >
               Refresh Page
             </button>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (!brokerage) {
-    return (
-      <MainLayout title="Brokerage Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">No Brokerage Found</h2>
-            <p className="text-muted-foreground">You don't have a brokerage associated with your account or you don't have permission to access it.</p>
           </div>
         </div>
       </MainLayout>

@@ -56,10 +56,9 @@ export const deleteProject = async (projectId: string): Promise<void> => {
 export const getBrokerageProjectStats = async (brokerageId: string): Promise<{
   invitedUsers: number;
 }> => {
-  console.log('Getting brokerage project stats:', brokerageId);
+  console.log('Getting brokerage project stats for brokerage:', brokerageId);
   
   try {
-    // Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -67,7 +66,6 @@ export const getBrokerageProjectStats = async (brokerageId: string): Promise<{
     }
 
     // Count unique invited users across all projects in this brokerage
-    // Use project_members table to avoid RLS issues
     const { data, error } = await supabase
       .from('project_members')
       .select(`
@@ -79,7 +77,7 @@ export const getBrokerageProjectStats = async (brokerageId: string): Promise<{
       .eq('projects.brokerage_id', brokerageId);
 
     if (error) {
-      console.error('Error loading projects for stats:', error);
+      console.error('Error loading project stats:', error);
       return { invitedUsers: 0 };
     }
 

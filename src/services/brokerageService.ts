@@ -25,61 +25,28 @@ export const getBrokerageByOwner = async (ownerId: string): Promise<Brokerage | 
 };
 
 export const getBrokerageProjects = async (brokerageId: string): Promise<Project[]> => {
-  console.log('Getting brokerage projects:', brokerageId);
+  console.log('Getting brokerage projects for brokerage:', brokerageId);
   
-  // First verify the user owns this brokerage to avoid RLS issues
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
     throw new Error('User must be authenticated');
   }
 
-  // Check if user owns the brokerage first
-  const { data: brokerage, error: brokerageError } = await supabase
-    .from('brokerages')
-    .select('id')
-    .eq('id', brokerageId)
-    .eq('owner_id', user.id)
-    .maybeSingle();
-
-  if (brokerageError) {
-    console.error('Brokerage verification error:', brokerageError);
-    throw brokerageError;
-  }
-
-  if (!brokerage) {
-    console.log('User does not own this brokerage or brokerage not found');
-    return [];
-  }
-
-  // Now query projects using project_members table to avoid RLS recursion
+  // Query projects directly now that RLS policies are fixed
   const { data, error } = await supabase
-    .from('project_members')
-    .select(`
-      projects!inner (
-        id,
-        name,
-        description,
-        status,
-        brokerage_id,
-        created_by,
-        created_at,
-        updated_at
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('projects.brokerage_id', brokerageId)
-    .order('created_at', { referencedTable: 'projects', ascending: false });
+    .from('projects')
+    .select('*')
+    .eq('brokerage_id', brokerageId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Get brokerage projects error:', error);
     throw error;
   }
 
-  // Extract projects from the joined data
-  const projects = data?.map(item => item.projects).filter(Boolean) || [];
-  console.log('Brokerage projects retrieved:', projects);
-  return projects;
+  console.log('Brokerage projects retrieved:', data);
+  return data || [];
 };
 
 export const updateBrokerageProfile = async (brokerageId: string, updates: {
@@ -135,7 +102,7 @@ export const validateBrokerageOwnership = async (brokerageId: string, ownerId: s
     .select('id')
     .eq('id', brokerageId)
     .eq('owner_id', ownerId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Validate brokerage ownership error:', error);
