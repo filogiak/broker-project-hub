@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -93,7 +94,7 @@ const BrokerageOwnerDashboard = () => {
         setUserProfile(profileData);
         console.log('✅ User profile loaded:', profileData);
 
-        // Load user's brokerage with better error handling
+        // Load user's brokerage
         try {
           const brokerageData = await getBrokerageByOwner(user.id);
           
@@ -106,25 +107,25 @@ const BrokerageOwnerDashboard = () => {
           setBrokerage(brokerageData);
           console.log('✅ Brokerage loaded:', brokerageData);
 
-          // Load projects for the brokerage with improved error handling
+          // Load projects using the same simple approach as admin dashboard
+          console.log('📋 Loading projects for brokerage:', brokerageData.id);
+          
           try {
-            console.log('📋 Loading projects for brokerage:', brokerageData.id);
             const projectsData = await getBrokerageProjects(brokerageData.id);
             setProjects(projectsData);
             console.log('✅ Projects loaded successfully:', projectsData.length, 'projects');
           } catch (projectError) {
-            console.error('⚠️ Error loading projects:', projectError);
+            console.error('❌ Failed to load projects:', projectError);
+            // Set empty array but don't fail the whole dashboard
             setProjects([]);
             
-            const errorMessage = projectError instanceof Error ? projectError.message : 'Unknown error';
-            
-            // Show a toast but don't fail the entire dashboard load
             toast({
-              title: "Projects Load Warning",
-              description: "Some project data could not be loaded. The database has been updated, try refreshing the page.",
-              variant: "default",
+              title: "Projects Loading Issue",
+              description: "Could not load projects. Please refresh the page or contact support.",
+              variant: "destructive",
             });
           }
+
         } catch (brokerageError) {
           console.error('❌ Error loading brokerage:', brokerageError);
           const errorMessage = brokerageError instanceof Error ? brokerageError.message : 'Unknown error';

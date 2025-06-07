@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -25,15 +24,9 @@ export const getBrokerageByOwner = async (ownerId: string): Promise<Brokerage | 
 };
 
 export const getBrokerageProjects = async (brokerageId: string): Promise<Project[]> => {
-  console.log('Getting brokerage projects for brokerage:', brokerageId);
+  console.log('🔍 Getting projects for brokerage:', brokerageId);
   
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  // Use simple query since RLS policies now handle access control properly
+  // Use the exact same approach as admin dashboard - simple direct query
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -41,16 +34,11 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Get brokerage projects error:', error);
-    // If RLS blocks access, return empty array instead of throwing
-    if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
-      console.log('No projects accessible due to RLS - returning empty array');
-      return [];
-    }
-    throw error;
+    console.error('❌ Error fetching projects:', error);
+    throw new Error(`Failed to fetch projects: ${error.message}`);
   }
 
-  console.log('Brokerage projects retrieved:', data);
+  console.log('✅ Projects fetched successfully:', data?.length || 0, 'projects');
   return data || [];
 };
 
