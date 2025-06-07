@@ -33,7 +33,7 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
     throw new Error('User must be authenticated');
   }
 
-  // Query projects directly now that RLS policies are fixed
+  // Use simple query since RLS policies now handle access control properly
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -42,6 +42,11 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
 
   if (error) {
     console.error('Get brokerage projects error:', error);
+    // If RLS blocks access, return empty array instead of throwing
+    if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
+      console.log('No projects accessible due to RLS - returning empty array');
+      return [];
+    }
     throw error;
   }
 

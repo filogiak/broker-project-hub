@@ -78,6 +78,11 @@ export const getBrokerageProjectStats = async (brokerageId: string): Promise<{
 
     if (error) {
       console.error('Error loading project stats:', error);
+      // Return 0 if RLS blocks access instead of throwing
+      if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
+        console.log('No project stats accessible due to RLS - returning 0');
+        return { invitedUsers: 0 };
+      }
       return { invitedUsers: 0 };
     }
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -42,7 +43,7 @@ const BrokerageOwnerDashboard = () => {
         
         console.log('Loading dashboard data for user:', user.id);
 
-        // Load user profile
+        // Load user profile first
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -67,17 +68,28 @@ const BrokerageOwnerDashboard = () => {
         
         if (!brokerageData) {
           console.log('No brokerage found for user');
-          setError('No brokerage found for your account');
+          setError('No brokerage found for your account. You may not have the required permissions.');
           return;
         }
 
         setBrokerage(brokerageData);
         console.log('Brokerage loaded:', brokerageData);
 
-        // Load projects for the brokerage
-        const projectsData = await getBrokerageProjects(brokerageData.id);
-        setProjects(projectsData);
-        console.log('Projects loaded:', projectsData);
+        // Load projects for the brokerage with better error handling
+        try {
+          const projectsData = await getBrokerageProjects(brokerageData.id);
+          setProjects(projectsData);
+          console.log('Projects loaded:', projectsData);
+        } catch (projectError) {
+          console.error('Error loading projects (non-fatal):', projectError);
+          // Don't fail the entire dashboard if projects can't be loaded
+          setProjects([]);
+          toast({
+            title: "Warning",
+            description: "Some project data could not be loaded. You may have limited access.",
+            variant: "default",
+          });
+        }
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -193,7 +205,7 @@ const BrokerageOwnerDashboard = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2 text-destructive">
-              {error ? 'Error Loading Dashboard' : 'No Brokerage Found'}
+              {error ? 'Dashboard Access Issue' : 'No Brokerage Found'}
             </h2>
             <p className="text-muted-foreground mb-4">
               {error || "You don't have a brokerage associated with your account or you don't have permission to access it."}
