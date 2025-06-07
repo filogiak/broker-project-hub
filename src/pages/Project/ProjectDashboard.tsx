@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -81,6 +80,18 @@ const ProjectDashboard = () => {
     }
   };
 
+  const handleBackToBrokerage = () => {
+    // Navigate back to the brokerage dashboard
+    // We'll need to get the brokerage ID from the project or user context
+    // For now, we'll navigate to a generic brokerage path
+    if (project?.brokerage_id) {
+      navigate(`/brokerage/${project.brokerage_id}`);
+    } else {
+      // Fallback: go back one page
+      navigate(-1);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
@@ -127,17 +138,17 @@ const ProjectDashboard = () => {
             </p>
           </div>
           <Button 
-            onClick={() => navigate(-1)}
+            onClick={handleBackToBrokerage}
             variant="outline"
           >
-            Back
+            Back to Brokerage
           </Button>
         </div>
 
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Project Members Card */}
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          {/* Project Members Card with green border */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-2 border-green-500 hover:border-green-600">
             <Link to={`/project/${projectId}/members`} className="block">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
