@@ -26,19 +26,59 @@ export const getBrokerageByOwner = async (ownerId: string): Promise<Brokerage | 
 export const getBrokerageProjects = async (brokerageId: string): Promise<Project[]> => {
   console.log('Getting brokerage projects:', brokerageId);
   
+  // First verify the user owns this brokerage to avoid RLS issues
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Check if user owns the brokerage first
+  const { data: brokerage, error: brokerageError } = await supabase
+    .from('brokerages')
+    .select('id')
+    .eq('id', brokerageId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  if (brokerageError) {
+    console.error('Brokerage verification error:', brokerageError);
+    throw brokerageError;
+  }
+
+  if (!brokerage) {
+    console.log('User does not own this brokerage or brokerage not found');
+    return [];
+  }
+
+  // Now query projects using project_members table to avoid RLS recursion
   const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('brokerage_id', brokerageId)
-    .order('created_at', { ascending: false });
+    .from('project_members')
+    .select(`
+      projects:project_id (
+        id,
+        name,
+        description,
+        status,
+        brokerage_id,
+        created_by,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('projects.brokerage_id', brokerageId)
+    .order('projects.created_at', { ascending: false });
 
   if (error) {
     console.error('Get brokerage projects error:', error);
     throw error;
   }
 
-  console.log('Brokerage projects retrieved:', data);
-  return data || [];
+  // Extract projects from the joined data
+  const projects = data?.map(item => item.projects).filter(Boolean) || [];
+  console.log('Brokerage projects retrieved:', projects);
+  return projects;
 };
 
 export const updateBrokerageProfile = async (brokerageId: string, updates: {
