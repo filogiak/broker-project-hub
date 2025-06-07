@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -13,13 +12,9 @@ export const getBrokerageByOwner = async (ownerId: string): Promise<Brokerage | 
     .from('brokerages')
     .select('*')
     .eq('owner_id', ownerId)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No brokerage found
-      return null;
-    }
     console.error('Get brokerage by owner error:', error);
     throw error;
   }

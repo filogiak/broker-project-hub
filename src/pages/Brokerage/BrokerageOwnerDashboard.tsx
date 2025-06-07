@@ -27,21 +27,25 @@ const BrokerageOwnerDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       if (!user?.id) return;
 
       try {
+        setError(null);
+        
         // Load user profile from database
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           console.error('Error loading profile:', profileError);
+          setError('Failed to load user profile');
         } else {
           setUserProfile(profileData);
         }
@@ -57,6 +61,8 @@ const BrokerageOwnerDashboard = () => {
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        setError(errorMessage);
         toast({
           title: "Error",
           description: "Failed to load dashboard data. Please try refreshing the page.",
@@ -111,9 +117,10 @@ const BrokerageOwnerDashboard = () => {
       });
     } catch (error) {
       console.error('Error creating project:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: "Failed to create project. Please check your permissions and try again.",
+        description: `Failed to create project: ${errorMessage}`,
         variant: "destructive",
       });
     }
@@ -129,9 +136,10 @@ const BrokerageOwnerDashboard = () => {
       });
     } catch (error) {
       console.error('Error deleting project:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: "Failed to delete project. Please check your permissions and try again.",
+        description: `Failed to delete project: ${errorMessage}`,
         variant: "destructive",
       });
     }
@@ -146,6 +154,25 @@ const BrokerageOwnerDashboard = () => {
       <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-lg">Loading dashboard...</div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout title="Brokerage Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2 text-destructive">Error Loading Dashboard</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       </MainLayout>
     );

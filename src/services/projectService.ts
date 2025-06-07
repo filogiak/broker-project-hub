@@ -44,9 +44,14 @@ export const createProject = async (projectData: ProjectData): Promise<Project> 
     .select('id')
     .eq('id', projectData.brokerageId)
     .eq('owner_id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (brokerageError || !brokerage) {
+  if (brokerageError) {
+    console.error('Brokerage verification error:', brokerageError);
+    throw new Error('Failed to verify brokerage ownership');
+  }
+
+  if (!brokerage) {
     throw new Error('You can only create projects in your own brokerage');
   }
 
@@ -80,11 +85,15 @@ export const getProject = async (projectId: string): Promise<Project> => {
     .from('projects')
     .select('*')
     .eq('id', projectId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Get project error:', error);
     throw error;
+  }
+
+  if (!data) {
+    throw new Error('Project not found or access denied');
   }
 
   console.log('Project retrieved:', data);
