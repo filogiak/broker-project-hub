@@ -1,10 +1,11 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
-import Auth from '@/pages/Auth';
+import AuthPage from '@/pages/Auth/AuthPage';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
 
@@ -12,7 +13,7 @@ const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<Auth />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route 
           path="/brokerage/:brokerageId" 
           element={

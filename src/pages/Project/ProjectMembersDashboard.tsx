@@ -16,7 +16,7 @@ type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
     first_name: string | null;
     last_name: string | null;
     email: string;
-  };
+  } | null;
 };
 
 const ProjectMembersDashboard = () => {
@@ -64,12 +64,12 @@ const ProjectMembersDashboard = () => {
 
         setProject(projectData);
 
-        // Load project members with profile information
+        // Load project members with profile information using proper join syntax
         const { data: membersData, error: membersError } = await supabase
           .from('project_members')
           .select(`
             *,
-            profiles:user_id (
+            profiles!inner (
               first_name,
               last_name,
               email
@@ -113,6 +113,7 @@ const ProjectMembersDashboard = () => {
 
   const formatUserName = (member: ProjectMember) => {
     const profile = member.profiles;
+    if (!profile) return 'Unknown User';
     if (profile.first_name || profile.last_name) {
       return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     }
@@ -163,7 +164,7 @@ const ProjectMembersDashboard = () => {
 
   return (
     <MainLayout 
-      title={`${project.name} - Project Dashboard`}
+      title={`${project.name} - Project Members`}
       userEmail={user?.email || ''} 
       onLogout={handleLogout}
     >
@@ -173,14 +174,14 @@ const ProjectMembersDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-primary">{project.name}</h1>
             <p className="text-muted-foreground mt-1">
-              {project.description || 'Project dashboard showing active members'}
+              Project Members Dashboard
             </p>
           </div>
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(`/project/${projectId}`)}
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
           >
-            Back
+            Back to Project
           </button>
         </div>
 
@@ -215,7 +216,7 @@ const ProjectMembersDashboard = () => {
                       <TableCell className="font-medium">
                         {formatUserName(member)}
                       </TableCell>
-                      <TableCell>{member.profiles.email}</TableCell>
+                      <TableCell>{member.profiles?.email || 'Unknown'}</TableCell>
                       <TableCell>{formatRole(member.role)}</TableCell>
                       <TableCell>{formatDate(member.joined_at)}</TableCell>
                     </TableRow>
