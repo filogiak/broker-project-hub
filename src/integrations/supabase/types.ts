@@ -52,6 +52,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invitation_code: string | null
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -64,6 +65,7 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invitation_code?: string | null
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -76,6 +78,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invitation_code?: string | null
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -286,6 +289,10 @@ export type Database = {
           brokerage_uuid: string
           project_description?: string
         }
+        Returns: string
+      }
+      generate_invitation_code: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_all_brokerage_owners: {

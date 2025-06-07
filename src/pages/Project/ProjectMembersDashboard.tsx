@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import AddMemberModal from '@/components/project/AddMemberModal';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -30,6 +31,7 @@ const ProjectMembersDashboard = () => {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProjectData = async () => {
@@ -98,6 +100,40 @@ const ProjectMembersDashboard = () => {
     loadProjectData();
   }, [user, authLoading, projectId, navigate]);
 
+  const loadMembers = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data: membersData, error: membersError } = await supabase
+        .from('project_members')
+        .select(`
+          *,
+          profiles!project_members_user_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('project_id', projectId)
+        .order('joined_at', { ascending: false });
+
+      if (membersError) {
+        console.error('Error loading project members:', membersError);
+        return;
+      }
+
+      setMembers(membersData || []);
+    } catch (error) {
+      console.error('Error loading members:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (project) {
+      loadMembers();
+    }
+  }, [project, projectId]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -128,6 +164,11 @@ const ProjectMembersDashboard = () => {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not joined yet';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleMemberAdded = () => {
+    loadMembers(); // Refresh the members list
+    setIsAddMemberModalOpen(false);
   };
 
   if (authLoading || loading) {
@@ -186,17 +227,33 @@ const ProjectMembersDashboard = () => {
         {/* Project Members */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Active Project Members
-              <span className="text-sm font-normal text-muted-foreground">
-                {members.length} {members.length === 1 ? 'member' : 'members'}
-              </span>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between">
+                Active Project Members
+                <span className="text-sm font-normal text-muted-foreground">
+                  {members.length} {members.length === 1 ? 'member' : 'members'}
+                </span>
+              </CardTitle>
+              <Button 
+                onClick={() => setIsAddMemberModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Member
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {members.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">No project members found.</p>
+                <p className="text-muted-foreground mb-4">No project members found.</p>
+                <Button 
+                  onClick={() => setIsAddMemberModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add First Member
+                </Button>
               </div>
             ) : (
               <Table>
@@ -224,6 +281,14 @@ const ProjectMembersDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Add Member Modal */}
+        <AddMemberModal
+          isOpen={isAddMemberModalOpen}
+          onClose={() => setIsAddMemberModalOpen(false)}
+          projectId={projectId!}
+          onMemberAdded={handleMemberAdded}
+        />
       </div>
     </MainLayout>
   );

@@ -8,12 +8,14 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AuthPage from '@/pages/Auth/AuthPage';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
+import InvitePage from '@/pages/Invite/InvitePage';
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/invite" element={<InvitePage />} />
         <Route 
           path="/brokerage/:brokerageId" 
           element={
@@ -40,8 +42,6 @@ const AppRouter = () => {
             </ProtectedRoute>
           } 
         />
-        
-        {/* Add the new project members dashboard route */}
         <Route 
           path="/project/:projectId/members" 
           element={
