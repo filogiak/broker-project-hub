@@ -1,14 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import PersonalProfileSection from '@/components/brokerage/PersonalProfileSection';
 import OrganizationSection from '@/components/brokerage/OrganizationSection';
 import ProjectsSection from '@/components/brokerage/ProjectsSection';
+import DashboardStats from '@/components/brokerage/DashboardStats';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getBrokerageByOwner, getBrokerageProjects } from '@/services/brokerageService';
+import { createProject, deleteProject } from '@/services/projectService';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -17,7 +20,9 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const BrokerageOwnerDashboard = () => {
   const { brokerageId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
@@ -77,9 +82,51 @@ const BrokerageOwnerDashboard = () => {
     setBrokerage(updatedBrokerage);
   };
 
-  const handleCreateProject = () => {
-    // TODO: Implement project creation modal/form
-    console.log('Create new project clicked');
+  const handleCreateProject = async (projectData: { name: string; description?: string }) => {
+    if (!brokerage) return;
+
+    try {
+      const newProject = await createProject({
+        name: projectData.name,
+        description: projectData.description,
+        brokerageId: brokerage.id,
+      });
+
+      setProjects(prev => [newProject, ...prev]);
+      toast({
+        title: "Project Created",
+        description: `${projectData.name} has been created successfully.`,
+      });
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create project. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProject(projectId);
+      setProjects(prev => prev.filter(project => project.id !== projectId));
+      toast({
+        title: "Project Deleted",
+        description: "Project has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    navigate(`/project/${projectId}`);
   };
 
   if (loading) {
@@ -122,6 +169,9 @@ const BrokerageOwnerDashboard = () => {
           </div>
         </div>
 
+        {/* Dashboard Stats */}
+        <DashboardStats brokerageId={brokerage.id} projects={projects} />
+
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Personal Profile Section */}
@@ -144,6 +194,8 @@ const BrokerageOwnerDashboard = () => {
           projects={projects}
           brokerageId={brokerage.id}
           onCreateProject={handleCreateProject}
+          onDeleteProject={handleDeleteProject}
+          onOpenProject={handleOpenProject}
         />
       </div>
     </MainLayout>

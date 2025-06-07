@@ -2,7 +2,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Users, Calendar } from 'lucide-react';
+import { Plus, FileText, Users, Calendar, Trash2, ExternalLink } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import CreateProjectModal from './CreateProjectModal';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -10,13 +12,31 @@ type Project = Database['public']['Tables']['projects']['Row'];
 interface ProjectsSectionProps {
   projects: Project[];
   brokerageId: string;
-  onCreateProject: () => void;
+  onCreateProject: (projectData: { name: string; description?: string }) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
+  onOpenProject: (projectId: string) => void;
 }
 
-const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSectionProps) => {
+const ProjectsSection = ({ 
+  projects, 
+  brokerageId, 
+  onCreateProject,
+  onDeleteProject,
+  onOpenProject
+}: ProjectsSectionProps) => {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleDeleteProject = async () => {
+    if (deleteProjectId) {
+      await onDeleteProject(deleteProjectId);
+      setDeleteProjectId(null);
+    }
   };
 
   return (
@@ -29,10 +49,10 @@ const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSec
               Projects
             </CardTitle>
             <CardDescription>
-              Manage mortgage projects and invite team members
+              Manage all mortgage projects for your brokerage
             </CardDescription>
           </div>
-          <Button onClick={onCreateProject} className="flex items-center gap-2">
+          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             New Project
           </Button>
@@ -46,7 +66,7 @@ const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSec
             <p className="text-muted-foreground mb-4">
               Create your first project to start managing mortgage applications
             </p>
-            <Button onClick={onCreateProject}>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create First Project
             </Button>
@@ -74,6 +94,8 @@ const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSec
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         project.status === 'active' 
                           ? 'bg-accent-yellow text-primary' 
+                          : project.status === 'pending_approval'
+                          ? 'bg-orange-200 text-orange-800'
                           : 'bg-gray-200 text-gray-700'
                       }`}>
                         {project.status}
@@ -81,12 +103,21 @@ const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSec
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <Users className="h-4 w-4 mr-2" />
-                      Manage Team
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => onOpenProject(project.id)}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open
                     </Button>
-                    <Button variant="outline" size="sm">
-                      View Details
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteProjectId(project.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -95,6 +126,31 @@ const ProjectsSection = ({ projects, brokerageId, onCreateProject }: ProjectsSec
           </div>
         )}
       </CardContent>
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateProject={onCreateProject}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteProjectId} onOpenChange={() => setDeleteProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
