@@ -358,6 +358,14 @@ export type Database = {
         Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean
       }
+      user_owns_project_brokerage: {
+        Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_owns_project_brokerage_simple: {
+        Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role:
