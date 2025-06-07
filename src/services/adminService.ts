@@ -47,6 +47,18 @@ export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
     throw new Error('User must be authenticated');
   }
 
+  // Verify superadmin role before proceeding
+  const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+  
+  if (roleError) {
+    console.error('Error checking superadmin role:', roleError);
+    throw new Error('Failed to verify permissions');
+  }
+
+  if (!isSuperadmin) {
+    throw new Error('Insufficient permissions: superadmin role required');
+  }
+
   const response = await supabase.functions.invoke('create-brokerage-owner', {
     body: data,
   });
@@ -56,7 +68,6 @@ export const createBrokerageOwner = async (data: CreateBrokerageOwnerData) => {
     throw new Error(response.error.message || 'Failed to create brokerage owner');
   }
 
-  // Parse the response data to get the actual error message
   if (response.data && typeof response.data === 'object' && 'error' in response.data) {
     console.error('Create brokerage owner API error:', response.data.error);
     throw new Error(response.data.error as string);
@@ -70,6 +81,18 @@ export const getAllBrokerageOwners = async (): Promise<BrokerageOwnerInfo[]> => 
   console.log('Getting all brokerage owners using secure function');
   
   try {
+    // First verify superadmin role
+    const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+    
+    if (roleError) {
+      console.error('Error checking superadmin role:', roleError);
+      throw new Error('Failed to verify permissions');
+    }
+
+    if (!isSuperadmin) {
+      throw new Error('Insufficient permissions: superadmin role required');
+    }
+
     const { data, error } = await supabase.rpc('get_all_brokerage_owners');
 
     if (error) {
@@ -89,6 +112,18 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
   console.log('Getting available brokerage owners using secure function');
   
   try {
+    // First verify superadmin role
+    const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+    
+    if (roleError) {
+      console.error('Error checking superadmin role:', roleError);
+      throw new Error('Failed to verify permissions');
+    }
+
+    if (!isSuperadmin) {
+      throw new Error('Insufficient permissions: superadmin role required');
+    }
+
     const { data, error } = await supabase.rpc('get_available_brokerage_owners');
 
     if (error) {
@@ -107,6 +142,18 @@ export const getAvailableBrokerageOwners = async (): Promise<AvailableOwner[]> =
 export const createBrokerageForOwner = async (data: CreateBrokerageData) => {
   console.log('Creating brokerage for owner:', data);
   
+  // First verify superadmin role
+  const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+  
+  if (roleError) {
+    console.error('Error checking superadmin role:', roleError);
+    throw new Error('Failed to verify permissions');
+  }
+
+  if (!isSuperadmin) {
+    throw new Error('Insufficient permissions: superadmin role required');
+  }
+
   const { data: brokerage, error: brokerageError } = await supabase
     .from('brokerages')
     .insert([{
@@ -139,6 +186,18 @@ export const createBrokerageForOwner = async (data: CreateBrokerageData) => {
 export const getAllBrokerages = async (): Promise<BrokerageInfo[]> => {
   console.log('Getting all brokerages');
   
+  // First verify superadmin role
+  const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+  
+  if (roleError) {
+    console.error('Error checking superadmin role:', roleError);
+    throw new Error('Failed to verify permissions');
+  }
+
+  if (!isSuperadmin) {
+    throw new Error('Insufficient permissions: superadmin role required');
+  }
+
   const { data, error } = await supabase
     .from('brokerages')
     .select(`
@@ -171,6 +230,19 @@ export const getTotalUsersCount = async (): Promise<number> => {
   console.log('Getting total users count');
   
   try {
+    // First verify superadmin role
+    const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+    
+    if (roleError) {
+      console.error('Error checking superadmin role:', roleError);
+      return 0;
+    }
+
+    if (!isSuperadmin) {
+      console.warn('Non-superadmin user attempting to get total users count');
+      return 0;
+    }
+
     const { count, error } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
@@ -184,7 +256,6 @@ export const getTotalUsersCount = async (): Promise<number> => {
     return count || 0;
   } catch (error) {
     console.error('getTotalUsersCount failed:', error);
-    // Return 0 as fallback instead of throwing
     return 0;
   }
 };
@@ -193,6 +264,19 @@ export const getTotalBrokeragesCount = async (): Promise<number> => {
   console.log('Getting total brokerages count');
   
   try {
+    // First verify superadmin role
+    const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+    
+    if (roleError) {
+      console.error('Error checking superadmin role:', roleError);
+      return 0;
+    }
+
+    if (!isSuperadmin) {
+      console.warn('Non-superadmin user attempting to get total brokerages count');
+      return 0;
+    }
+
     const { count, error } = await supabase
       .from('brokerages')
       .select('*', { count: 'exact', head: true });
@@ -206,7 +290,6 @@ export const getTotalBrokeragesCount = async (): Promise<number> => {
     return count || 0;
   } catch (error) {
     console.error('getTotalBrokeragesCount failed:', error);
-    // Return 0 as fallback instead of throwing
     return 0;
   }
 };
@@ -215,6 +298,19 @@ export const getTotalProjectsCount = async (): Promise<number> => {
   console.log('Getting total projects count');
   
   try {
+    // First verify superadmin role
+    const { data: isSuperadmin, error: roleError } = await supabase.rpc('is_superadmin');
+    
+    if (roleError) {
+      console.error('Error checking superadmin role:', roleError);
+      return 0;
+    }
+
+    if (!isSuperadmin) {
+      console.warn('Non-superadmin user attempting to get total projects count');
+      return 0;
+    }
+
     const { count, error } = await supabase
       .from('projects')
       .select('*', { count: 'exact', head: true });
@@ -228,7 +324,6 @@ export const getTotalProjectsCount = async (): Promise<number> => {
     return count || 0;
   } catch (error) {
     console.error('getTotalProjectsCount failed:', error);
-    // Return 0 as fallback instead of throwing
     return 0;
   }
 };

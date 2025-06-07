@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -31,6 +32,16 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
+  // If superadmin is one of the allowed roles, use the AdminPermissionCheck
+  if (allowedRoles.includes('superadmin')) {
+    return (
+      <AdminPermissionCheck fallback={<Navigate to={fallbackPath} replace />}>
+        {children}
+      </AdminPermissionCheck>
+    );
+  }
+
+  // For other roles, check user.roles as before
   const hasAllowedRole = user.roles.some(role => allowedRoles.includes(role));
 
   if (!hasAllowedRole) {
