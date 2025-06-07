@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,12 +65,12 @@ const ProjectMembersDashboard = () => {
 
         setProject(projectData);
 
-        // Load project members with profile information using proper join syntax
+        // Load project members with profile information using specific foreign key relationship
         const { data: membersData, error: membersError } = await supabase
           .from('project_members')
           .select(`
             *,
-            profiles!inner (
+            profiles!project_members_user_id_fkey (
               first_name,
               last_name,
               email
@@ -150,12 +151,9 @@ const ProjectMembersDashboard = () => {
             <p className="text-muted-foreground mb-4">
               {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
             </p>
-            <button 
-              onClick={() => navigate(-1)} 
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
+            <Button onClick={() => navigate(-1)} variant="outline">
               Go Back
-            </button>
+            </Button>
           </div>
         </div>
       </MainLayout>
@@ -177,16 +175,16 @@ const ProjectMembersDashboard = () => {
               Project Members Dashboard
             </p>
           </div>
-          <button 
+          <Button 
             onClick={() => navigate(`/project/${projectId}`)}
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
+            variant="outline"
           >
             Back to Project
-          </button>
+          </Button>
         </div>
 
         {/* Project Members */}
-        <Card className="card-primary">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Active Project Members
