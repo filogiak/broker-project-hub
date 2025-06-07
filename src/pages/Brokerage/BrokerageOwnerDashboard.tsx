@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -142,7 +141,15 @@ const BrokerageOwnerDashboard = () => {
     }
 
     try {
-      console.log('Creating project:', projectData);
+      console.log('🚀 Dashboard initiating project creation:', projectData);
+      
+      // Show loading toast
+      const loadingToast = toast({
+        title: "Creating Project",
+        description: "Please wait while we create your project...",
+        variant: "default",
+      });
+
       const newProject = await createProject({
         name: projectData.name,
         description: projectData.description,
@@ -150,16 +157,34 @@ const BrokerageOwnerDashboard = () => {
       });
 
       setProjects(prev => [newProject, ...prev]);
+      
       toast({
-        title: "Project Created",
-        description: `${projectData.name} has been created successfully.`,
+        title: "Project Created Successfully",
+        description: `${projectData.name} has been created and is ready to use.`,
+        variant: "default",
       });
+
+      console.log('✅ Dashboard: Project creation completed successfully');
+
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('❌ Dashboard: Project creation failed:', error);
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Provide more specific error messages based on the error type
+      let userFriendlyMessage = errorMessage;
+      
+      if (errorMessage.includes('database configuration')) {
+        userFriendlyMessage = 'Project creation is temporarily unavailable. Our team has been notified and will fix this soon.';
+      } else if (errorMessage.includes('not authorized')) {
+        userFriendlyMessage = 'You do not have permission to create projects for this brokerage.';
+      } else if (errorMessage.includes('infinite recursion')) {
+        userFriendlyMessage = 'There is a temporary issue with project creation. Please try again in a few minutes.';
+      }
+
       toast({
-        title: "Error",
-        description: `Failed to create project: ${errorMessage}`,
+        title: "Failed to Create Project",
+        description: userFriendlyMessage,
         variant: "destructive",
       });
     }

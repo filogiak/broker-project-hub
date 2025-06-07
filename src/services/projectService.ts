@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -9,32 +8,121 @@ export const createProject = async (projectData: {
   description?: string;
   brokerageId: string;
 }): Promise<Project> => {
-  console.log('Creating project:', projectData);
+  console.log('🚀 Starting project creation with data:', projectData);
   
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
+    console.error('❌ No authenticated user found');
     throw new Error('User must be authenticated to create projects');
   }
 
-  const { data, error } = await supabase
-    .from('projects')
-    .insert({
+  console.log('✅ User authenticated:', user.id);
+
+  // First, verify brokerage ownership
+  console.log('🔍 Verifying brokerage ownership for:', projectData.brokerageId);
+  const { data: brokerageCheck, error: brokerageError } = await supabase
+    .from('brokerages')
+    .select('id, owner_id, name')
+    .eq('id', projectData.brokerageId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  if (brokerageError) {
+    console.error('❌ Brokerage verification error:', brokerageError);
+    throw new Error(`Failed to verify brokerage ownership: ${brokerageError.message}`);
+  }
+
+  if (!brokerageCheck) {
+    console.error('❌ User is not owner of brokerage or brokerage not found');
+    throw new Error('You are not authorized to create projects for this brokerage');
+  }
+
+  console.log('✅ Brokerage ownership verified:', brokerageCheck);
+
+  // Try using the safe database function first
+  console.log('🛡️ Attempting to create project using safe database function...');
+  try {
+    const { data: functionResult, error: functionError } = await supabase
+      .rpc('create_project_safe', {
+        project_name: projectData.name,
+        project_description: projectData.description || null,
+        brokerage_id: projectData.brokerageId
+      });
+
+    if (functionError) {
+      console.warn('⚠️ Database function failed, falling back to direct insert:', functionError);
+      throw functionError; // Will trigger fallback
+    }
+
+    if (functionResult) {
+      console.log('✅ Project created successfully via database function, ID:', functionResult);
+      
+      // Fetch the created project
+      const { data: createdProject, error: fetchError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', functionResult)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching created project:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('🎉 Project creation completed successfully:', createdProject);
+      return createdProject;
+    }
+  } catch (functionError) {
+    console.warn('⚠️ Safe function approach failed, trying direct insert fallback...');
+  }
+
+  // Fallback: Direct insert approach with detailed logging
+  console.log('🔄 Using fallback direct insert approach...');
+  
+  try {
+    const insertData = {
       name: projectData.name,
       description: projectData.description,
       brokerage_id: projectData.brokerageId,
       created_by: user.id,
-    })
-    .select()
-    .single();
+      status: 'active' as const
+    };
 
-  if (error) {
-    console.error('Create project error:', error);
-    throw error;
+    console.log('📝 Inserting project with data:', insertData);
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Direct insert failed with error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+
+      // Special handling for infinite recursion error
+      if (error.message?.includes('infinite recursion')) {
+        console.error('🔄 Infinite recursion detected in RLS policy');
+        throw new Error('Project creation temporarily unavailable due to database configuration. Please contact support.');
+      }
+
+      throw error;
+    }
+
+    console.log('🎉 Project created successfully via direct insert:', data);
+    return data;
+
+  } catch (directError) {
+    console.error('❌ All project creation methods failed:', directError);
+    
+    const errorMessage = directError instanceof Error ? directError.message : 'Unknown error occurred';
+    throw new Error(`Failed to create project: ${errorMessage}`);
   }
-
-  console.log('Project created:', data);
-  return data;
 };
 
 export const deleteProject = async (projectId: string): Promise<void> => {
