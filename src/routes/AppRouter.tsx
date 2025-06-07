@@ -8,6 +8,7 @@ import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import AuthPage from '@/pages/Auth/AuthPage';
 import Dashboard from '@/pages/Dashboard/Dashboard';
 import BrokerageDashboard from '@/pages/Brokerage/BrokerageDashboard';
+import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ClientPortal from '@/pages/Client/ClientPortal';
@@ -37,6 +38,18 @@ const AppRouter = () => {
             <ProtectedRoute>
               <RoleBasedRoute allowedRoles={['superadmin', 'brokerage_owner', 'broker_assistant']}>
                 <BrokerageDashboard />
+              </RoleBasedRoute>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Brokerage Owner Dashboard - dedicated route for owners */}
+        <Route 
+          path="/brokerage-owner" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedRoute allowedRoles={['brokerage_owner']}>
+                <BrokerageOwnerDashboard />
               </RoleBasedRoute>
             </ProtectedRoute>
           } 
