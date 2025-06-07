@@ -8,6 +8,7 @@ import ProjectsSection from '@/components/brokerage/ProjectsSection';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getBrokerageByOwner, getBrokerageProjects } from '@/services/brokerageService';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -27,6 +28,19 @@ const BrokerageOwnerDashboard = () => {
       if (!user?.id) return;
 
       try {
+        // Load user profile from database
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error loading profile:', profileError);
+        } else {
+          setUserProfile(profileData);
+        }
+
         // Load user's brokerage
         const brokerageData = await getBrokerageByOwner(user.id);
         setBrokerage(brokerageData);
@@ -35,11 +49,6 @@ const BrokerageOwnerDashboard = () => {
         if (brokerageData) {
           const projectsData = await getBrokerageProjects(brokerageData.id);
           setProjects(projectsData);
-        }
-
-        // Set user profile from auth context
-        if (user.profile) {
-          setUserProfile(user.profile);
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
