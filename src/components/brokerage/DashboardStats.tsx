@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Clock, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { getBrokerageProjectStats } from '@/services/projectService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -19,33 +19,18 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // Get all project IDs for this brokerage
-        const projectIds = projects.map(p => p.id);
-
-        if (projectIds.length > 0) {
-          // Count invited users across all projects
-          const { data: invitations, error } = await supabase
-            .from('invitations')
-            .select('email')
-            .in('project_id', projectIds);
-
-          if (error) {
-            console.error('Error loading invitations:', error);
-          } else {
-            // Count unique invited users
-            const uniqueEmails = new Set(invitations?.map(inv => inv.email) || []);
-            setInvitedUsers(uniqueEmails.size);
-          }
-        }
+        const stats = await getBrokerageProjectStats(brokerageId);
+        setInvitedUsers(stats.invitedUsers);
       } catch (error) {
         console.error('Error loading stats:', error);
+        setInvitedUsers(0);
       } finally {
         setLoading(false);
       }
     };
 
     loadStats();
-  }, [projects]);
+  }, [brokerageId, projects.length]); // Refresh when projects change
 
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const approvalsDue = projects.filter(p => p.status === 'pending_approval').length;

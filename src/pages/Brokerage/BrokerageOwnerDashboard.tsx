@@ -46,24 +46,29 @@ const BrokerageOwnerDashboard = () => {
           setUserProfile(profileData);
         }
 
-        // Load user's brokerage
+        // Load user's brokerage (RLS will ensure they can only see their own)
         const brokerageData = await getBrokerageByOwner(user.id);
         setBrokerage(brokerageData);
 
-        // Load projects if brokerage exists
+        // Load projects if brokerage exists (RLS will ensure proper access)
         if (brokerageData) {
           const projectsData = await getBrokerageProjects(brokerageData.id);
           setProjects(projectsData);
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. Please try refreshing the page.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadDashboardData();
-  }, [user]);
+  }, [user, toast]);
 
   const handleLogout = async () => {
     try {
@@ -83,7 +88,14 @@ const BrokerageOwnerDashboard = () => {
   };
 
   const handleCreateProject = async (projectData: { name: string; description?: string }) => {
-    if (!brokerage) return;
+    if (!brokerage) {
+      toast({
+        title: "Error",
+        description: "No brokerage found. Cannot create project.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const newProject = await createProject({
@@ -101,7 +113,7 @@ const BrokerageOwnerDashboard = () => {
       console.error('Error creating project:', error);
       toast({
         title: "Error",
-        description: "Failed to create project. Please try again.",
+        description: "Failed to create project. Please check your permissions and try again.",
         variant: "destructive",
       });
     }
@@ -119,7 +131,7 @@ const BrokerageOwnerDashboard = () => {
       console.error('Error deleting project:', error);
       toast({
         title: "Error",
-        description: "Failed to delete project. Please try again.",
+        description: "Failed to delete project. Please check your permissions and try again.",
         variant: "destructive",
       });
     }
@@ -145,7 +157,7 @@ const BrokerageOwnerDashboard = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">No Brokerage Found</h2>
-            <p className="text-muted-foreground">You don't have a brokerage associated with your account.</p>
+            <p className="text-muted-foreground">You don't have a brokerage associated with your account or you don't have permission to access it.</p>
           </div>
         </div>
       </MainLayout>

@@ -90,3 +90,21 @@ export const updateOwnerProfile = async (userId: string, updates: {
   console.log('Owner profile updated:', data);
   return data;
 };
+
+export const validateBrokerageOwnership = async (brokerageId: string, ownerId: string): Promise<boolean> => {
+  console.log('Validating brokerage ownership:', brokerageId, ownerId);
+  
+  const { data, error } = await supabase
+    .from('brokerages')
+    .select('id')
+    .eq('id', brokerageId)
+    .eq('owner_id', ownerId)
+    .single();
+
+  if (error) {
+    console.error('Validate brokerage ownership error:', error);
+    return false;
+  }
+
+  return !!data;
+};

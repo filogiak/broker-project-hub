@@ -38,6 +38,18 @@ export const createProject = async (projectData: ProjectData): Promise<Project> 
     throw new Error('User must be authenticated to create a project');
   }
 
+  // Verify user owns the brokerage
+  const { data: brokerage, error: brokerageError } = await supabase
+    .from('brokerages')
+    .select('id')
+    .eq('id', projectData.brokerageId)
+    .eq('owner_id', user.id)
+    .single();
+
+  if (brokerageError || !brokerage) {
+    throw new Error('You can only create projects in your own brokerage');
+  }
+
   const insertData: ProjectInsert = {
     name: projectData.name,
     description: projectData.description,
@@ -79,17 +91,24 @@ export const getProject = async (projectId: string): Promise<Project> => {
   return data;
 };
 
-export const getProjectsByBroker = async (brokerId: string): Promise<Project[]> => {
-  console.log('Getting projects by broker:', brokerId);
+export const getProjectsByBrokerageOwner = async (ownerId: string): Promise<Project[]> => {
+  console.log('Getting projects by brokerage owner:', ownerId);
   
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
-    .or(`created_by.eq.${brokerId},project_members.user_id.eq.${brokerId}`)
+    .select(`
+      *,
+      brokerages!inner(
+        id,
+        name,
+        owner_id
+      )
+    `)
+    .eq('brokerages.owner_id', ownerId)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Get projects by broker error:', error);
+    console.error('Get projects by brokerage owner error:', error);
     throw error;
   }
 
@@ -124,6 +143,29 @@ export const updateProject = async (projectId: string, projectData: Partial<Proj
 export const deleteProject = async (projectId: string): Promise<void> => {
   console.log('Deleting project:', projectId);
   
+  // First delete related project members
+  const { error: membersError } = await supabase
+    .from('project_members')
+    .delete()
+    .eq('project_id', projectId);
+
+  if (membersError) {
+    console.error('Delete project members error:', membersError);
+    throw membersError;
+  }
+
+  // Delete related invitations
+  const { error: invitationsError } = await supabase
+    .from('invitations')
+    .delete()
+    .eq('project_id', projectId);
+
+  if (invitationsError) {
+    console.error('Delete project invitations error:', invitationsError);
+    throw invitationsError;
+  }
+
+  // Finally delete the project
   const { error } = await supabase
     .from('projects')
     .delete()
@@ -140,11 +182,21 @@ export const deleteProject = async (projectId: string): Promise<void> => {
 export const addClientToProject = async (projectId: string, clientData: ClientData) => {
   console.log('Adding client to project:', projectId, clientData);
   
-  // Create invitation for client
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  // Verify user can access this project
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .single();
+
+  if (projectError || !project) {
+    throw new Error('Project not found or access denied');
   }
 
   const { data, error } = await supabase
@@ -170,11 +222,21 @@ export const addClientToProject = async (projectId: string, clientData: ClientDa
 export const addAgentToProject = async (projectId: string, agentData: AgentData) => {
   console.log('Adding agent to project:', projectId, agentData);
   
-  // Create invitation for agent
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  // Verify user can access this project
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .single();
+
+  if (projectError || !project) {
+    throw new Error('Project not found or access denied');
   }
 
   const { data, error } = await supabase
@@ -238,4 +300,67 @@ export const removeProjectMember = async (projectId: string, userId: string): Pr
   }
 
   console.log('Project member removed successfully');
+};
+
+export const getProjectInvitations = async (projectId: string) => {
+  console.log('Getting project invitations:', projectId);
+  
+  const { data, error } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('project_id', projectId)
+    .is('accepted_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Get project invitations error:', error);
+    throw error;
+  }
+
+  console.log('Project invitations retrieved:', data);
+  return data || [];
+};
+
+export const getBrokerageProjectStats = async (brokerageId: string) => {
+  console.log('Getting brokerage project stats:', brokerageId);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Get all project IDs for this brokerage (RLS will ensure user can only see their own)
+  const { data: projects, error: projectsError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('brokerage_id', brokerageId);
+
+  if (projectsError) {
+    console.error('Error loading projects for stats:', projectsError);
+    throw projectsError;
+  }
+
+  const projectIds = projects?.map(p => p.id) || [];
+  
+  if (projectIds.length === 0) {
+    return { invitedUsers: 0 };
+  }
+
+  // Count invited users across all projects (RLS will ensure proper access)
+  const { data: invitations, error: invitationsError } = await supabase
+    .from('invitations')
+    .select('email')
+    .in('project_id', projectIds);
+
+  if (invitationsError) {
+    console.error('Error loading invitations for stats:', invitationsError);
+    throw invitationsError;
+  }
+
+  // Count unique invited users
+  const uniqueEmails = new Set(invitations?.map(inv => inv.email) || []);
+  
+  console.log('Brokerage project stats retrieved:', { invitedUsers: uniqueEmails.size });
+  return { invitedUsers: uniqueEmails.size };
 };
