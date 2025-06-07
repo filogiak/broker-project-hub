@@ -32,6 +32,10 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
+  console.log('RoleBasedRoute - User:', user.email);
+  console.log('RoleBasedRoute - User roles:', user.roles);
+  console.log('RoleBasedRoute - Allowed roles:', allowedRoles);
+
   // If superadmin is one of the allowed roles, use the AdminPermissionCheck
   if (allowedRoles.includes('superadmin')) {
     return (
@@ -43,8 +47,10 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
 
   // For other roles, check user.roles as before
   const hasAllowedRole = user.roles.some(role => allowedRoles.includes(role));
+  console.log('RoleBasedRoute - Has allowed role:', hasAllowedRole);
 
   if (!hasAllowedRole) {
+    console.log('RoleBasedRoute - Access denied, redirecting to:', fallbackPath);
     return <Navigate to={fallbackPath} replace />;
   }
 
