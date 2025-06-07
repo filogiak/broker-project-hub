@@ -19,105 +19,61 @@ export const createProject = async (projectData: {
 
   console.log('✅ User authenticated:', user.id);
 
-  // First, verify brokerage ownership with detailed logging
-  console.log('🔍 Verifying brokerage ownership for:', projectData.brokerageId);
-  const { data: brokerageCheck, error: brokerageError } = await supabase
-    .from('brokerages')
-    .select('id, owner_id, name')
-    .eq('id', projectData.brokerageId)
-    .eq('owner_id', user.id)
-    .maybeSingle();
-
-  if (brokerageError) {
-    console.error('❌ Brokerage verification error:', brokerageError);
-    throw new Error(`Failed to verify brokerage ownership: ${brokerageError.message}`);
-  }
-
-  if (!brokerageCheck) {
-    console.error('❌ User is not owner of brokerage or brokerage not found');
-    throw new Error('You are not authorized to create projects for this brokerage');
-  }
-
-  console.log('✅ Brokerage ownership verified:', brokerageCheck);
-
-  // Check current RLS policies by trying a simple select first
-  console.log('🔍 Testing RLS policies with simple project select...');
-  try {
-    const { data: testProjects, error: testError } = await supabase
-      .from('projects')
-      .select('id, name')
-      .eq('brokerage_id', projectData.brokerageId)
-      .limit(1);
-    
-    if (testError) {
-      console.error('❌ RLS test failed:', testError);
-    } else {
-      console.log('✅ RLS test passed, found projects:', testProjects?.length || 0);
-    }
-  } catch (rlsTestError) {
-    console.error('❌ RLS test exception:', rlsTestError);
-  }
-
-  // Direct insert approach with extensive logging
-  console.log('📝 Attempting direct insert approach...');
+  // Use the safe database function that handles RLS properly
+  console.log('🛡️ Creating project using safe database function...');
   
   try {
-    const insertData = {
-      name: projectData.name,
-      description: projectData.description || null,
-      brokerage_id: projectData.brokerageId,
-      created_by: user.id,
-      status: 'active' as const
-    };
-
-    console.log('📋 Insert data prepared:', insertData);
-    console.log('🎯 About to execute INSERT operation...');
-
-    const { data, error } = await supabase
-      .from('projects')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Direct insert failed with detailed error:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        insertData: insertData
+    const { data: projectId, error: functionError } = await supabase
+      .rpc('create_project_safe', {
+        project_name: projectData.name,
+        brokerage_uuid: projectData.brokerageId,
+        project_description: projectData.description || null
       });
 
-      // Check if it's the infinite recursion error
-      if (error.message?.includes('infinite recursion')) {
-        console.error('🔄 Infinite recursion detected in RLS policy');
-        
-        // Let's try to understand which policy is causing the issue
-        console.log('🔍 Checking user roles and permissions...');
-        try {
-          const { data: userRoles, error: rolesError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id);
-          
-          console.log('👤 User roles:', userRoles, rolesError);
-        } catch (rolesCheckError) {
-          console.error('❌ Failed to check user roles:', rolesCheckError);
-        }
-
-        throw new Error('Project creation temporarily unavailable due to database configuration. Please contact support.');
-      }
-
-      throw error;
+    if (functionError) {
+      console.error('❌ Safe function failed:', functionError);
+      throw functionError;
     }
 
-    console.log('🎉 Project created successfully via direct insert:', data);
-    return data;
+    if (!projectId) {
+      console.error('❌ No project ID returned from function');
+      throw new Error('Failed to create project - no ID returned');
+    }
 
-  } catch (directError) {
-    console.error('❌ All project creation methods failed:', directError);
+    console.log('✅ Project created successfully with ID:', projectId);
     
-    const errorMessage = directError instanceof Error ? directError.message : 'Unknown error occurred';
+    // Fetch the created project
+    const { data: createdProject, error: fetchError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ Error fetching created project:', fetchError);
+      throw fetchError;
+    }
+
+    if (!createdProject) {
+      console.error('❌ Created project not found');
+      throw new Error('Project was created but could not be retrieved');
+    }
+
+    console.log('🎉 Project creation completed successfully:', createdProject);
+    return createdProject;
+
+  } catch (error) {
+    console.error('❌ Project creation failed:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    // Provide user-friendly error messages
+    if (errorMessage.includes('not authorized')) {
+      throw new Error('You do not have permission to create projects for this brokerage.');
+    } else if (errorMessage.includes('must be authenticated')) {
+      throw new Error('You must be logged in to create projects.');
+    }
+    
     throw new Error(`Failed to create project: ${errorMessage}`);
   }
 };

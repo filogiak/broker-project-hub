@@ -280,6 +280,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_project_safe: {
+        Args: {
+          project_name: string
+          brokerage_uuid: string
+          project_description?: string
+        }
+        Returns: string
+      }
       get_all_brokerage_owners: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -331,7 +339,19 @@ export type Database = {
         Returns: boolean
       }
       user_can_access_project: {
-        Args: { project_id: string; user_id?: string }
+        Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_is_project_member: {
+        Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_is_superadmin: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
+      user_owns_brokerage: {
+        Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean
       }
     }
