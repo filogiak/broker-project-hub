@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +39,7 @@ const Dashboard = () => {
     case 'brokerage_owner':
       // Check if brokerage owner has a brokerage
       if (user.brokerageId) {
-        return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
+        return <Navigate to="/brokerage-owner" replace />;
       } else {
         // Show form to create brokerage
         return (
