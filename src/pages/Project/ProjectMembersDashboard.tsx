@@ -1,221 +1,296 @@
-
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import MainLayout from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, Mail, Phone, Calendar, Settings } from 'lucide-react';
-import EmailInvitationModal from '@/components/project/EmailInvitationModal';
-import AddMemberModal from '@/components/project/AddMemberModal';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { logout } from '@/services/authService';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import AddMemberModal from '@/components/project/AddMemberModal';
 import type { Database } from '@/integrations/supabase/types';
 
-type ProjectMember = {
-  id: string;
-  user_id: string;
-  role: Database['public']['Enums']['user_role'];
-  joined_at: string | null;
+type Project = Database['public']['Tables']['projects']['Row'];
+type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
   profiles: {
     first_name: string | null;
     last_name: string | null;
     email: string;
-    phone: string | null;
-  };
+  } | null;
 };
 
 const ProjectMembersDashboard = () => {
-  const { id: projectId } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showCodeModal, setShowCodeModal] = useState(false);
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  
+  const [project, setProject] = useState<Project | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
-  const { data: members, isLoading, refetch } = useQuery({
-    queryKey: ['project-members', projectId],
-    queryFn: async () => {
-      if (!projectId) throw new Error('Project ID is required');
+  useEffect(() => {
+    const loadProjectData = async () => {
+      if (authLoading) return;
       
-      const { data, error } = await supabase
+      if (!user?.id) {
+        navigate('/auth');
+        return;
+      }
+
+      if (!projectId) {
+        setError('No project ID provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Load project details
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .single();
+
+        if (projectError) {
+          console.error('Error loading project:', projectError);
+          setError('Failed to load project details');
+          return;
+        }
+
+        setProject(projectData);
+
+        // Load project members with profile information using specific foreign key relationship
+        const { data: membersData, error: membersError } = await supabase
+          .from('project_members')
+          .select(`
+            *,
+            profiles!project_members_user_id_fkey (
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('project_id', projectId)
+          .order('joined_at', { ascending: false });
+
+        if (membersError) {
+          console.error('Error loading project members:', membersError);
+          setError('Failed to load project members');
+          return;
+        }
+
+        setMembers(membersData || []);
+
+      } catch (error) {
+        console.error('Error loading project data:', error);
+        setError('An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProjectData();
+  }, [user, authLoading, projectId, navigate]);
+
+  const loadMembers = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data: membersData, error: membersError } = await supabase
         .from('project_members')
         .select(`
-          id,
-          user_id,
-          role,
-          joined_at,
+          *,
           profiles!project_members_user_id_fkey (
             first_name,
             last_name,
-            email,
-            phone
+            email
           )
         `)
         .eq('project_id', projectId)
         .order('joined_at', { ascending: false });
 
-      if (error) throw error;
-      return data as ProjectMember[];
-    },
-    enabled: !!projectId
-  });
+      if (membersError) {
+        console.error('Error loading project members:', membersError);
+        return;
+      }
 
-  const { data: project } = useQuery({
-    queryKey: ['project', projectId],
-    queryFn: async () => {
-      if (!projectId) throw new Error('Project ID is required');
-      
-      const { data, error } = await supabase
-        .from('projects')
-        .select('name, description')
-        .eq('id', projectId)
-        .single();
+      setMembers(membersData || []);
+    } catch (error) {
+      console.error('Error loading members:', error);
+    }
+  };
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!projectId
-  });
+  useEffect(() => {
+    if (project) {
+      loadMembers();
+    }
+  }, [project, projectId]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "Failed to logout properly. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatUserName = (member: ProjectMember) => {
+    const profile = member.profiles;
+    if (!profile) return 'Unknown User';
+    if (profile.first_name || profile.last_name) {
+      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    }
+    return profile.email;
+  };
 
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Pending';
+    if (!dateString) return 'Not joined yet';
     return new Date(dateString).toLocaleDateString();
   };
 
   const handleMemberAdded = () => {
-    refetch();
+    loadMembers(); // Refresh the members list
+    setIsAddMemberModalOpen(false);
   };
 
-  if (isLoading) {
+  if (authLoading || loading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="grid gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
+      <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-lg">Loading project dashboard...</div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <MainLayout title="Project Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2 text-destructive">
+              {error ? 'Project Access Issue' : 'Project Not Found'}
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
+            </p>
+            <Button onClick={() => navigate(-1)} variant="outline">
+              Go Back
+            </Button>
           </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8" />
-            Project Members
-          </h1>
-          <p className="text-muted-foreground">
-            Manage members for {project?.name || 'this project'}
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button onClick={() => setShowEmailModal(true)} className="gap-2">
-            <Mail className="h-4 w-4" />
-            Send Email Invitation
-          </Button>
-          <Button onClick={() => setShowCodeModal(true)} variant="outline" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Generate Code (Legacy)
+    <MainLayout 
+      title={`${project.name} - Project Members`}
+      userEmail={user?.email || ''} 
+      onLogout={handleLogout}
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-primary">{project.name}</h1>
+            <p className="text-muted-foreground mt-1">
+              Project Members Dashboard
+            </p>
+          </div>
+          <Button 
+            onClick={() => navigate(`/project/${projectId}`)}
+            variant="outline"
+          >
+            Back to Project
           </Button>
         </div>
-      </div>
 
-      {/* Members List */}
-      <div className="grid gap-4">
-        {members?.map((member) => (
-          <Card key={member.id}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-primary" />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">
-                        {member.profiles.first_name && member.profiles.last_name
-                          ? `${member.profiles.first_name} ${member.profiles.last_name}`
-                          : 'Name not provided'
-                        }
-                      </h3>
-                      <Badge variant="secondary">
-                        {formatRole(member.role)}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-4 w-4" />
-                        {member.profiles.email}
-                      </div>
-                      
-                      {member.profiles.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-4 w-4" />
-                          {member.profiles.phone}
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        Joined: {formatDate(member.joined_at)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {(!members || members.length === 0) && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No members yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Start building your team by inviting members to this project.
-              </p>
-              <Button onClick={() => setShowEmailModal(true)} className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Invite First Member
+        {/* Project Members */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between">
+                Active Project Members
+                <span className="text-sm font-normal text-muted-foreground">
+                  {members.length} {members.length === 1 ? 'member' : 'members'}
+                </span>
+              </CardTitle>
+              <Button 
+                onClick={() => setIsAddMemberModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Member
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {members.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No project members found.</p>
+                <Button 
+                  onClick={() => setIsAddMemberModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add First Member
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Joined Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        {formatUserName(member)}
+                      </TableCell>
+                      <TableCell>{member.profiles?.email || 'Unknown'}</TableCell>
+                      <TableCell>{formatRole(member.role)}</TableCell>
+                      <TableCell>{formatDate(member.joined_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Modals */}
-      {projectId && (
-        <>
-          <EmailInvitationModal
-            isOpen={showEmailModal}
-            onClose={() => setShowEmailModal(false)}
-            projectId={projectId}
-            onMemberAdded={handleMemberAdded}
-          />
-          
-          <AddMemberModal
-            isOpen={showCodeModal}
-            onClose={() => setShowCodeModal(false)}
-            projectId={projectId}
-            onMemberAdded={handleMemberAdded}
-          />
-        </>
-      )}
-    </div>
+        {/* Add Member Modal */}
+        <AddMemberModal
+          isOpen={isAddMemberModalOpen}
+          onClose={() => setIsAddMemberModalOpen(false)}
+          projectId={projectId!}
+          onMemberAdded={handleMemberAdded}
+        />
+      </div>
+    </MainLayout>
   );
 };
 
