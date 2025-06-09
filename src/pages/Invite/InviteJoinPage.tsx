@@ -7,14 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { decryptInvitationData, type InvitationData } from '@/utils/invitationCrypto';
+import { validateInvitationToken } from '@/services/invitationService';
+import type { Database } from '@/integrations/supabase/types';
+
+type Invitation = Database['public']['Tables']['invitations']['Row'];
 
 const InviteJoinPage = () => {
   const { token } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,6 +30,7 @@ const InviteJoinPage = () => {
   useEffect(() => {
     const validateToken = async () => {
       if (!token) {
+        console.error('❌ [INVITE JOIN] No token provided');
         setLoading(false);
         return;
       }
@@ -34,39 +38,23 @@ const InviteJoinPage = () => {
       try {
         console.log('🔍 [INVITE JOIN] Validating invitation token');
         
-        // Decrypt token to get invitation data
-        const data = decryptInvitationData(token);
-        if (!data) {
+        // Use the invitation service to validate the token
+        const validInvitation = await validateInvitationToken(token);
+        
+        if (!validInvitation) {
           console.error('❌ [INVITE JOIN] Invalid or expired token');
           toast({
             title: "Invalid Invitation",
-            description: "This invitation link is invalid or has expired.",
+            description: "This invitation link is invalid, expired, or has already been used.",
             variant: "destructive",
           });
+          setInvitation(null);
+          setLoading(false);
           return;
         }
 
-        // Verify invitation still exists and is valid in database
-        const { data: invitation, error } = await supabase
-          .from('invitations')
-          .select('*')
-          .eq('encrypted_token', token)
-          .eq('email', data.email)
-          .is('used_at', null)
-          .single();
-
-        if (error || !invitation) {
-          console.error('❌ [INVITE JOIN] Invitation not found or already used:', error);
-          toast({
-            title: "Invalid Invitation",
-            description: "This invitation has already been used or is no longer valid.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        console.log('✅ [INVITE JOIN] Valid invitation found:', data);
-        setInvitationData(data);
+        console.log('✅ [INVITE JOIN] Valid invitation found:', validInvitation);
+        setInvitation(validInvitation);
 
       } catch (error) {
         console.error('❌ [INVITE JOIN] Error validating token:', error);
@@ -75,6 +63,7 @@ const InviteJoinPage = () => {
           description: "Failed to validate invitation. Please try again.",
           variant: "destructive",
         });
+        setInvitation(null);
       } finally {
         setLoading(false);
       }
@@ -86,7 +75,7 @@ const InviteJoinPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!invitationData) return;
+    if (!invitation) return;
 
     if (formData.password !== formData.confirmPassword) {
       toast({
@@ -109,11 +98,11 @@ const InviteJoinPage = () => {
     setIsSubmitting(true);
 
     try {
-      console.log('👤 [INVITE JOIN] Creating account for:', invitationData.email);
+      console.log('👤 [INVITE JOIN] Creating account for:', invitation.email);
 
-      // Create user account (no email confirmation needed since they clicked the email link)
+      // Create user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: invitationData.email,
+        email: invitation.email,
         password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
@@ -145,7 +134,7 @@ const InviteJoinPage = () => {
         .from('profiles')
         .insert({
           id: authData.user.id,
-          email: invitationData.email,
+          email: invitation.email,
           first_name: formData.firstName,
           last_name: formData.lastName,
         });
@@ -160,7 +149,7 @@ const InviteJoinPage = () => {
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: invitationData.role as any,
+          role: invitation.role as any,
         });
 
       if (roleError) {
@@ -168,30 +157,32 @@ const InviteJoinPage = () => {
         // Continue if role already exists
       }
 
-      // Add to project
-      const { error: memberError } = await supabase
-        .from('project_members')
-        .insert({
-          project_id: invitationData.projectId,
-          user_id: authData.user.id,
-          role: invitationData.role as any,
-          invited_by: invitationData.invitedBy,
-          joined_at: new Date().toISOString(),
-        });
+      // Add to project if project_id exists
+      if (invitation.project_id) {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: invitation.project_id,
+            user_id: authData.user.id,
+            role: invitation.role as any,
+            invited_by: invitation.invited_by,
+            joined_at: new Date().toISOString(),
+          });
 
-      if (memberError) {
-        console.error('❌ [INVITE JOIN] Project member error:', memberError);
-        // Continue if already a member
+        if (memberError) {
+          console.error('❌ [INVITE JOIN] Project member error:', memberError);
+          // Continue if already a member
+        }
       }
 
       // Mark invitation as used
       const { error: inviteError } = await supabase
         .from('invitations')
-        .update({ used_at: new Date().toISOString() })
-        .eq('encrypted_token', token);
+        .update({ accepted_at: new Date().toISOString() })
+        .eq('id', invitation.id);
 
       if (inviteError) {
-        console.error('❌ [INVITE JOIN] Error marking invitation as used:', inviteError);
+        console.error('❌ [INVITE JOIN] Error marking invitation as accepted:', inviteError);
       }
 
       console.log('🎉 [INVITE JOIN] Complete signup flow successful');
@@ -201,8 +192,12 @@ const InviteJoinPage = () => {
         description: "Your account has been created successfully. Welcome to the project!",
       });
 
-      // Redirect to project dashboard
-      navigate(`/project/${invitationData.projectId}`);
+      // Redirect to project dashboard if project exists, otherwise to main dashboard
+      if (invitation.project_id) {
+        navigate(`/project/${invitation.project_id}`);
+      } else {
+        navigate('/dashboard');
+      }
 
     } catch (error) {
       console.error('❌ [INVITE JOIN] Complete signup error:', error);
@@ -226,7 +221,7 @@ const InviteJoinPage = () => {
     );
   }
 
-  if (!invitationData) {
+  if (!invitation) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
@@ -246,7 +241,7 @@ const InviteJoinPage = () => {
     );
   }
 
-  const roleDisplayName = invitationData.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const roleDisplayName = invitation.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -265,7 +260,7 @@ const InviteJoinPage = () => {
               <Input
                 id="email"
                 type="email"
-                value={invitationData.email}
+                value={invitation.email}
                 disabled
                 className="bg-gray-50"
               />
