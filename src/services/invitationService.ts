@@ -34,21 +34,12 @@ export const createProjectInvitation = async (
 
   try {
     // Step 1: Generate invitation code
-    console.log('🎲 [INVITATION SERVICE] Attempting to generate invitation code...');
+    console.log('🎲 [INVITATION SERVICE] Generating invitation code...');
     const { data: invitationCode, error: codeError } = await supabase
       .rpc('generate_invitation_code');
 
-    console.log('🎲 [INVITATION SERVICE] RPC call completed');
-    console.log('🎲 [INVITATION SERVICE] RPC response data:', invitationCode);
-    console.log('🎲 [INVITATION SERVICE] RPC response error:', codeError);
-
     if (codeError) {
-      console.error('❌ [INVITATION SERVICE] Error from generate_invitation_code RPC:', {
-        message: codeError.message,
-        details: codeError.details,
-        hint: codeError.hint,
-        code: codeError.code
-      });
+      console.error('❌ [INVITATION SERVICE] Error from generate_invitation_code RPC:', codeError);
       throw new Error('Failed to generate invitation code: ' + codeError.message);
     }
 
@@ -59,59 +50,7 @@ export const createProjectInvitation = async (
 
     console.log('✅ [INVITATION SERVICE] Invitation code generated successfully:', invitationCode);
 
-    // Step 2: Verify project access
-    console.log('🏢 [INVITATION SERVICE] Verifying user can access project...');
-    const { data: projectData, error: projectError } = await supabase
-      .from('projects')
-      .select('id, name, brokerage_id')
-      .eq('id', projectId)
-      .single();
-
-    console.log('🏢 [INVITATION SERVICE] Project query result:', { projectData, projectError });
-
-    if (projectError) {
-      console.error('❌ [INVITATION SERVICE] Project query error:', projectError);
-      throw new Error('Failed to verify project: ' + projectError.message);
-    }
-
-    if (!projectData) {
-      console.error('❌ [INVITATION SERVICE] Project not found');
-      throw new Error('Project not found');
-    }
-
-    console.log('✅ [INVITATION SERVICE] Project found:', projectData);
-
-    // Step 3: Verify user owns the brokerage that owns this project
-    console.log('🏢 [INVITATION SERVICE] Verifying brokerage ownership...');
-    const { data: brokerageData, error: brokerageError } = await supabase
-      .from('brokerages')
-      .select('id, name, owner_id')
-      .eq('id', projectData.brokerage_id)
-      .single();
-
-    console.log('🏢 [INVITATION SERVICE] Brokerage query result:', { brokerageData, brokerageError });
-
-    if (brokerageError) {
-      console.error('❌ [INVITATION SERVICE] Brokerage query error:', brokerageError);
-      throw new Error('Failed to verify brokerage: ' + brokerageError.message);
-    }
-
-    if (!brokerageData) {
-      console.error('❌ [INVITATION SERVICE] Brokerage not found');
-      throw new Error('Brokerage not found');
-    }
-
-    if (brokerageData.owner_id !== session.user.id) {
-      console.error('❌ [INVITATION SERVICE] User is not brokerage owner:', {
-        userId: session.user.id,
-        brokerageOwnerId: brokerageData.owner_id
-      });
-      throw new Error('You are not authorized to create invitations for this project');
-    }
-
-    console.log('✅ [INVITATION SERVICE] User is authorized brokerage owner');
-
-    // Step 4: Create the invitation record
+    // Step 2: Create the invitation record
     console.log('📝 [INVITATION SERVICE] Creating invitation record in database...');
     
     const invitationData = {
@@ -131,8 +70,6 @@ export const createProjectInvitation = async (
       .insert(invitationData)
       .select()
       .single();
-
-    console.log('📝 [INVITATION SERVICE] Database insert result:', { invitation, invitationError });
 
     if (invitationError) {
       console.error('❌ [INVITATION SERVICE] Error inserting invitation:', {
