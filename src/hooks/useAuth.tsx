@@ -2,9 +2,12 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentUser, type AuthUser } from '@/services/authService';
+import { debugAuthState, cleanupAuthState } from '@/services/authDebugService';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: AuthUser | null;
+  session: Session | null;
   loading: boolean;
   refreshUser: () => Promise<void>;
   sessionError: string | null;
@@ -14,43 +17,58 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
   const refreshUser = async () => {
     try {
-      console.log('🔄 Refreshing user authentication state...');
+      console.log('🔄 [AUTH PROVIDER] Refreshing user authentication state...');
       setSessionError(null);
       
+      // Enhanced debugging
+      const authDebug = await debugAuthState();
+      console.log('🔄 [AUTH PROVIDER] Auth debug state:', authDebug);
+      
       // Check current session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error('❌ Session error:', sessionError);
+        console.error('❌ [AUTH PROVIDER] Session error:', sessionError);
         setSessionError(sessionError.message);
         setUser(null);
+        setSession(null);
         return;
       }
 
-      if (!session) {
-        console.log('📤 No active session found');
+      if (!currentSession) {
+        console.log('📤 [AUTH PROVIDER] No active session found');
         setUser(null);
+        setSession(null);
         return;
       }
 
-      console.log('✅ Active session found, loading user data...');
+      console.log('✅ [AUTH PROVIDER] Active session found, loading user data...', {
+        userId: currentSession.user.id,
+        tokenPresent: !!currentSession.access_token
+      });
+      
+      // Set session first
+      setSession(currentSession);
+      
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-      console.log('✅ User data loaded successfully:', currentUser?.email);
+      console.log('✅ [AUTH PROVIDER] User data loaded successfully:', currentUser?.email);
     } catch (error) {
-      console.error('❌ Error refreshing user:', error);
+      console.error('❌ [AUTH PROVIDER] Error refreshing user:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
       setSessionError(errorMessage);
       
       // If it's an auth session missing error, clear the user
       if (errorMessage.includes('Auth session missing') || errorMessage.includes('invalid JWT')) {
-        console.log('🔄 Clearing invalid session...');
+        console.log('🔄 [AUTH PROVIDER] Clearing invalid session...');
         setUser(null);
+        setSession(null);
       }
     }
   };
@@ -68,19 +86,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes with enhanced logging
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Auth state changed:', event, session?.user?.email);
+      console.log('🔔 [AUTH PROVIDER] Auth state changed:', event, session?.user?.email);
       
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out');
+        console.log('👋 [AUTH PROVIDER] User signed out');
         setUser(null);
+        setSession(null);
         setSessionError(null);
+        cleanupAuthState();
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log('👤 User signed in or token refreshed');
+        console.log('👤 [AUTH PROVIDER] User signed in or token refreshed');
         setSessionError(null);
+        setSession(session);
         // Defer user data loading to prevent potential deadlocks
         setTimeout(() => {
           if (mounted) {
@@ -88,7 +109,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }, 100);
       } else if (event === 'USER_UPDATED') {
-        console.log('📝 User updated');
+        console.log('📝 [AUTH PROVIDER] User updated');
+        setSession(session);
         setTimeout(() => {
           if (mounted) {
             refreshUser();
@@ -104,7 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, sessionError }}>
+    <AuthContext.Provider value={{ user, session, loading, refreshUser, sessionError }}>
       {children}
     </AuthContext.Provider>
   );
