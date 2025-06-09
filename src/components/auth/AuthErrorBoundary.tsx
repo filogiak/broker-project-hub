@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, RotateCcw } from 'lucide-react';
 
 interface AuthErrorBoundaryProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface AuthErrorBoundaryProps {
 }
 
 const AuthErrorBoundary = ({ children, fallback }: AuthErrorBoundaryProps) => {
-  const { sessionError, refreshUser, loading } = useAuth();
+  const { sessionError, refreshUser, loading, forceSessionReset } = useAuth();
 
   // If there's a session error, show error UI
   if (sessionError && !loading) {
@@ -41,6 +42,15 @@ const AuthErrorBoundary = ({ children, fallback }: AuthErrorBoundaryProps) => {
               </Button>
               <Button 
                 variant="outline"
+                onClick={() => forceSessionReset()}
+                className="w-full"
+                disabled={loading}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Session
+              </Button>
+              <Button 
+                variant="ghost"
                 onClick={() => window.location.href = '/auth'}
                 className="w-full"
               >

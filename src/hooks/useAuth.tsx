@@ -2,7 +2,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentUser, type AuthUser } from '@/services/authService';
-import { debugAuthState, cleanupAuthState } from '@/services/authDebugService';
+import { debugAuthState, globalSessionCleanup, detectSessionConflicts, monitorSessionState } from '@/services/authDebugService';
 import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   refreshUser: () => Promise<void>;
   sessionError: string | null;
+  forceSessionReset: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,16 +22,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
+  const forceSessionReset = async () => {
+    console.log('🔧 [AUTH PROVIDER] Force session reset initiated...');
+    setSessionError(null);
+    
+    // Clean up everything
+    globalSessionCleanup();
+    
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (error) {
+      console.warn('⚠️ [AUTH PROVIDER] Global signout failed during reset:', error);
+    }
+    
+    setUser(null);
+    setSession(null);
+    
+    // Force page reload
+    window.location.href = '/auth';
+  };
+
   const refreshUser = async () => {
     try {
       console.log('🔄 [AUTH PROVIDER] Refreshing user authentication state...');
       setSessionError(null);
       
+      // Check for session conflicts first
+      const conflicts = await detectSessionConflicts();
+      if (conflicts.hasConflicts) {
+        console.warn('⚠️ [AUTH PROVIDER] Session conflicts detected:', conflicts);
+        globalSessionCleanup();
+        
+        // Wait for cleanup
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
       // Enhanced debugging
       const authDebug = await debugAuthState();
       console.log('🔄 [AUTH PROVIDER] Auth debug state:', authDebug);
       
-      // Check current session first
+      // Check current session
       const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
@@ -48,9 +79,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
+      // Validate session integrity
+      if (!authDebug.dbContextUserId && currentSession.user) {
+        console.warn('⚠️ [AUTH PROVIDER] Session exists but DB context invalid');
+        setSessionError('Session context invalid - please log in again');
+        setUser(null);
+        setSession(null);
+        return;
+      }
+
       console.log('✅ [AUTH PROVIDER] Active session found, loading user data...', {
         userId: currentSession.user.id,
-        tokenPresent: !!currentSession.access_token
+        tokenPresent: !!currentSession.access_token,
+        dbContext: authDebug.dbContextUserId
       });
       
       // Set session first
@@ -65,7 +106,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSessionError(errorMessage);
       
       // If it's an auth session missing error, clear the user
-      if (errorMessage.includes('Auth session missing') || errorMessage.includes('invalid JWT')) {
+      if (errorMessage.includes('Auth session missing') || 
+          errorMessage.includes('invalid JWT') || 
+          errorMessage.includes('session not found')) {
         console.log('🔄 [AUTH PROVIDER] Clearing invalid session...');
         setUser(null);
         setSession(null);
@@ -75,12 +118,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let stopMonitoring: (() => void) | undefined;
 
     // Initial user load
     const initAuth = async () => {
       await refreshUser();
       if (mounted) {
         setLoading(false);
+        
+        // Start session monitoring for authenticated users
+        if (session) {
+          stopMonitoring = monitorSessionState();
+        }
       }
     };
 
@@ -97,15 +146,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setSession(null);
         setSessionError(null);
-        cleanupAuthState();
+        globalSessionCleanup();
+        
+        if (stopMonitoring) {
+          stopMonitoring();
+          stopMonitoring = undefined;
+        }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('👤 [AUTH PROVIDER] User signed in or token refreshed');
         setSessionError(null);
         setSession(session);
+        
         // Defer user data loading to prevent potential deadlocks
         setTimeout(() => {
           if (mounted) {
-            refreshUser();
+            refreshUser().then(() => {
+              if (!stopMonitoring && session) {
+                stopMonitoring = monitorSessionState();
+              }
+            });
           }
         }, 100);
       } else if (event === 'USER_UPDATED') {
@@ -122,11 +181,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      if (stopMonitoring) {
+        stopMonitoring();
+      }
     };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, refreshUser, sessionError }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      refreshUser, 
+      sessionError, 
+      forceSessionReset 
+    }}>
       {children}
     </AuthContext.Provider>
   );

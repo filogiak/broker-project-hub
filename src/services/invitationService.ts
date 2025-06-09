@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { debugAuthState, validateSessionBeforeOperation, refreshAuthSession } from './authDebugService';
+import { debugAuthState, validateSessionBeforeOperation, enforceSingleSession } from './authDebugService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -14,40 +13,57 @@ export const createProjectInvitation = async (
   console.log('🎯 [INVITATION SERVICE] Starting invitation creation process');
   console.log('🎯 [INVITATION SERVICE] Input parameters:', { projectId, role, email });
   
-  // Phase 1: Comprehensive auth state debugging
-  console.log('🔍 [INVITATION SERVICE] Running comprehensive auth debug check...');
-  const authDebug = await debugAuthState();
-  console.log('🔍 [INVITATION SERVICE] Auth debug results:', authDebug);
-  
-  if (!authDebug.sessionExists || !authDebug.userExists) {
-    console.error('❌ [INVITATION SERVICE] Invalid auth state detected:', authDebug);
-    throw new Error(`Authentication failed: ${authDebug.error || 'No valid session'}`);
-  }
-  
-  // Phase 2: Session validation before operation
-  console.log('✅ [INVITATION SERVICE] Validating session before database operation...');
+  // Phase 1: Enhanced session validation with automatic recovery
+  console.log('🔍 [INVITATION SERVICE] Validating session for invitation creation...');
   const { valid: sessionValid, session } = await validateSessionBeforeOperation();
   
   if (!sessionValid || !session?.user) {
-    console.error('❌ [INVITATION SERVICE] Session validation failed');
-    throw new Error('Session validation failed - please log in again');
+    console.error('❌ [INVITATION SERVICE] Session validation failed - attempting recovery...');
+    
+    // Try to enforce single session and retry once
+    await enforceSingleSession();
+    
+    // Wait for cleanup
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const { valid: retryValid, session: retrySession } = await validateSessionBeforeOperation();
+    
+    if (!retryValid || !retrySession?.user) {
+      console.error('❌ [INVITATION SERVICE] Session recovery failed');
+      throw new Error('Authentication failed - please log in again');
+    }
+    
+    console.log('✅ [INVITATION SERVICE] Session recovered successfully');
+  }
+
+  // Get final session for operations
+  const { data: { session: finalSession } } = await supabase.auth.getSession();
+  if (!finalSession?.user) {
+    throw new Error('No valid session after validation');
   }
 
   console.log('✅ [INVITATION SERVICE] Session validation passed:', {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    tokenPresent: !!session.access_token
+    userId: finalSession.user.id,
+    userEmail: finalSession.user.email,
+    tokenPresent: !!finalSession.access_token
   });
 
   try {
-    // Step 1: Generate invitation code with retry logic
+    // Step 1: Generate invitation code with enhanced retry logic
     console.log('🎲 [INVITATION SERVICE] Generating invitation code...');
     let invitationCode: string;
     let codeAttempts = 0;
-    const maxCodeAttempts = 3;
+    const maxCodeAttempts = 5;
     
     while (codeAttempts < maxCodeAttempts) {
       try {
+        // Validate session before each attempt
+        const currentDebug = await debugAuthState();
+        if (!currentDebug.dbContextUserId) {
+          console.warn(`⚠️ [INVITATION SERVICE] DB context lost on attempt ${codeAttempts + 1}, refreshing...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
         const { data: code, error: codeError } = await supabase
           .rpc('generate_invitation_code');
 
@@ -59,8 +75,8 @@ export const createProjectInvitation = async (
             throw new Error('Failed to generate invitation code after multiple attempts: ' + codeError.message);
           }
           
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Progressive delay
+          await new Promise(resolve => setTimeout(resolve, 1000 * codeAttempts));
           continue;
         }
 
@@ -81,18 +97,20 @@ export const createProjectInvitation = async (
         if (codeAttempts >= maxCodeAttempts) {
           throw error;
         }
+        
+        // Progressive delay
+        await new Promise(resolve => setTimeout(resolve, 1000 * codeAttempts));
       }
     }
 
-    // Step 2: Create the invitation record with enhanced error handling
+    // Step 2: Create the invitation record with enhanced session validation
     console.log('📝 [INVITATION SERVICE] Creating invitation record in database...');
-    console.log('📝 [INVITATION SERVICE] Current session user:', session.user.id);
     
     const invitationData = {
       email,
       role,
       project_id: projectId,
-      invited_by: session.user.id,
+      invited_by: finalSession.user.id,
       invitation_code: invitationCode!,
       token: crypto.randomUUID(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -100,13 +118,32 @@ export const createProjectInvitation = async (
 
     console.log('📝 [INVITATION SERVICE] Invitation data to insert:', invitationData);
 
-    // Attempt insertion with retry logic for potential auth context issues
+    // Attempt insertion with session validation and retry logic
     let insertAttempts = 0;
-    const maxInsertAttempts = 2;
+    const maxInsertAttempts = 3;
     let invitation: Invitation;
     
     while (insertAttempts < maxInsertAttempts) {
       try {
+        // Validate session before each insert attempt
+        const preInsertDebug = await debugAuthState();
+        console.log(`📝 [INVITATION SERVICE] Pre-insert session check (attempt ${insertAttempts + 1}):`, {
+          sessionExists: preInsertDebug.sessionExists,
+          userExists: preInsertDebug.userExists,
+          dbContext: preInsertDebug.dbContextUserId,
+          environment: preInsertDebug.environment
+        });
+        
+        if (!preInsertDebug.dbContextUserId) {
+          console.warn(`⚠️ [INVITATION SERVICE] DB context missing on insert attempt ${insertAttempts + 1}`);
+          
+          // Try to recover session
+          const { valid: recoveryValid } = await validateSessionBeforeOperation();
+          if (!recoveryValid) {
+            throw new Error('Session recovery failed during invitation creation');
+          }
+        }
+        
         const { data: insertedInvitation, error: invitationError } = await supabase
           .from('invitations')
           .insert(invitationData)
@@ -121,21 +158,26 @@ export const createProjectInvitation = async (
             code: invitationError.code
           });
           
-          // Check if it's an auth issue and try refreshing session
+          // Check if it's an auth/RLS issue
           if (invitationError.message.includes('row-level security') || 
               invitationError.message.includes('permission denied') ||
+              invitationError.message.includes('auth') ||
               invitationError.code === 'PGRST301') {
             
-            console.log('🔄 [INVITATION SERVICE] RLS/Auth error detected, refreshing session...');
-            const refreshed = await refreshAuthSession();
+            console.log('🔄 [INVITATION SERVICE] RLS/Auth error detected, attempting session recovery...');
             
-            if (!refreshed) {
-              throw new Error('Session refresh failed - please log in again');
+            // Force session validation and recovery
+            await enforceSingleSession();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const { valid: recoveryValid } = await validateSessionBeforeOperation();
+            if (!recoveryValid) {
+              throw new Error('Session recovery failed - please log in again');
             }
             
             insertAttempts++;
             if (insertAttempts < maxInsertAttempts) {
-              console.log('🔄 [INVITATION SERVICE] Retrying invitation creation with refreshed session...');
+              console.log('🔄 [INVITATION SERVICE] Retrying invitation creation with recovered session...');
               continue;
             }
           }
@@ -158,6 +200,9 @@ export const createProjectInvitation = async (
         if (insertAttempts >= maxInsertAttempts) {
           throw error;
         }
+        
+        // Progressive delay
+        await new Promise(resolve => setTimeout(resolve, 1000 * insertAttempts));
       }
     }
 

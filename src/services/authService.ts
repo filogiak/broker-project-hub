@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { enforceSingleSession, validateSessionBeforeOperation, globalSessionCleanup } from './authDebugService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -15,123 +15,158 @@ export interface AuthUser {
 }
 
 export const login = async (email: string, password: string) => {
-  console.log('Attempting login for:', email);
+  console.log('🔐 [AUTH SERVICE] Starting login process for:', email);
   
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  // Enforce single session before login
+  await enforceSingleSession();
+  
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (error) {
-    console.error('Login error:', error);
+    if (error) {
+      console.error('❌ [AUTH SERVICE] Login error:', error);
+      throw error;
+    }
+
+    console.log('✅ [AUTH SERVICE] Login successful:', data.user?.email);
+    
+    // Force page reload to ensure clean state
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 100);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ [AUTH SERVICE] Login failed:', error);
     throw error;
   }
-
-  console.log('Login successful:', data.user?.email);
-  return data;
 };
 
 export const logout = async () => {
-  console.log('Logging out user');
+  console.log('👋 [AUTH SERVICE] Starting logout process');
   
-  const { error } = await supabase.auth.signOut();
-  
-  if (error) {
-    console.error('Logout error:', error);
-    throw error;
-  }
+  try {
+    // Clean up local state first
+    globalSessionCleanup();
+    
+    // Attempt global signout
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+    
+    if (error) {
+      console.error('⚠️ [AUTH SERVICE] Logout error (continuing):', error);
+    }
 
-  console.log('Logout successful');
+    console.log('✅ [AUTH SERVICE] Logout completed');
+    
+    // Force page reload to ensure clean state
+    setTimeout(() => {
+      window.location.href = '/auth';
+    }, 100);
+    
+  } catch (error) {
+    console.error('❌ [AUTH SERVICE] Logout failed:', error);
+    // Still redirect to auth page
+    window.location.href = '/auth';
+  }
 };
 
 export const getCurrentUser = async (): Promise<AuthUser | null> => {
-  console.log('Getting current user');
+  console.log('👤 [AUTH SERVICE] Getting current user');
   
-  const { data: { user }, error } = await supabase.auth.getUser();
+  // Validate session before attempting to get user data
+  const { valid, session } = await validateSessionBeforeOperation();
   
-  if (error) {
-    console.error('Get current user error:', error);
-    throw error;
-  }
-
-  if (!user) {
-    console.log('No user found');
+  if (!valid || !session?.user) {
+    console.log('❌ [AUTH SERVICE] No valid session for getCurrentUser');
     return null;
   }
 
-  // Get user profile and roles
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  const user = session.user;
 
-  if (profileError) {
-    console.error('Get profile error:', profileError);
-    throw profileError;
+  try {
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('❌ [AUTH SERVICE] Get profile error:', profileError);
+      throw profileError;
+    }
+
+    // Get user roles
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    if (rolesError) {
+      console.error('❌ [AUTH SERVICE] Get roles error:', rolesError);
+      throw rolesError;
+    }
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: profile.email,
+      firstName: profile.first_name || undefined,
+      lastName: profile.last_name || undefined,
+      phone: profile.phone || undefined,
+      brokerageId: profile.brokerage_id || undefined,
+      roles: userRoles.map(ur => ur.role),
+    };
+
+    console.log('✅ [AUTH SERVICE] Current user loaded:', authUser.email);
+    return authUser;
+  } catch (error) {
+    console.error('❌ [AUTH SERVICE] Failed to get current user:', error);
+    throw error;
   }
-
-  // Get user roles
-  const { data: userRoles, error: rolesError } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id);
-
-  if (rolesError) {
-    console.error('Get roles error:', rolesError);
-    throw rolesError;
-  }
-
-  const authUser: AuthUser = {
-    id: user.id,
-    email: profile.email,
-    firstName: profile.first_name || undefined,
-    lastName: profile.last_name || undefined,
-    phone: profile.phone || undefined,
-    brokerageId: profile.brokerage_id || undefined,
-    roles: userRoles.map(ur => ur.role),
-  };
-
-  console.log('Current user:', authUser);
-  return authUser;
 };
 
 export const isAuthenticated = async (): Promise<boolean> => {
-  console.log('Checking authentication status');
+  console.log('🔍 [AUTH SERVICE] Checking authentication status');
   
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { valid } = await validateSessionBeforeOperation();
   
-  if (error) {
-    console.error('Authentication check error:', error);
-    return false;
-  }
-
-  const authenticated = !!user;
-  console.log('Authentication status:', authenticated);
-  return authenticated;
+  console.log('🔍 [AUTH SERVICE] Authentication status:', valid);
+  return valid;
 };
 
 export const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-  console.log('Attempting signup for:', email);
+  console.log('📝 [AUTH SERVICE] Starting signup process for:', email);
   
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        first_name: firstName,
-        last_name: lastName,
+  // Enforce single session before signup
+  await enforceSingleSession();
+  
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
-    },
-  });
+    });
 
-  if (error) {
-    console.error('Signup error:', error);
+    if (error) {
+      console.error('❌ [AUTH SERVICE] Signup error:', error);
+      throw error;
+    }
+
+    console.log('✅ [AUTH SERVICE] Signup successful:', data.user?.email);
+    return data;
+  } catch (error) {
+    console.error('❌ [AUTH SERVICE] Signup failed:', error);
     throw error;
   }
-
-  console.log('Signup successful:', data.user?.email);
-  return data;
 };
 
 export const assignRole = async (userId: string, role: UserRole) => {
