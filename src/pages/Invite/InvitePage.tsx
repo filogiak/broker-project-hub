@@ -29,7 +29,10 @@ const InvitePage = () => {
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🚀 [INVITE PAGE] Form submission started with code:', invitationCode);
+    
     if (invitationCode.length !== 6) {
+      console.warn('⚠️ [INVITE PAGE] Invalid code length:', invitationCode.length);
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit invitation code",
@@ -41,29 +44,48 @@ const InvitePage = () => {
     setIsLoading(true);
 
     try {
+      console.log('📞 [INVITE PAGE] Calling validateInvitationCode service...');
       const validInvitation = await validateInvitationCode(invitationCode);
       
       if (!validInvitation) {
+        console.warn('⚠️ [INVITE PAGE] Invitation validation failed for code:', invitationCode);
         toast({
           title: "Invalid Code",
-          description: "The invitation code is invalid or has expired",
+          description: "The invitation code is invalid, expired, or has already been used",
           variant: "destructive",
         });
         return;
       }
 
+      console.log('✅ [INVITE PAGE] Invitation validation successful:', {
+        id: validInvitation.id,
+        email: validInvitation.email,
+        role: validInvitation.role
+      });
+
       setInvitation(validInvitation);
       setUserDetails(prev => ({ ...prev, email: validInvitation.email }));
       setStep('register');
 
-    } catch (error) {
-      console.error('Error validating code:', error);
       toast({
-        title: "Error",
-        description: "Failed to validate invitation code",
+        title: "Code Validated",
+        description: `Welcome! Please complete your registration for ${validInvitation.email}`,
+      });
+
+    } catch (error) {
+      console.error('❌ [INVITE PAGE] Error validating code:', {
+        error,
+        code: invitationCode,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
+      toast({
+        title: "Validation Error",
+        description: "Failed to validate invitation code. Please try again.",
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 [INVITE PAGE] Code validation completed');
       setIsLoading(false);
     }
   };
@@ -71,12 +93,25 @@ const InvitePage = () => {
   const handleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!invitation) return;
+    console.log('📝 [INVITE PAGE] Registration form submission started');
+    
+    if (!invitation) {
+      console.error('❌ [INVITE PAGE] No invitation available for registration');
+      return;
+    }
+
+    console.log('📝 [INVITE PAGE] Registration details:', {
+      email: userDetails.email,
+      firstName: userDetails.firstName,
+      lastName: userDetails.lastName,
+      invitationId: invitation.id
+    });
 
     setIsLoading(true);
 
     try {
       // Create user account
+      console.log('👤 [INVITE PAGE] Creating user account...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userDetails.email,
         password: userDetails.password,
@@ -90,16 +125,23 @@ const InvitePage = () => {
       });
 
       if (authError) {
-        console.error('Auth error:', authError);
+        console.error('❌ [INVITE PAGE] Auth error during registration:', authError);
+        
+        let errorMessage = authError.message;
+        if (authError.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Please try logging in instead.';
+        }
+        
         toast({
           title: "Registration Failed",
-          description: authError.message,
+          description: errorMessage,
           variant: "destructive",
         });
         return;
       }
 
       if (!authData.user) {
+        console.error('❌ [INVITE PAGE] No user returned from registration');
         toast({
           title: "Registration Failed",
           description: "Failed to create user account",
@@ -108,8 +150,16 @@ const InvitePage = () => {
         return;
       }
 
+      console.log('✅ [INVITE PAGE] User account created successfully:', {
+        userId: authData.user.id,
+        email: authData.user.email
+      });
+
       // Accept the invitation
+      console.log('🤝 [INVITE PAGE] Accepting invitation...');
       await acceptInvitation(invitation.id, authData.user.id);
+
+      console.log('🎉 [INVITE PAGE] Registration and invitation acceptance completed');
 
       toast({
         title: "Welcome!",
@@ -118,19 +168,27 @@ const InvitePage = () => {
 
       // Redirect to the project
       if (invitation.project_id) {
+        console.log('🔄 [INVITE PAGE] Redirecting to project:', invitation.project_id);
         navigate(`/project/${invitation.project_id}`);
       } else {
-        navigate('/');
+        console.log('🔄 [INVITE PAGE] Redirecting to dashboard');
+        navigate('/dashboard');
       }
 
     } catch (error) {
-      console.error('Error during registration:', error);
+      console.error('❌ [INVITE PAGE] Error during registration process:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        invitationId: invitation.id
+      });
+      
       toast({
-        title: "Error",
+        title: "Registration Error",
         description: error instanceof Error ? error.message : "Failed to complete registration",
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 [INVITE PAGE] Registration process completed');
       setIsLoading(false);
     }
   };
@@ -138,6 +196,13 @@ const InvitePage = () => {
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
+  console.log('🎨 [INVITE PAGE] Rendering with state:', {
+    step,
+    isLoading,
+    hasInvitation: !!invitation,
+    codeLength: invitationCode.length
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center p-4">
@@ -165,6 +230,9 @@ const InvitePage = () => {
                   className="text-center text-lg tracking-wider font-mono"
                   maxLength={6}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter the 6-digit code you received from your project manager
+                </p>
               </div>
               
               <Button type="submit" className="w-full" disabled={isLoading || invitationCode.length !== 6}>
@@ -177,6 +245,11 @@ const InvitePage = () => {
                 <div className="bg-muted p-3 rounded-lg text-sm">
                   <p><strong>Email:</strong> {invitation.email}</p>
                   <p><strong>Role:</strong> {formatRole(invitation.role)}</p>
+                  {invitation.project_id && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      You'll be added to the project upon completion
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -211,6 +284,9 @@ const InvitePage = () => {
                     disabled
                     className="bg-muted"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    This email was specified in your invitation
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -224,6 +300,9 @@ const InvitePage = () => {
                     required
                     minLength={6}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Minimum 6 characters
+                  </p>
                 </div>
 
                 <div className="flex space-x-2">

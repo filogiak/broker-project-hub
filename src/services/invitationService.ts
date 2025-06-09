@@ -220,27 +220,83 @@ export const createProjectInvitation = async (
 };
 
 export const validateInvitationCode = async (code: string): Promise<Invitation | null> => {
-  console.log('🔍 Validating invitation code:', code);
+  console.log('🔍 [INVITATION SERVICE] Starting invitation code validation:', code);
   
+  if (!code || code.length !== 6) {
+    console.warn('⚠️ [INVITATION SERVICE] Invalid code format provided:', code);
+    return null;
+  }
+
   try {
+    console.log('📞 [INVITATION SERVICE] Querying invitations table for code validation...');
+    
     const { data: invitation, error } = await supabase
       .from('invitations')
       .select('*')
       .eq('invitation_code', code)
-      .gt('expires_at', new Date().toISOString())
-      .is('accepted_at', null)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no match
 
     if (error) {
-      console.error('❌ Error validating invitation code:', error);
+      console.error('❌ [INVITATION SERVICE] Database error during validation:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return null;
     }
 
-    console.log('✅ Valid invitation found:', invitation);
+    if (!invitation) {
+      console.warn('⚠️ [INVITATION SERVICE] No invitation found for code:', code);
+      return null;
+    }
+
+    console.log('📋 [INVITATION SERVICE] Raw invitation found:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      expires_at: invitation.expires_at,
+      accepted_at: invitation.accepted_at,
+      project_id: invitation.project_id
+    });
+
+    // Check if invitation has expired
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at);
+    
+    if (expiresAt <= now) {
+      console.warn('⚠️ [INVITATION SERVICE] Invitation has expired:', {
+        code,
+        expires_at: invitation.expires_at,
+        current_time: now.toISOString()
+      });
+      return null;
+    }
+
+    // Check if invitation has already been accepted
+    if (invitation.accepted_at) {
+      console.warn('⚠️ [INVITATION SERVICE] Invitation has already been accepted:', {
+        code,
+        accepted_at: invitation.accepted_at
+      });
+      return null;
+    }
+
+    console.log('✅ [INVITATION SERVICE] Valid invitation found:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      project_id: invitation.project_id
+    });
+    
     return invitation;
 
   } catch (error) {
-    console.error('❌ Invitation validation failed:', error);
+    console.error('❌ [INVITATION SERVICE] Invitation validation failed:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      code
+    });
     return null;
   }
 };
@@ -249,10 +305,11 @@ export const acceptInvitation = async (
   invitationId: string,
   userId: string
 ): Promise<void> => {
-  console.log('🤝 Accepting invitation:', { invitationId, userId });
+  console.log('🤝 [INVITATION SERVICE] Starting invitation acceptance:', { invitationId, userId });
   
   try {
     // Get the invitation details first
+    console.log('📋 [INVITATION SERVICE] Fetching invitation details...');
     const { data: invitation, error: fetchError } = await supabase
       .from('invitations')
       .select('*')
@@ -260,23 +317,33 @@ export const acceptInvitation = async (
       .single();
 
     if (fetchError || !invitation) {
-      console.error('❌ Error fetching invitation:', fetchError);
+      console.error('❌ [INVITATION SERVICE] Error fetching invitation:', fetchError);
       throw new Error('Invitation not found');
     }
 
+    console.log('📋 [INVITATION SERVICE] Invitation details retrieved:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      project_id: invitation.project_id,
+      invited_by: invitation.invited_by
+    });
+
     // Mark invitation as accepted
+    console.log('✅ [INVITATION SERVICE] Marking invitation as accepted...');
     const { error: updateError } = await supabase
       .from('invitations')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invitationId);
 
     if (updateError) {
-      console.error('❌ Error accepting invitation:', updateError);
-      throw new Error('Failed to accept invitation');
+      console.error('❌ [INVITATION SERVICE] Error accepting invitation:', updateError);
+      throw new Error('Failed to accept invitation: ' + updateError.message);
     }
 
     // Add user to project members if project invitation
     if (invitation.project_id) {
+      console.log('👥 [INVITATION SERVICE] Adding user to project members...');
       const { error: memberError } = await supabase
         .from('project_members')
         .insert({
@@ -288,15 +355,26 @@ export const acceptInvitation = async (
         });
 
       if (memberError) {
-        console.error('❌ Error adding project member:', memberError);
-        throw new Error('Failed to add to project');
+        console.error('❌ [INVITATION SERVICE] Error adding project member:', memberError);
+        throw new Error('Failed to add to project: ' + memberError.message);
       }
+
+      console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
+        project_id: invitation.project_id,
+        user_id: userId,
+        role: invitation.role
+      });
     }
 
-    console.log('🎉 Invitation accepted successfully');
+    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed successfully');
 
   } catch (error) {
-    console.error('❌ Failed to accept invitation:', error);
+    console.error('❌ [INVITATION SERVICE] Failed to accept invitation:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      invitationId,
+      userId
+    });
     throw error instanceof Error ? error : new Error('Failed to accept invitation');
   }
 };
