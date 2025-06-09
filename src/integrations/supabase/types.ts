@@ -91,39 +91,54 @@ export type Database = {
           brokerage_id: string | null
           created_at: string | null
           email: string
+          email_sent: boolean | null
+          email_sent_at: string | null
+          encrypted_token: string | null
           expires_at: string
           id: string
           invitation_code: string | null
+          invitation_token: string | null
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           token: string
+          used_at: string | null
         }
         Insert: {
           accepted_at?: string | null
           brokerage_id?: string | null
           created_at?: string | null
           email: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          encrypted_token?: string | null
           expires_at?: string
           id?: string
           invitation_code?: string | null
+          invitation_token?: string | null
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
           token?: string
+          used_at?: string | null
         }
         Update: {
           accepted_at?: string | null
           brokerage_id?: string | null
           created_at?: string | null
           email?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          encrypted_token?: string | null
           expires_at?: string
           id?: string
           invitation_code?: string | null
+          invitation_token?: string | null
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           token?: string
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -332,7 +347,15 @@ export type Database = {
         }
         Returns: string
       }
+      generate_encrypted_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_invitation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

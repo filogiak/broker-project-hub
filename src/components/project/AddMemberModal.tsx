@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { createProjectInvitation } from '@/services/invitationService';
+import { Mail, CheckCircle } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -22,7 +23,8 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('real_estate_agent');
   const [isLoading, setIsLoading] = useState(false);
-  const [invitationCode, setInvitationCode] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [invitationSuccess, setInvitationSuccess] = useState(false);
   const { toast } = useToast();
 
   const roleOptions = [
@@ -34,7 +36,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🚀 [ADD MEMBER MODAL] Form submission started');
+    console.log('🚀 [ADD MEMBER MODAL] Form submission started (email-based)');
     console.log('🚀 [ADD MEMBER MODAL] Form data:', { email: email.trim(), role, projectId });
     
     if (!email.trim()) {
@@ -64,30 +66,34 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
 
     try {
       console.log('📞 [ADD MEMBER MODAL] Calling createProjectInvitation service...');
-      const { invitationCode: code } = await createProjectInvitation(projectId, role, email.trim());
+      const { success } = await createProjectInvitation(projectId, role, email.trim());
       
-      console.log('🎉 [ADD MEMBER MODAL] Invitation creation successful, code:', code);
-      setInvitationCode(code);
+      console.log('🎉 [ADD MEMBER MODAL] Invitation creation completed, success:', success);
       
-      toast({
-        title: "Invitation Created",
-        description: `Invitation code ${code} has been generated for ${email}`,
-      });
+      setEmailSent(true);
+      setInvitationSuccess(success);
+      
+      if (success) {
+        toast({
+          title: "Invitation Sent",
+          description: `Invitation email has been sent to ${email}`,
+        });
+      } else {
+        toast({
+          title: "Invitation Created",
+          description: `Invitation created but email failed to send. Please contact ${email} directly.`,
+          variant: "destructive",
+        });
+      }
 
       console.log('🔄 [ADD MEMBER MODAL] Calling onMemberAdded callback');
       onMemberAdded();
 
     } catch (error) {
-      console.error('❌ [ADD MEMBER MODAL] Invitation creation error:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorType: typeof error,
-        errorConstructor: error?.constructor?.name
-      });
+      console.error('❌ [ADD MEMBER MODAL] Invitation creation error:', error);
       
       let errorMessage = "Failed to create invitation";
       
-      // Provide more specific error messages
       if (error instanceof Error) {
         if (error.message.includes('authentication')) {
           errorMessage = "Authentication failed. Please log in again and try.";
@@ -106,7 +112,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
         variant: "destructive",
       });
     } finally {
-      console.log('🏁 [ADD MEMBER MODAL] Form submission completed, setting loading to false');
+      console.log('🏁 [ADD MEMBER MODAL] Form submission completed');
       setIsLoading(false);
     }
   };
@@ -115,39 +121,16 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
     console.log('🚪 [ADD MEMBER MODAL] Modal closing, resetting state');
     setEmail('');
     setRole('real_estate_agent');
-    setInvitationCode(null);
+    setEmailSent(false);
+    setInvitationSuccess(false);
     onClose();
-  };
-
-  const copyInvitationCode = () => {
-    if (invitationCode) {
-      console.log('📋 [ADD MEMBER MODAL] Copying invitation code to clipboard:', invitationCode);
-      navigator.clipboard.writeText(invitationCode);
-      toast({
-        title: "Copied",
-        description: "Invitation code copied to clipboard",
-      });
-    } else {
-      console.warn('⚠️ [ADD MEMBER MODAL] Attempted to copy null invitation code');
-    }
-  };
-
-  const copyInviteLink = () => {
-    if (invitationCode) {
-      const inviteLink = `${window.location.origin}/invite`;
-      console.log('📋 [ADD MEMBER MODAL] Copying invitation link to clipboard:', inviteLink);
-      navigator.clipboard.writeText(inviteLink);
-      toast({
-        title: "Link Copied",
-        description: "Invitation link copied to clipboard",
-      });
-    }
   };
 
   console.log('🎨 [ADD MEMBER MODAL] Rendering modal with state:', { 
     isOpen, 
     isLoading, 
-    invitationCode: !!invitationCode,
+    emailSent,
+    invitationSuccess,
     email,
     role 
   });
@@ -159,7 +142,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
           <DialogTitle>Add Project Member</DialogTitle>
         </DialogHeader>
 
-        {!invitationCode ? (
+        {!emailSent ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -192,39 +175,46 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Create Invitation'}
+                {isLoading ? 'Sending Invitation...' : 'Send Email Invitation'}
               </Button>
             </div>
           </form>
         ) : (
           <div className="space-y-4 text-center">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Invitation Created!</h3>
+              <div className="flex justify-center">
+                {invitationSuccess ? (
+                  <CheckCircle className="h-12 w-12 text-green-500" />
+                ) : (
+                  <Mail className="h-12 w-12 text-yellow-500" />
+                )}
+              </div>
+              
+              <h3 className="text-lg font-semibold">
+                {invitationSuccess ? 'Invitation Sent!' : 'Invitation Created'}
+              </h3>
+              
               <p className="text-muted-foreground">
-                Share this 6-digit code with {email}:
+                {invitationSuccess ? (
+                  <>An invitation email has been sent to <strong>{email}</strong></>
+                ) : (
+                  <>Invitation created for <strong>{email}</strong> but email delivery failed</>
+                )}
               </p>
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="text-2xl font-mono font-bold tracking-wider">
-                  {invitationCode}
-                </div>
-              </div>
-              <div className="flex space-x-2 justify-center">
-                <Button onClick={copyInvitationCode} variant="outline" size="sm">
-                  Copy Code
-                </Button>
-                <Button onClick={copyInviteLink} variant="outline" size="sm">
-                  Copy Invite Link
-                </Button>
-              </div>
             </div>
 
             <div className="text-sm text-muted-foreground space-y-2">
-              <p>
-                The invited user should visit: <strong>{window.location.origin}/invite</strong>
-              </p>
-              <p>
-                And enter the code above to join the project.
-              </p>
+              {invitationSuccess ? (
+                <p>
+                  The invited user will receive an email with a direct link to join the project.
+                  They'll be able to create their account and join in one simple step.
+                </p>
+              ) : (
+                <p>
+                  Please contact <strong>{email}</strong> directly and ask them to visit the
+                  invitation page to join the project.
+                </p>
+              )}
             </div>
 
             <Button onClick={handleClose} className="w-full">

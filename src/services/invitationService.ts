@@ -1,221 +1,102 @@
 import { supabase } from '@/integrations/supabase/client';
 import { debugAuthState, validateSessionBeforeOperation, enforceSingleSession } from './authDebugService';
+import { createEmailInvitation } from './emailInvitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
 type Invitation = Database['public']['Tables']['invitations']['Row'];
 
+// New email-based invitation creation (preferred method)
 export const createProjectInvitation = async (
   projectId: string,
   role: UserRole,
   email: string
-): Promise<{ invitation: Invitation; invitationCode: string }> => {
-  console.log('🎯 [INVITATION SERVICE] Starting invitation creation process');
-  console.log('🎯 [INVITATION SERVICE] Input parameters:', { projectId, role, email });
+): Promise<{ invitation: Invitation; invitationCode?: string; success: boolean }> => {
+  console.log('🎯 [INVITATION SERVICE] Starting invitation creation (email-based)');
+  console.log('🎯 [INVITATION SERVICE] Parameters:', { projectId, role, email });
+  
+  try {
+    const { invitation, success } = await createEmailInvitation(projectId, role, email);
+    
+    if (success) {
+      console.log('🎉 [INVITATION SERVICE] Email invitation created successfully');
+      return { invitation, success: true };
+    } else {
+      console.warn('⚠️ [INVITATION SERVICE] Email invitation created but email failed to send');
+      return { invitation, success: false };
+    }
+    
+  } catch (error) {
+    console.error('❌ [INVITATION SERVICE] Email invitation failed, falling back to code-based');
+    
+    // Fallback to original code-based invitation
+    return createCodeBasedInvitation(projectId, role, email);
+  }
+};
+
+// Legacy code-based invitation (kept for backward compatibility)
+const createCodeBasedInvitation = async (
+  projectId: string,
+  role: UserRole,
+  email: string
+): Promise<{ invitation: Invitation; invitationCode: string; success: boolean }> => {
+  console.log('🔄 [INVITATION SERVICE] Using legacy code-based invitation');
   
   // Phase 1: Enhanced session validation with automatic recovery
-  console.log('🔍 [INVITATION SERVICE] Validating session for invitation creation...');
   const { valid: sessionValid, session } = await validateSessionBeforeOperation();
   
   if (!sessionValid || !session?.user) {
-    console.error('❌ [INVITATION SERVICE] Session validation failed - attempting recovery...');
-    
-    // Try to enforce single session and retry once
+    console.error('❌ [INVITATION SERVICE] Session validation failed');
     await enforceSingleSession();
-    
-    // Wait for cleanup
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const { valid: retryValid, session: retrySession } = await validateSessionBeforeOperation();
     
     if (!retryValid || !retrySession?.user) {
-      console.error('❌ [INVITATION SERVICE] Session recovery failed');
       throw new Error('Authentication failed - please log in again');
     }
-    
-    console.log('✅ [INVITATION SERVICE] Session recovered successfully');
   }
 
-  // Get final session for operations
   const { data: { session: finalSession } } = await supabase.auth.getSession();
   if (!finalSession?.user) {
     throw new Error('No valid session after validation');
   }
 
-  console.log('✅ [INVITATION SERVICE] Session validation passed:', {
-    userId: finalSession.user.id,
-    userEmail: finalSession.user.email,
-    tokenPresent: !!finalSession.access_token
-  });
-
   try {
-    // Step 1: Generate invitation code with enhanced retry logic
-    console.log('🎲 [INVITATION SERVICE] Generating invitation code...');
-    let invitationCode: string;
-    let codeAttempts = 0;
-    const maxCodeAttempts = 5;
-    
-    while (codeAttempts < maxCodeAttempts) {
-      try {
-        // Validate session before each attempt
-        const currentDebug = await debugAuthState();
-        if (!currentDebug.dbContextUserId) {
-          console.warn(`⚠️ [INVITATION SERVICE] DB context lost on attempt ${codeAttempts + 1}, refreshing...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        const { data: code, error: codeError } = await supabase
-          .rpc('generate_invitation_code');
+    // Generate invitation code
+    const { data: code, error: codeError } = await supabase
+      .rpc('generate_invitation_code');
 
-        if (codeError) {
-          console.error(`❌ [INVITATION SERVICE] Code generation attempt ${codeAttempts + 1} failed:`, codeError);
-          codeAttempts++;
-          
-          if (codeAttempts >= maxCodeAttempts) {
-            throw new Error('Failed to generate invitation code after multiple attempts: ' + codeError.message);
-          }
-          
-          // Progressive delay
-          await new Promise(resolve => setTimeout(resolve, 1000 * codeAttempts));
-          continue;
-        }
-
-        if (!code) {
-          console.error(`❌ [INVITATION SERVICE] No code returned on attempt ${codeAttempts + 1}`);
-          codeAttempts++;
-          continue;
-        }
-
-        invitationCode = code;
-        console.log('✅ [INVITATION SERVICE] Invitation code generated successfully:', invitationCode);
-        break;
-        
-      } catch (error) {
-        console.error(`❌ [INVITATION SERVICE] Code generation attempt ${codeAttempts + 1} error:`, error);
-        codeAttempts++;
-        
-        if (codeAttempts >= maxCodeAttempts) {
-          throw error;
-        }
-        
-        // Progressive delay
-        await new Promise(resolve => setTimeout(resolve, 1000 * codeAttempts));
-      }
+    if (codeError || !code) {
+      throw new Error('Failed to generate invitation code');
     }
 
-    // Step 2: Create the invitation record with enhanced session validation
-    console.log('📝 [INVITATION SERVICE] Creating invitation record in database...');
-    
+    // Create invitation record
     const invitationData = {
       email,
       role,
       project_id: projectId,
       invited_by: finalSession.user.id,
-      invitation_code: invitationCode!,
+      invitation_code: code,
       token: crypto.randomUUID(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    console.log('📝 [INVITATION SERVICE] Invitation data to insert:', invitationData);
+    const { data: invitation, error: invitationError } = await supabase
+      .from('invitations')
+      .insert(invitationData)
+      .select()
+      .single();
 
-    // Attempt insertion with session validation and retry logic
-    let insertAttempts = 0;
-    const maxInsertAttempts = 3;
-    let invitation: Invitation;
-    
-    while (insertAttempts < maxInsertAttempts) {
-      try {
-        // Validate session before each insert attempt
-        const preInsertDebug = await debugAuthState();
-        console.log(`📝 [INVITATION SERVICE] Pre-insert session check (attempt ${insertAttempts + 1}):`, {
-          sessionExists: preInsertDebug.sessionExists,
-          userExists: preInsertDebug.userExists,
-          dbContext: preInsertDebug.dbContextUserId,
-          environment: preInsertDebug.environment
-        });
-        
-        if (!preInsertDebug.dbContextUserId) {
-          console.warn(`⚠️ [INVITATION SERVICE] DB context missing on insert attempt ${insertAttempts + 1}`);
-          
-          // Try to recover session
-          const { valid: recoveryValid } = await validateSessionBeforeOperation();
-          if (!recoveryValid) {
-            throw new Error('Session recovery failed during invitation creation');
-          }
-        }
-        
-        const { data: insertedInvitation, error: invitationError } = await supabase
-          .from('invitations')
-          .insert(invitationData)
-          .select()
-          .single();
-
-        if (invitationError) {
-          console.error(`❌ [INVITATION SERVICE] Insert attempt ${insertAttempts + 1} failed:`, {
-            message: invitationError.message,
-            details: invitationError.details,
-            hint: invitationError.hint,
-            code: invitationError.code
-          });
-          
-          // Check if it's an auth/RLS issue
-          if (invitationError.message.includes('row-level security') || 
-              invitationError.message.includes('permission denied') ||
-              invitationError.message.includes('auth') ||
-              invitationError.code === 'PGRST301') {
-            
-            console.log('🔄 [INVITATION SERVICE] RLS/Auth error detected, attempting session recovery...');
-            
-            // Force session validation and recovery
-            await enforceSingleSession();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const { valid: recoveryValid } = await validateSessionBeforeOperation();
-            if (!recoveryValid) {
-              throw new Error('Session recovery failed - please log in again');
-            }
-            
-            insertAttempts++;
-            if (insertAttempts < maxInsertAttempts) {
-              console.log('🔄 [INVITATION SERVICE] Retrying invitation creation with recovered session...');
-              continue;
-            }
-          }
-          
-          throw new Error('Failed to create invitation: ' + invitationError.message);
-        }
-
-        if (!insertedInvitation) {
-          throw new Error('Failed to create invitation: No invitation returned');
-        }
-
-        invitation = insertedInvitation;
-        console.log('🎉 [INVITATION SERVICE] Invitation created successfully:', invitation);
-        break;
-        
-      } catch (error) {
-        console.error(`❌ [INVITATION SERVICE] Insert attempt ${insertAttempts + 1} error:`, error);
-        insertAttempts++;
-        
-        if (insertAttempts >= maxInsertAttempts) {
-          throw error;
-        }
-        
-        // Progressive delay
-        await new Promise(resolve => setTimeout(resolve, 1000 * insertAttempts));
-      }
+    if (invitationError || !invitation) {
+      throw new Error('Failed to create invitation: ' + invitationError?.message);
     }
 
-    return { invitation: invitation!, invitationCode: invitationCode! };
+    return { invitation, invitationCode: code, success: true };
 
   } catch (error) {
-    console.error('❌ [INVITATION SERVICE] Complete invitation creation failed:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : undefined,
-      authState: await debugAuthState()
-    });
-    throw error instanceof Error ? error : new Error('Failed to create invitation');
+    console.error('❌ [INVITATION SERVICE] Code-based invitation failed:', error);
+    throw error;
   }
 };
 
@@ -234,7 +115,7 @@ export const validateInvitationCode = async (code: string): Promise<Invitation |
       .from('invitations')
       .select('*')
       .eq('invitation_code', code)
-      .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no match
+      .maybeSingle();
 
     if (error) {
       console.error('❌ [INVITATION SERVICE] Database error during validation:', {
@@ -448,36 +329,7 @@ export const acceptInvitation = async (
       throw new Error('Failed to accept invitation: ' + updateError.message);
     }
 
-    // Final verification: ensure all operations succeeded
-    console.log('🔍 [INVITATION SERVICE] Performing final verification...');
-    
-    // Verify role was assigned
-    const { data: finalRoleCheck } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', invitation.role)
-      .maybeSingle();
-
-    if (!finalRoleCheck) {
-      throw new Error('Role assignment verification failed');
-    }
-
-    // Verify project membership if applicable
-    if (invitation.project_id) {
-      const { data: finalMemberCheck } = await supabase
-        .from('project_members')
-        .select('role')
-        .eq('project_id', invitation.project_id)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (!finalMemberCheck) {
-        throw new Error('Project membership verification failed');
-      }
-    }
-
-    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed and verified successfully');
+    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed successfully');
 
   } catch (error) {
     console.error('❌ [INVITATION SERVICE] Failed to accept invitation:', {

@@ -9,6 +9,7 @@ import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import AuthPage from '@/pages/Auth/AuthPage';
 import InvitePage from '@/pages/Invite/InvitePage';
 import VerificationCallback from '@/pages/Invite/VerificationCallback';
+import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
 
 // Dashboard pages
 import Dashboard from '@/pages/Dashboard/Dashboard';
@@ -37,6 +38,9 @@ const AppRouter = () => {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/invite/verify" element={<VerificationCallback />} />
+            
+            {/* New email-based invitation route */}
+            <Route path="/invite/join/:token" element={<InviteJoinPage />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={
