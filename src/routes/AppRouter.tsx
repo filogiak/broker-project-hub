@@ -1,97 +1,129 @@
+
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
-import AuthErrorBoundary from '@/components/auth/AuthErrorBoundary';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
+import AuthErrorBoundary from '@/components/auth/AuthErrorBoundary';
 
-// Auth pages
+// Page imports
+import Index from '@/pages/Index';
 import AuthPage from '@/pages/Auth/AuthPage';
-import InvitePage from '@/pages/Invite/InvitePage';
-import VerificationCallback from '@/pages/Invite/VerificationCallback';
-import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
-
-// Dashboard pages
 import Dashboard from '@/pages/Dashboard/Dashboard';
-import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
-
-// Admin pages
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
-
-// Project pages
+import BrokerageDashboard from '@/pages/Brokerage/BrokerageDashboard';
+import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
 import ProjectDocuments from '@/pages/Project/ProjectDocuments';
-
-// Other pages
-import Index from '@/pages/Index';
+import InvitePage from '@/pages/Invite/InvitePage';
+import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
+import VerificationCallback from '@/pages/Invite/VerificationCallback';
+import VerificationCallbackPage from '@/pages/Invite/VerificationCallbackPage';
 import NotFound from '@/pages/NotFound';
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Index />,
+  },
+  {
+    path: '/auth',
+    element: <AuthPage />,
+  },
+  {
+    path: '/dashboard',
+    element: (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute>
+        <RoleBasedRoute allowedRoles={['superadmin']}>
+          <AdminDashboard />
+        </RoleBasedRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/brokerage/:brokerageId',
+    element: (
+      <ProtectedRoute>
+        <BrokerageDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/brokerage-owner/:brokerageId',
+    element: (
+      <ProtectedRoute>
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+          <BrokerageOwnerDashboard />
+        </RoleBasedRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/project/:projectId',
+    element: (
+      <ProtectedRoute>
+        <ProjectDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/project/:projectId/members',
+    element: (
+      <ProtectedRoute>
+        <ProjectMembersDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/project/:projectId/documents',
+    element: (
+      <ProtectedRoute>
+        <ProjectDocuments />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/project/:projectId/invite',
+    element: (
+      <ProtectedRoute>
+        <InvitePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/invite/join/:token',
+    element: <InviteJoinPage />,
+  },
+  {
+    path: '/invite/verify/:token',
+    element: <VerificationCallbackPage />,
+  },
+  {
+    path: '/auth/callback',
+    element: <VerificationCallback />,
+  },
+  {
+    path: '*',
+    element: <NotFound />,
+  },
+]);
 
 const AppRouter = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AuthErrorBoundary>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/invite" element={<InvitePage />} />
-            <Route path="/invite/verify" element={<VerificationCallback />} />
-            
-            {/* New email-based invitation route */}
-            <Route path="/invite/join/:token" element={<InviteJoinPage />} />
-
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-
-            {/* Admin routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['superadmin']}>
-                  <AdminDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            {/* Brokerage owner routes */}
-            <Route path="/brokerage/:brokerageId?" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
-                  <BrokerageOwnerDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            {/* Project routes */}
-            <Route path="/project/:projectId" element={
-              <ProtectedRoute>
-                <ProjectDashboard />
-              </ProtectedRoute>
-            } />
-
-            <Route path="/project/:projectId/members" element={
-              <ProtectedRoute>
-                <ProjectMembersDashboard />
-              </ProtectedRoute>
-            } />
-
-            <Route path="/project/:projectId/documents" element={
-              <ProtectedRoute>
-                <ProjectDocuments />
-              </ProtectedRoute>
-            } />
-
-            {/* Catch all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthErrorBoundary>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <AuthErrorBoundary>
+        <RouterProvider router={router} />
+      </AuthErrorBoundary>
+    </AuthProvider>
   );
 };
 

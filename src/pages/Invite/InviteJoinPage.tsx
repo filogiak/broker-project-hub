@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { validateInvitationToken } from '@/services/invitationService';
+import PostVerificationSetup from '@/components/auth/PostVerificationSetup';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -19,6 +21,8 @@ const InviteJoinPage = () => {
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -30,8 +34,6 @@ const InviteJoinPage = () => {
     const validateToken = async () => {
       console.log('🔍 [INVITE JOIN] Starting token validation process');
       console.log('🔍 [INVITE JOIN] Raw token from URL params:', token);
-      console.log('🔍 [INVITE JOIN] Current URL:', window.location.href);
-      console.log('🔍 [INVITE JOIN] URL pathname:', window.location.pathname);
       
       if (!token) {
         console.error('❌ [INVITE JOIN] No token provided in URL params');
@@ -42,7 +44,6 @@ const InviteJoinPage = () => {
       try {
         console.log('🔍 [INVITE JOIN] Validating invitation token with service...');
         
-        // Use the invitation service to validate the token
         const validInvitation = await validateInvitationToken(token);
         
         if (!validInvitation) {
@@ -104,7 +105,7 @@ const InviteJoinPage = () => {
     try {
       console.log('👤 [INVITE JOIN] Creating account for:', invitation.email);
 
-      // Create user account
+      // Create user account with email confirmation disabled
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
         password: formData.password,
@@ -131,77 +132,11 @@ const InviteJoinPage = () => {
         throw new Error('No user returned from signup');
       }
 
-      console.log('✅ [INVITE JOIN] Account created successfully');
+      console.log('✅ [INVITE JOIN] Account created successfully, user ID:', authData.user.id);
 
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: invitation.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-        });
-
-      if (profileError) {
-        console.error('❌ [INVITE JOIN] Profile creation error:', profileError);
-        // Continue - profile might already exist
-      }
-
-      // Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: invitation.role as any,
-        });
-
-      if (roleError) {
-        console.error('❌ [INVITE JOIN] Role assignment error:', roleError);
-        // Continue if role already exists
-      }
-
-      // Add to project if project_id exists
-      if (invitation.project_id) {
-        const { error: memberError } = await supabase
-          .from('project_members')
-          .insert({
-            project_id: invitation.project_id,
-            user_id: authData.user.id,
-            role: invitation.role as any,
-            invited_by: invitation.invited_by,
-            joined_at: new Date().toISOString(),
-          });
-
-        if (memberError) {
-          console.error('❌ [INVITE JOIN] Project member error:', memberError);
-          // Continue if already a member
-        }
-      }
-
-      // Mark invitation as used
-      const { error: inviteError } = await supabase
-        .from('invitations')
-        .update({ accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id);
-
-      if (inviteError) {
-        console.error('❌ [INVITE JOIN] Error marking invitation as accepted:', inviteError);
-      }
-
-      console.log('🎉 [INVITE JOIN] Complete signup flow successful');
-
-      toast({
-        title: "Welcome!",
-        description: "Your account has been created successfully. Welcome to the project!",
-      });
-
-      // Redirect to project dashboard if project exists, otherwise to main dashboard
-      if (invitation.project_id) {
-        navigate(`/project/${invitation.project_id}`);
-      } else {
-        navigate('/dashboard');
-      }
+      // Store the user ID and show the setup component
+      setNewUserId(authData.user.id);
+      setShowSetup(true);
 
     } catch (error) {
       console.error('❌ [INVITE JOIN] Complete signup error:', error);
@@ -212,6 +147,22 @@ const InviteJoinPage = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSetupComplete = () => {
+    console.log('🎉 [INVITE JOIN] Setup completed, redirecting...');
+    
+    toast({
+      title: "Welcome!",
+      description: "Your account has been created and you've been added to the project!",
+    });
+
+    // Redirect to project dashboard if project exists, otherwise to main dashboard
+    if (invitation?.project_id) {
+      navigate(`/project/${invitation.project_id}`);
+    } else {
+      navigate('/dashboard');
     }
   };
 
@@ -251,6 +202,19 @@ const InviteJoinPage = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Show the post-verification setup component
+  if (showSetup && newUserId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <PostVerificationSetup
+          invitation={invitation}
+          userId={newUserId}
+          onSetupComplete={handleSetupComplete}
+        />
       </div>
     );
   }

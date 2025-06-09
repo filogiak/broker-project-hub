@@ -85,6 +85,8 @@ export const createEmailInvitation = async (
         role,
         inviterName,
         encryptedToken,
+        // Use the join route for new signups
+        invitationUrl: `${window.location.origin}/invite/join/${encryptedToken}`,
       },
     });
 
