@@ -112,82 +112,70 @@ export const validateInvitationToken = async (encryptedToken: string): Promise<I
   console.log('🔍 [INVITATION SERVICE] Starting invitation token validation');
   console.log('🔍 [INVITATION SERVICE] Raw token received:', encryptedToken);
   console.log('🔍 [INVITATION SERVICE] Token length:', encryptedToken?.length);
+  console.log('🔍 [INVITATION SERVICE] Token has special chars:', /[+/=]/.test(encryptedToken));
   
   if (!encryptedToken) {
     console.warn('⚠️ [INVITATION SERVICE] No token provided');
     return null;
   }
 
-  // Decode URL-encoded token if necessary
-  let decodedToken = encryptedToken;
-  try {
-    decodedToken = decodeURIComponent(encryptedToken);
-    console.log('🔄 [INVITATION SERVICE] URL decoded token:', decodedToken);
-    console.log('🔄 [INVITATION SERVICE] Token changed after decode:', decodedToken !== encryptedToken);
-  } catch (decodeError) {
-    console.warn('⚠️ [INVITATION SERVICE] URL decode failed, using original token:', decodeError);
-  }
+  // Try multiple URL decoding approaches
+  const tokenVariants = [
+    encryptedToken, // Original
+    decodeURIComponent(encryptedToken), // Standard decode
+    encryptedToken.replace(/ /g, '+'), // Replace spaces with +
+    decodeURIComponent(encryptedToken.replace(/ /g, '+')), // Decode after fixing +
+  ];
+
+  console.log('🔄 [INVITATION SERVICE] Testing token variants:', tokenVariants.map((t, i) => 
+    `${i}: ${t.substring(0, 20)}... (${t.length} chars)`
+  ));
 
   try {
     console.log('📞 [INVITATION SERVICE] Querying invitations table for token validation...');
-    console.log('📞 [INVITATION SERVICE] Looking for encrypted_token:', decodedToken.substring(0, 20) + '...');
     
-    // Try exact match first
-    const { data: invitation, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('encrypted_token', decodedToken)
-      .maybeSingle();
-
-    if (error) {
-      console.error('❌ [INVITATION SERVICE] Database error during token validation:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+    // Try exact match first with all variants
+    for (let i = 0; i < tokenVariants.length; i++) {
+      const variant = tokenVariants[i];
+      console.log(`🔍 [INVITATION SERVICE] Testing variant ${i}: ${variant.substring(0, 20)}...`);
       
-      // If exact match fails, try with original token
-      if (decodedToken !== encryptedToken) {
-        console.log('🔄 [INVITATION SERVICE] Trying with original token...');
-        const { data: fallbackInvitation, error: fallbackError } = await supabase
-          .from('invitations')
-          .select('*')
-          .eq('encrypted_token', encryptedToken)
-          .maybeSingle();
-          
-        if (!fallbackError && fallbackInvitation) {
-          console.log('✅ [INVITATION SERVICE] Found invitation with original token');
-          return this.validateInvitationExpiry(fallbackInvitation);
-        }
-      }
-      
-      return null;
-    }
-
-    if (!invitation) {
-      console.warn('⚠️ [INVITATION SERVICE] No invitation found for token');
-      
-      // Debug: Check what tokens exist in database
-      const { data: allInvitations, error: debugError } = await supabase
+      const { data: invitation, error } = await supabase
         .from('invitations')
-        .select('id, encrypted_token, email, expires_at, accepted_at')
-        .not('encrypted_token', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(5);
-        
-      if (!debugError && allInvitations) {
-        console.log('🔍 [INVITATION SERVICE] Recent tokens in database:');
-        allInvitations.forEach((inv, index) => {
-          const dbToken = inv.encrypted_token || '';
-          console.log(`  ${index + 1}. ${dbToken.substring(0, 20)}... (${inv.email}) - Match: ${dbToken === decodedToken || dbToken === encryptedToken}`);
-        });
+        .select('*')
+        .eq('encrypted_token', variant)
+        .maybeSingle();
+
+      if (error) {
+        console.error(`❌ [INVITATION SERVICE] Database error testing variant ${i}:`, error.message);
+        continue;
       }
-      
-      return null;
+
+      if (invitation) {
+        console.log(`✅ [INVITATION SERVICE] Found invitation with variant ${i}`);
+        return validateInvitationExpiry(invitation);
+      }
     }
 
-    return this.validateInvitationExpiry(invitation);
+    console.warn('⚠️ [INVITATION SERVICE] No invitation found for any token variant');
+    
+    // Debug: Check what tokens exist in database
+    const { data: allInvitations, error: debugError } = await supabase
+      .from('invitations')
+      .select('id, encrypted_token, email, expires_at, accepted_at')
+      .not('encrypted_token', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5);
+      
+    if (!debugError && allInvitations) {
+      console.log('🔍 [INVITATION SERVICE] Recent tokens in database:');
+      allInvitations.forEach((inv, index) => {
+        const dbToken = inv.encrypted_token || '';
+        const matches = tokenVariants.some(variant => variant === dbToken);
+        console.log(`  ${index + 1}. ${dbToken.substring(0, 20)}... (${inv.email}) - Length: ${dbToken.length} - Matches: ${matches}`);
+      });
+    }
+    
+    return null;
 
   } catch (error) {
     console.error('❌ [INVITATION SERVICE] Token validation failed:', {
