@@ -34,7 +34,11 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🚀 [ADD MEMBER MODAL] Form submission started');
+    console.log('🚀 [ADD MEMBER MODAL] Form data:', { email: email.trim(), role, projectId });
+    
     if (!email.trim()) {
+      console.warn('⚠️ [ADD MEMBER MODAL] Email validation failed - empty email');
       toast({
         title: "Email Required",
         description: "Please enter an email address",
@@ -43,11 +47,14 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
       return;
     }
 
+    console.log('✅ [ADD MEMBER MODAL] Form validation passed');
     setIsLoading(true);
 
     try {
+      console.log('📞 [ADD MEMBER MODAL] Calling createProjectInvitation service...');
       const { invitationCode: code } = await createProjectInvitation(projectId, role, email.trim());
       
+      console.log('🎉 [ADD MEMBER MODAL] Invitation creation successful, code:', code);
       setInvitationCode(code);
       
       toast({
@@ -55,21 +62,30 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
         description: `Invitation code ${code} has been generated for ${email}`,
       });
 
+      console.log('🔄 [ADD MEMBER MODAL] Calling onMemberAdded callback');
       onMemberAdded();
 
     } catch (error) {
-      console.error('Error creating invitation:', error);
+      console.error('❌ [ADD MEMBER MODAL] Invitation creation error:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name
+      });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create invitation",
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 [ADD MEMBER MODAL] Form submission completed, setting loading to false');
       setIsLoading(false);
     }
   };
 
   const handleClose = () => {
+    console.log('🚪 [ADD MEMBER MODAL] Modal closing, resetting state');
     setEmail('');
     setRole('real_estate_agent');
     setInvitationCode(null);
@@ -78,13 +94,24 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
 
   const copyInvitationCode = () => {
     if (invitationCode) {
+      console.log('📋 [ADD MEMBER MODAL] Copying invitation code to clipboard:', invitationCode);
       navigator.clipboard.writeText(invitationCode);
       toast({
         title: "Copied",
         description: "Invitation code copied to clipboard",
       });
+    } else {
+      console.warn('⚠️ [ADD MEMBER MODAL] Attempted to copy null invitation code');
     }
   };
+
+  console.log('🎨 [ADD MEMBER MODAL] Rendering modal with state:', { 
+    isOpen, 
+    isLoading, 
+    invitationCode: !!invitationCode,
+    email,
+    role 
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

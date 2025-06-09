@@ -10,51 +10,154 @@ export const createProjectInvitation = async (
   role: UserRole,
   email: string
 ): Promise<{ invitation: Invitation; invitationCode: string }> => {
-  console.log('🎯 Creating project invitation:', { projectId, role, email });
+  console.log('🎯 [INVITATION SERVICE] Starting invitation creation process');
+  console.log('🎯 [INVITATION SERVICE] Input parameters:', { projectId, role, email });
   
-  // Check authentication
-  const { data: { session } } = await supabase.auth.getSession();
+  // Check authentication first
+  console.log('🔐 [INVITATION SERVICE] Checking user session...');
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  
+  if (sessionError) {
+    console.error('❌ [INVITATION SERVICE] Session error:', sessionError);
+    throw new Error('Session error: ' + sessionError.message);
+  }
+  
   if (!session?.user) {
+    console.error('❌ [INVITATION SERVICE] No authenticated user found');
     throw new Error('You must be logged in to create invitations');
   }
 
+  console.log('✅ [INVITATION SERVICE] User authenticated:', {
+    userId: session.user.id,
+    userEmail: session.user.email
+  });
+
   try {
-    // Generate invitation code using the database function
+    // Step 1: Generate invitation code
+    console.log('🎲 [INVITATION SERVICE] Attempting to generate invitation code...');
     const { data: invitationCode, error: codeError } = await supabase
       .rpc('generate_invitation_code');
 
-    if (codeError || !invitationCode) {
-      console.error('❌ Error generating invitation code:', codeError);
-      throw new Error('Failed to generate invitation code');
+    console.log('🎲 [INVITATION SERVICE] RPC call completed');
+    console.log('🎲 [INVITATION SERVICE] RPC response data:', invitationCode);
+    console.log('🎲 [INVITATION SERVICE] RPC response error:', codeError);
+
+    if (codeError) {
+      console.error('❌ [INVITATION SERVICE] Error from generate_invitation_code RPC:', {
+        message: codeError.message,
+        details: codeError.details,
+        hint: codeError.hint,
+        code: codeError.code
+      });
+      throw new Error('Failed to generate invitation code: ' + codeError.message);
     }
 
-    console.log('✅ Generated invitation code:', invitationCode);
+    if (!invitationCode) {
+      console.error('❌ [INVITATION SERVICE] No invitation code returned from RPC');
+      throw new Error('Failed to generate invitation code: No code returned');
+    }
 
-    // Create the invitation
+    console.log('✅ [INVITATION SERVICE] Invitation code generated successfully:', invitationCode);
+
+    // Step 2: Verify project access
+    console.log('🏢 [INVITATION SERVICE] Verifying user can access project...');
+    const { data: projectData, error: projectError } = await supabase
+      .from('projects')
+      .select('id, name, brokerage_id')
+      .eq('id', projectId)
+      .single();
+
+    console.log('🏢 [INVITATION SERVICE] Project query result:', { projectData, projectError });
+
+    if (projectError) {
+      console.error('❌ [INVITATION SERVICE] Project query error:', projectError);
+      throw new Error('Failed to verify project: ' + projectError.message);
+    }
+
+    if (!projectData) {
+      console.error('❌ [INVITATION SERVICE] Project not found');
+      throw new Error('Project not found');
+    }
+
+    console.log('✅ [INVITATION SERVICE] Project found:', projectData);
+
+    // Step 3: Verify user owns the brokerage that owns this project
+    console.log('🏢 [INVITATION SERVICE] Verifying brokerage ownership...');
+    const { data: brokerageData, error: brokerageError } = await supabase
+      .from('brokerages')
+      .select('id, name, owner_id')
+      .eq('id', projectData.brokerage_id)
+      .single();
+
+    console.log('🏢 [INVITATION SERVICE] Brokerage query result:', { brokerageData, brokerageError });
+
+    if (brokerageError) {
+      console.error('❌ [INVITATION SERVICE] Brokerage query error:', brokerageError);
+      throw new Error('Failed to verify brokerage: ' + brokerageError.message);
+    }
+
+    if (!brokerageData) {
+      console.error('❌ [INVITATION SERVICE] Brokerage not found');
+      throw new Error('Brokerage not found');
+    }
+
+    if (brokerageData.owner_id !== session.user.id) {
+      console.error('❌ [INVITATION SERVICE] User is not brokerage owner:', {
+        userId: session.user.id,
+        brokerageOwnerId: brokerageData.owner_id
+      });
+      throw new Error('You are not authorized to create invitations for this project');
+    }
+
+    console.log('✅ [INVITATION SERVICE] User is authorized brokerage owner');
+
+    // Step 4: Create the invitation record
+    console.log('📝 [INVITATION SERVICE] Creating invitation record in database...');
+    
+    const invitationData = {
+      email,
+      role,
+      project_id: projectId,
+      invited_by: session.user.id,
+      invitation_code: invitationCode,
+      token: crypto.randomUUID(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    console.log('📝 [INVITATION SERVICE] Invitation data to insert:', invitationData);
+
     const { data: invitation, error: invitationError } = await supabase
       .from('invitations')
-      .insert({
-        email,
-        role,
-        project_id: projectId,
-        invited_by: session.user.id,
-        invitation_code: invitationCode,
-        token: crypto.randomUUID(), // Generate a unique token
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-      })
+      .insert(invitationData)
       .select()
       .single();
 
-    if (invitationError || !invitation) {
-      console.error('❌ Error creating invitation:', invitationError);
-      throw new Error('Failed to create invitation');
+    console.log('📝 [INVITATION SERVICE] Database insert result:', { invitation, invitationError });
+
+    if (invitationError) {
+      console.error('❌ [INVITATION SERVICE] Error inserting invitation:', {
+        message: invitationError.message,
+        details: invitationError.details,
+        hint: invitationError.hint,
+        code: invitationError.code
+      });
+      throw new Error('Failed to create invitation: ' + invitationError.message);
     }
 
-    console.log('🎉 Invitation created successfully:', invitation);
+    if (!invitation) {
+      console.error('❌ [INVITATION SERVICE] No invitation returned from insert');
+      throw new Error('Failed to create invitation: No invitation returned');
+    }
+
+    console.log('🎉 [INVITATION SERVICE] Invitation created successfully:', invitation);
     return { invitation, invitationCode };
 
   } catch (error) {
-    console.error('❌ Invitation creation failed:', error);
+    console.error('❌ [INVITATION SERVICE] Complete invitation creation failed:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     throw error instanceof Error ? error : new Error('Failed to create invitation');
   }
 };
