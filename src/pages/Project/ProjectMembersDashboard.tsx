@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,7 +42,7 @@ const ProjectMembersDashboard = () => {
           user_id,
           role,
           joined_at,
-          profiles:user_id (
+          profiles!project_members_user_id_fkey (
             first_name,
             last_name,
             email,

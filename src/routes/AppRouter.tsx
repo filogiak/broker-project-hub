@@ -46,9 +46,7 @@ const AppRouter = () => {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
@@ -58,9 +56,7 @@ const AppRouter = () => {
               path="/admin"
               element={
                 <RoleBasedRoute allowedRoles={['superadmin']}>
-                  <MainLayout>
-                    <AdminDashboard />
-                  </MainLayout>
+                  <AdminDashboard />
                 </RoleBasedRoute>
               }
             />
@@ -70,9 +66,7 @@ const AppRouter = () => {
               path="/brokerage/:id"
               element={
                 <RoleBasedRoute allowedRoles={['superadmin', 'brokerage_owner']}>
-                  <MainLayout>
-                    <BrokerageDashboard />
-                  </MainLayout>
+                  <BrokerageDashboard />
                 </RoleBasedRoute>
               }
             />
@@ -81,9 +75,7 @@ const AppRouter = () => {
               path="/brokerage-owner"
               element={
                 <RoleBasedRoute allowedRoles={['brokerage_owner']}>
-                  <MainLayout>
-                    <BrokerageOwnerDashboard />
-                  </MainLayout>
+                  <BrokerageOwnerDashboard />
                 </RoleBasedRoute>
               }
             />
@@ -93,9 +85,7 @@ const AppRouter = () => {
               path="/broker"
               element={
                 <RoleBasedRoute allowedRoles={['broker_assistant']}>
-                  <MainLayout>
-                    <BrokerDashboard />
-                  </MainLayout>
+                  <BrokerDashboard />
                 </RoleBasedRoute>
               }
             />
@@ -104,9 +94,7 @@ const AppRouter = () => {
               path="/broker/projects"
               element={
                 <RoleBasedRoute allowedRoles={['broker_assistant']}>
-                  <MainLayout>
-                    <BrokerProjectList />
-                  </MainLayout>
+                  <BrokerProjectList />
                 </RoleBasedRoute>
               }
             />
@@ -116,9 +104,7 @@ const AppRouter = () => {
               path="/agent"
               element={
                 <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-                  <MainLayout>
-                    <AgentPortal />
-                  </MainLayout>
+                  <AgentPortal />
                 </RoleBasedRoute>
               }
             />
@@ -128,9 +114,7 @@ const AppRouter = () => {
               path="/client"
               element={
                 <RoleBasedRoute allowedRoles={['mortgage_applicant']}>
-                  <MainLayout>
-                    <ClientPortal />
-                  </MainLayout>
+                  <ClientPortal />
                 </RoleBasedRoute>
               }
             />
@@ -140,9 +124,7 @@ const AppRouter = () => {
               path="/tenant"
               element={
                 <RoleBasedRoute allowedRoles={['superadmin', 'brokerage_owner']}>
-                  <MainLayout>
-                    <TenantDashboard />
-                  </MainLayout>
+                  <TenantDashboard />
                 </RoleBasedRoute>
               }
             />
@@ -151,9 +133,7 @@ const AppRouter = () => {
               path="/tenant/settings"
               element={
                 <RoleBasedRoute allowedRoles={['superadmin', 'brokerage_owner']}>
-                  <MainLayout>
-                    <TenantSettings />
-                  </MainLayout>
+                  <TenantSettings />
                 </RoleBasedRoute>
               }
             />
@@ -163,9 +143,7 @@ const AppRouter = () => {
               path="/project/:id"
               element={
                 <ProtectedRoute>
-                  <MainLayout>
-                    <ProjectDashboard />
-                  </MainLayout>
+                  <ProjectDashboard />
                 </ProtectedRoute>
               }
             />
@@ -174,9 +152,7 @@ const AppRouter = () => {
               path="/project/:id/members"
               element={
                 <ProtectedRoute>
-                  <MainLayout>
-                    <ProjectMembersDashboard />
-                  </MainLayout>
+                  <ProjectMembersDashboard />
                 </ProtectedRoute>
               }
             />
@@ -185,9 +161,7 @@ const AppRouter = () => {
               path="/project/:id/documents"
               element={
                 <ProtectedRoute>
-                  <MainLayout>
-                    <ProjectDocuments />
-                  </MainLayout>
+                  <ProjectDocuments />
                 </ProtectedRoute>
               }
             />
