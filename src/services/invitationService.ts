@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { debugAuthState, validateSessionBeforeOperation, enforceSingleSession } from './authDebugService';
 import type { Database } from '@/integrations/supabase/types';
@@ -330,11 +329,52 @@ export const acceptInvitation = async (
       invited_by: invitation.invited_by
     });
 
-    // Updated Step 1: Add user to project members FIRST with the new RLS policy
+    // Step 1: Ensure user has the correct role assigned
+    console.log('👤 [INVITATION SERVICE] Ensuring user role is assigned...');
+    
+    // Check if role already exists
+    const { data: existingRole, error: roleCheckError } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('role', invitation.role)
+      .maybeSingle();
+
+    if (roleCheckError) {
+      console.error('❌ [INVITATION SERVICE] Error checking user role:', roleCheckError);
+      throw new Error('Failed to check user role: ' + roleCheckError.message);
+    }
+
+    if (!existingRole) {
+      console.log('📝 [INVITATION SERVICE] Creating user role assignment...');
+      const { error: roleCreateError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: invitation.role
+        });
+
+      if (roleCreateError) {
+        console.error('❌ [INVITATION SERVICE] Error creating user role:', roleCreateError);
+        
+        // Check if it's a duplicate role error (unique constraint violation)
+        if (roleCreateError.code === '23505') {
+          console.warn('⚠️ [INVITATION SERVICE] User role already exists, continuing...');
+        } else {
+          throw new Error('Failed to assign role: ' + roleCreateError.message);
+        }
+      } else {
+        console.log('✅ [INVITATION SERVICE] User role assigned successfully:', {
+          user_id: userId,
+          role: invitation.role
+        });
+      }
+    }
+
+    // Step 2: Add user to project members
     if (invitation.project_id) {
       console.log('👥 [INVITATION SERVICE] Adding user to project members...');
       
-      // The new RLS policy allows insertion when there's a valid invitation
       const { error: memberError } = await supabase
         .from('project_members')
         .insert({
@@ -363,7 +403,7 @@ export const acceptInvitation = async (
       }
     }
 
-    // Step 2: Mark invitation as accepted AFTER adding to project
+    // Step 3: Mark invitation as accepted
     console.log('✅ [INVITATION SERVICE] Marking invitation as accepted...');
     const { error: updateError } = await supabase
       .from('invitations')

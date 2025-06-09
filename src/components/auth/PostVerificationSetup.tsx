@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Loader2, XCircle, User, Users } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, User, Users, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { acceptInvitation } from '@/services/invitationService';
 import type { Database } from '@/integrations/supabase/types';
@@ -34,6 +34,12 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       label: 'Creating your profile',
       status: 'pending',
       icon: <User className="h-4 w-4" />
+    },
+    {
+      id: 'role',
+      label: 'Assigning your role',
+      status: 'pending',
+      icon: <UserCheck className="h-4 w-4" />
     },
     {
       id: 'project',
@@ -96,9 +102,45 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       updateStepStatus('profile', 'complete');
       await delay(500); // Small delay for UX
 
-      // Step 2: Add to project and accept invitation
-      updateStepStatus('project', 'loading');
+      // Step 2: Assign user role
+      updateStepStatus('role', 'loading');
       setCurrentStep(1);
+
+      console.log('👤 [POST-VERIFICATION] Assigning user role...');
+      
+      // Check if role already exists
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('role', invitation.role)
+        .maybeSingle();
+
+      if (roleCheckError) {
+        console.error('❌ [POST-VERIFICATION] Error checking user role:', roleCheckError);
+        throw new Error('Failed to check user role: ' + roleCheckError.message);
+      }
+
+      if (!existingRole) {
+        const { error: roleCreateError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: invitation.role
+          });
+
+        if (roleCreateError) {
+          console.error('❌ [POST-VERIFICATION] Error creating user role:', roleCreateError);
+          throw new Error('Failed to assign role: ' + roleCreateError.message);
+        }
+      }
+
+      updateStepStatus('role', 'complete');
+      await delay(500);
+
+      // Step 3: Add to project and accept invitation
+      updateStepStatus('project', 'loading');
+      setCurrentStep(2);
 
       console.log('🤝 [POST-VERIFICATION] Accepting invitation and adding to project...');
       
