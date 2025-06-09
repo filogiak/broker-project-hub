@@ -39,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     const emailResponse = await resend.emails.send({
-      from: "Invitation <onboarding@resend.dev>",
+      from: "Invitations <noreply@gomutuo.it>",
       to: [email],
       subject: `You're invited to join ${projectName}`,
       html: `
