@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationCode, acceptInvitation } from '@/services/invitationService';
+import { validateInvitationCode } from '@/services/invitationService';
+import EmailVerificationScreen from '@/components/auth/EmailVerificationScreen';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -22,7 +23,7 @@ const InvitePage = () => {
     lastName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'code' | 'register'>('code');
+  const [step, setStep] = useState<'code' | 'register' | 'verify'>('code');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -110,8 +111,11 @@ const InvitePage = () => {
     setIsLoading(true);
 
     try {
-      // Create user account
-      console.log('👤 [INVITE PAGE] Creating user account...');
+      // Store the invitation code for later retrieval
+      sessionStorage.setItem('pendingInvitationCode', invitationCode);
+
+      // Create user account with email confirmation enabled
+      console.log('👤 [INVITE PAGE] Creating user account with email confirmation...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userDetails.email,
         password: userDetails.password,
@@ -120,7 +124,7 @@ const InvitePage = () => {
             first_name: userDetails.firstName,
             last_name: userDetails.lastName,
           },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/invite/verify?code=${invitationCode}`,
         },
       });
 
@@ -152,27 +156,23 @@ const InvitePage = () => {
 
       console.log('✅ [INVITE PAGE] User account created successfully:', {
         userId: authData.user.id,
-        email: authData.user.email
+        email: authData.user.email,
+        needsConfirmation: !authData.session
       });
 
-      // Accept the invitation
-      console.log('🤝 [INVITE PAGE] Accepting invitation...');
-      await acceptInvitation(invitation.id, authData.user.id);
-
-      console.log('🎉 [INVITE PAGE] Registration and invitation acceptance completed');
-
-      toast({
-        title: "Welcome!",
-        description: "Your account has been created and you've joined the project",
-      });
-
-      // Redirect to the project
-      if (invitation.project_id) {
-        console.log('🔄 [INVITE PAGE] Redirecting to project:', invitation.project_id);
-        navigate(`/project/${invitation.project_id}`);
+      // If the user needs to confirm email, show verification screen
+      if (!authData.session) {
+        console.log('📧 [INVITE PAGE] Email confirmation required, showing verification screen');
+        setStep('verify');
+        
+        toast({
+          title: "Check Your Email",
+          description: "We've sent a verification link to complete your account setup.",
+        });
       } else {
-        console.log('🔄 [INVITE PAGE] Redirecting to dashboard');
-        navigate('/dashboard');
+        // If somehow no confirmation is needed, redirect to verification callback
+        console.log('🔄 [INVITE PAGE] No email confirmation needed, redirecting to verification...');
+        navigate(`/invite/verify?code=${invitationCode}`);
       }
 
     } catch (error) {
@@ -184,7 +184,6 @@ const InvitePage = () => {
       
       let errorMessage = "Failed to complete registration";
       
-      // Provide more specific error messages
       if (error instanceof Error) {
         if (error.message.includes('already a member')) {
           errorMessage = "You're already a member of this project. Please try logging in instead.";
@@ -208,6 +207,11 @@ const InvitePage = () => {
     }
   };
 
+  const handleVerificationComplete = () => {
+    console.log('✅ [INVITE PAGE] Email verification completed, redirecting...');
+    navigate(`/invite/verify?code=${invitationCode}`);
+  };
+
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -227,7 +231,9 @@ const InvitePage = () => {
           <p className="text-muted-foreground">
             {step === 'code' 
               ? 'Enter your 6-digit invitation code to get started'
-              : 'Complete your account setup'
+              : step === 'register'
+              ? 'Complete your account setup'
+              : 'Verify your email address'
             }
           </p>
         </CardHeader>
@@ -254,7 +260,7 @@ const InvitePage = () => {
                 {isLoading ? 'Validating...' : 'Continue'}
               </Button>
             </form>
-          ) : (
+          ) : step === 'register' ? (
             <div className="space-y-4">
               {invitation && (
                 <div className="bg-muted p-3 rounded-lg text-sm">
@@ -262,7 +268,7 @@ const InvitePage = () => {
                   <p><strong>Role:</strong> {formatRole(invitation.role)}</p>
                   {invitation.project_id && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      You'll be added to the project upon completion
+                      You'll be added to the project after email verification
                     </p>
                   )}
                 </div>
@@ -330,11 +336,16 @@ const InvitePage = () => {
                     Back
                   </Button>
                   <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? 'Creating Account...' : 'Join Project'}
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </div>
               </form>
             </div>
+          ) : (
+            <EmailVerificationScreen
+              email={userDetails.email}
+              onVerificationComplete={handleVerificationComplete}
+            />
           )}
         </CardContent>
       </Card>
