@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { login, signUp } from '@/services/authService';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
@@ -21,31 +20,6 @@ const AuthPage = () => {
     firstName: '', 
     lastName: '' 
   });
-
-  // Clean up any existing sessions on page load
-  useEffect(() => {
-    const cleanupSessions = async () => {
-      try {
-        // Clear any lingering auth state
-        localStorage.removeItem('supabase.auth.token');
-        Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-            localStorage.removeItem(key);
-          }
-        });
-        
-        // Attempt silent signout to clean server state
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (error) {
-        // Ignore cleanup errors
-        console.log('Auth cleanup completed');
-      }
-    };
-
-    if (!user) {
-      cleanupSessions();
-    }
-  }, [user]);
 
   // Redirect if already authenticated
   if (user && !loading) {
