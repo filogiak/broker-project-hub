@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,20 +28,25 @@ const InviteJoinPage = () => {
 
   useEffect(() => {
     const validateToken = async () => {
+      console.log('🔍 [INVITE JOIN] Starting token validation process');
+      console.log('🔍 [INVITE JOIN] Raw token from URL params:', token);
+      console.log('🔍 [INVITE JOIN] Current URL:', window.location.href);
+      console.log('🔍 [INVITE JOIN] URL pathname:', window.location.pathname);
+      
       if (!token) {
-        console.error('❌ [INVITE JOIN] No token provided');
+        console.error('❌ [INVITE JOIN] No token provided in URL params');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('🔍 [INVITE JOIN] Validating invitation token');
+        console.log('🔍 [INVITE JOIN] Validating invitation token with service...');
         
         // Use the invitation service to validate the token
         const validInvitation = await validateInvitationToken(token);
         
         if (!validInvitation) {
-          console.error('❌ [INVITE JOIN] Invalid or expired token');
+          console.error('❌ [INVITE JOIN] Invalid or expired token returned from service');
           toast({
             title: "Invalid Invitation",
             description: "This invitation link is invalid, expired, or has already been used.",
@@ -216,6 +220,11 @@ const InviteJoinPage = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-lg font-medium">Validating invitation...</div>
+          {token && (
+            <div className="text-sm text-gray-500 mt-2">
+              Token: {token.substring(0, 10)}...
+            </div>
+          )}
         </div>
       </div>
     );
@@ -232,6 +241,11 @@ const InviteJoinPage = () => {
             <p className="text-muted-foreground mb-4">
               This invitation link is invalid, expired, or has already been used.
             </p>
+            {token && (
+              <div className="text-xs text-gray-400 mb-4 font-mono break-all">
+                Token: {token}
+              </div>
+            )}
             <Button onClick={() => navigate('/')} variant="outline">
               Go Home
             </Button>

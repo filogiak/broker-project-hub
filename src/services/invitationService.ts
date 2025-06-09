@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { createEmailInvitation } from './emailInvitationService';
 import type { Database } from '@/integrations/supabase/types';
@@ -110,20 +109,34 @@ export const validateInvitationCode = async (code: string): Promise<Invitation |
 };
 
 export const validateInvitationToken = async (encryptedToken: string): Promise<Invitation | null> => {
-  console.log('🔍 [INVITATION SERVICE] Starting invitation token validation:', encryptedToken.substring(0, 10) + '...');
+  console.log('🔍 [INVITATION SERVICE] Starting invitation token validation');
+  console.log('🔍 [INVITATION SERVICE] Raw token received:', encryptedToken);
+  console.log('🔍 [INVITATION SERVICE] Token length:', encryptedToken?.length);
   
   if (!encryptedToken) {
     console.warn('⚠️ [INVITATION SERVICE] No token provided');
     return null;
   }
 
+  // Decode URL-encoded token if necessary
+  let decodedToken = encryptedToken;
+  try {
+    decodedToken = decodeURIComponent(encryptedToken);
+    console.log('🔄 [INVITATION SERVICE] URL decoded token:', decodedToken);
+    console.log('🔄 [INVITATION SERVICE] Token changed after decode:', decodedToken !== encryptedToken);
+  } catch (decodeError) {
+    console.warn('⚠️ [INVITATION SERVICE] URL decode failed, using original token:', decodeError);
+  }
+
   try {
     console.log('📞 [INVITATION SERVICE] Querying invitations table for token validation...');
+    console.log('📞 [INVITATION SERVICE] Looking for encrypted_token:', decodedToken.substring(0, 20) + '...');
     
+    // Try exact match first
     const { data: invitation, error } = await supabase
       .from('invitations')
       .select('*')
-      .eq('encrypted_token', encryptedToken)
+      .eq('encrypted_token', decodedToken)
       .maybeSingle();
 
     if (error) {
@@ -133,51 +146,48 @@ export const validateInvitationToken = async (encryptedToken: string): Promise<I
         hint: error.hint,
         code: error.code
       });
+      
+      // If exact match fails, try with original token
+      if (decodedToken !== encryptedToken) {
+        console.log('🔄 [INVITATION SERVICE] Trying with original token...');
+        const { data: fallbackInvitation, error: fallbackError } = await supabase
+          .from('invitations')
+          .select('*')
+          .eq('encrypted_token', encryptedToken)
+          .maybeSingle();
+          
+        if (!fallbackError && fallbackInvitation) {
+          console.log('✅ [INVITATION SERVICE] Found invitation with original token');
+          return this.validateInvitationExpiry(fallbackInvitation);
+        }
+      }
+      
       return null;
     }
 
     if (!invitation) {
       console.warn('⚠️ [INVITATION SERVICE] No invitation found for token');
+      
+      // Debug: Check what tokens exist in database
+      const { data: allInvitations, error: debugError } = await supabase
+        .from('invitations')
+        .select('id, encrypted_token, email, expires_at, accepted_at')
+        .not('encrypted_token', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(5);
+        
+      if (!debugError && allInvitations) {
+        console.log('🔍 [INVITATION SERVICE] Recent tokens in database:');
+        allInvitations.forEach((inv, index) => {
+          const dbToken = inv.encrypted_token || '';
+          console.log(`  ${index + 1}. ${dbToken.substring(0, 20)}... (${inv.email}) - Match: ${dbToken === decodedToken || dbToken === encryptedToken}`);
+        });
+      }
+      
       return null;
     }
 
-    console.log('📋 [INVITATION SERVICE] Invitation found via token:', {
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role,
-      expires_at: invitation.expires_at,
-      accepted_at: invitation.accepted_at,
-      project_id: invitation.project_id
-    });
-
-    // Check if invitation has expired
-    const now = new Date();
-    const expiresAt = new Date(invitation.expires_at);
-    
-    if (expiresAt <= now) {
-      console.warn('⚠️ [INVITATION SERVICE] Invitation has expired:', {
-        expires_at: invitation.expires_at,
-        current_time: now.toISOString()
-      });
-      return null;
-    }
-
-    // Check if invitation has already been accepted
-    if (invitation.accepted_at) {
-      console.warn('⚠️ [INVITATION SERVICE] Invitation has already been accepted:', {
-        accepted_at: invitation.accepted_at
-      });
-      return null;
-    }
-
-    console.log('✅ [INVITATION SERVICE] Valid invitation found via token:', {
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role,
-      project_id: invitation.project_id
-    });
-    
-    return invitation;
+    return this.validateInvitationExpiry(invitation);
 
   } catch (error) {
     console.error('❌ [INVITATION SERVICE] Token validation failed:', {
@@ -186,6 +196,47 @@ export const validateInvitationToken = async (encryptedToken: string): Promise<I
     });
     return null;
   }
+};
+
+// Helper function to validate expiry and acceptance status
+const validateInvitationExpiry = (invitation: Invitation): Invitation | null => {
+  console.log('📋 [INVITATION SERVICE] Invitation found via token:', {
+    id: invitation.id,
+    email: invitation.email,
+    role: invitation.role,
+    expires_at: invitation.expires_at,
+    accepted_at: invitation.accepted_at,
+    project_id: invitation.project_id
+  });
+
+  // Check if invitation has expired
+  const now = new Date();
+  const expiresAt = new Date(invitation.expires_at);
+  
+  if (expiresAt <= now) {
+    console.warn('⚠️ [INVITATION SERVICE] Invitation has expired:', {
+      expires_at: invitation.expires_at,
+      current_time: now.toISOString()
+    });
+    return null;
+  }
+
+  // Check if invitation has already been accepted
+  if (invitation.accepted_at) {
+    console.warn('⚠️ [INVITATION SERVICE] Invitation has already been accepted:', {
+      accepted_at: invitation.accepted_at
+    });
+    return null;
+  }
+
+  console.log('✅ [INVITATION SERVICE] Valid invitation found via token:', {
+    id: invitation.id,
+    email: invitation.email,
+    role: invitation.role,
+    project_id: invitation.project_id
+  });
+  
+  return invitation;
 };
 
 export const acceptInvitation = async (
