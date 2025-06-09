@@ -47,6 +47,18 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      console.warn('⚠️ [ADD MEMBER MODAL] Email validation failed - invalid format');
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log('✅ [ADD MEMBER MODAL] Form validation passed');
     setIsLoading(true);
 
@@ -73,9 +85,24 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
         errorConstructor: error?.constructor?.name
       });
       
+      let errorMessage = "Failed to create invitation";
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('authentication')) {
+          errorMessage = "Authentication failed. Please log in again and try.";
+        } else if (error.message.includes('session')) {
+          errorMessage = "Session expired. Please refresh the page and try again.";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "You don't have permission to invite members to this project.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create invitation",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -102,6 +129,18 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
       });
     } else {
       console.warn('⚠️ [ADD MEMBER MODAL] Attempted to copy null invitation code');
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (invitationCode) {
+      const inviteLink = `${window.location.origin}/invite`;
+      console.log('📋 [ADD MEMBER MODAL] Copying invitation link to clipboard:', inviteLink);
+      navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: "Link Copied",
+        description: "Invitation link copied to clipboard",
+      });
     }
   };
 
@@ -169,14 +208,24 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
                   {invitationCode}
                 </div>
               </div>
-              <Button onClick={copyInvitationCode} variant="outline" size="sm">
-                Copy Code
-              </Button>
+              <div className="flex space-x-2 justify-center">
+                <Button onClick={copyInvitationCode} variant="outline" size="sm">
+                  Copy Code
+                </Button>
+                <Button onClick={copyInviteLink} variant="outline" size="sm">
+                  Copy Invite Link
+                </Button>
+              </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              The invited user should visit the invite page and enter this code to join the project.
-            </p>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>
+                The invited user should visit: <strong>{window.location.origin}/invite</strong>
+              </p>
+              <p>
+                And enter the code above to join the project.
+              </p>
+            </div>
 
             <Button onClick={handleClose} className="w-full">
               Done

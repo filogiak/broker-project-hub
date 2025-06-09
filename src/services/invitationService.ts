@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { debugAuthState, validateSessionBeforeOperation, enforceSingleSession } from './authDebugService';
 import type { Database } from '@/integrations/supabase/types';
@@ -329,21 +330,11 @@ export const acceptInvitation = async (
       invited_by: invitation.invited_by
     });
 
-    // Mark invitation as accepted
-    console.log('✅ [INVITATION SERVICE] Marking invitation as accepted...');
-    const { error: updateError } = await supabase
-      .from('invitations')
-      .update({ accepted_at: new Date().toISOString() })
-      .eq('id', invitationId);
-
-    if (updateError) {
-      console.error('❌ [INVITATION SERVICE] Error accepting invitation:', updateError);
-      throw new Error('Failed to accept invitation: ' + updateError.message);
-    }
-
-    // Add user to project members if project invitation
+    // Updated Step 1: Add user to project members FIRST with the new RLS policy
     if (invitation.project_id) {
       console.log('👥 [INVITATION SERVICE] Adding user to project members...');
+      
+      // The new RLS policy allows insertion when there's a valid invitation
       const { error: memberError } = await supabase
         .from('project_members')
         .insert({
@@ -356,14 +347,32 @@ export const acceptInvitation = async (
 
       if (memberError) {
         console.error('❌ [INVITATION SERVICE] Error adding project member:', memberError);
-        throw new Error('Failed to add to project: ' + memberError.message);
+        
+        // Check if it's a duplicate user error (unique constraint violation)
+        if (memberError.code === '23505' && memberError.message.includes('unique_project_user')) {
+          console.warn('⚠️ [INVITATION SERVICE] User already a member of project, continuing...');
+        } else {
+          throw new Error('Failed to add to project: ' + memberError.message);
+        }
+      } else {
+        console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
+          project_id: invitation.project_id,
+          user_id: userId,
+          role: invitation.role
+        });
       }
+    }
 
-      console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
-        project_id: invitation.project_id,
-        user_id: userId,
-        role: invitation.role
-      });
+    // Step 2: Mark invitation as accepted AFTER adding to project
+    console.log('✅ [INVITATION SERVICE] Marking invitation as accepted...');
+    const { error: updateError } = await supabase
+      .from('invitations')
+      .update({ accepted_at: new Date().toISOString() })
+      .eq('id', invitationId);
+
+    if (updateError) {
+      console.error('❌ [INVITATION SERVICE] Error accepting invitation:', updateError);
+      throw new Error('Failed to accept invitation: ' + updateError.message);
     }
 
     console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed successfully');

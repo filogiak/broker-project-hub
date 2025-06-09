@@ -182,9 +182,24 @@ const InvitePage = () => {
         invitationId: invitation.id
       });
       
+      let errorMessage = "Failed to complete registration";
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('already a member')) {
+          errorMessage = "You're already a member of this project. Please try logging in instead.";
+        } else if (error.message.includes('authentication')) {
+          errorMessage = "Authentication failed. Please try again or contact support.";
+        } else if (error.message.includes('session')) {
+          errorMessage = "Session expired. Please refresh the page and try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Registration Error",
-        description: error instanceof Error ? error.message : "Failed to complete registration",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
