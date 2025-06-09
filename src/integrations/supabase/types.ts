@@ -353,6 +353,10 @@ export type Database = {
         Args: { project_uuid: string; user_uuid?: string }
         Returns: boolean
       }
+      user_can_view_project_members: {
+        Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
       user_is_project_member: {
         Args: { project_uuid: string; user_uuid?: string }
         Returns: boolean

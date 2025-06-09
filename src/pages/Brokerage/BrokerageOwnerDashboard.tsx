@@ -7,7 +7,7 @@ import ProjectsSection from '@/components/brokerage/ProjectsSection';
 import DashboardStats from '@/components/brokerage/DashboardStats';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
-import { getBrokerageByOwner, getBrokerageProjects } from '@/services/brokerageService';
+import { getBrokerageByOwner } from '@/services/brokerageService';
 import { createProject, deleteProject } from '@/services/projectService';
 import { getUserProjects } from '@/services/userProjectService';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +72,7 @@ const BrokerageOwnerDashboard = () => {
         }
 
         // Load user profile first
+        console.log('👤 Loading user profile...');
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -92,9 +93,10 @@ const BrokerageOwnerDashboard = () => {
         }
 
         setUserProfile(profileData);
-        console.log('✅ User profile loaded:', profileData);
+        console.log('✅ User profile loaded successfully');
 
         // Load user's brokerage
+        console.log('🏢 Loading user brokerage...');
         try {
           const brokerageData = await getBrokerageByOwner(user.id);
           
@@ -105,23 +107,28 @@ const BrokerageOwnerDashboard = () => {
           }
 
           setBrokerage(brokerageData);
-          console.log('✅ Brokerage loaded:', brokerageData);
+          console.log('✅ Brokerage loaded successfully:', brokerageData.name);
 
-          // Load projects using user-centric approach to avoid RLS recursion
+          // Load projects with improved error handling
           console.log('📋 Loading user projects...');
           
           try {
             const projectsData = await getUserProjects(user.id);
             setProjects(projectsData);
-            console.log('✅ User projects loaded successfully:', projectsData.length, 'projects');
+            console.log('✅ User projects loaded successfully:', projectsData.length, 'projects found');
+            
+            if (projectsData.length === 0) {
+              console.log('ℹ️ No projects found - user may need to create their first project');
+            }
           } catch (projectError) {
             console.error('❌ Failed to load user projects:', projectError);
-            // Set empty array but don't fail the whole dashboard
+            
+            // Don't fail the whole dashboard for project loading issues
             setProjects([]);
             
             toast({
               title: "Projects Loading Issue",
-              description: "Could not load your projects. Please refresh the page or contact support.",
+              description: "Your projects couldn't be loaded, but the dashboard is still accessible. Try refreshing the page.",
               variant: "destructive",
             });
           }
