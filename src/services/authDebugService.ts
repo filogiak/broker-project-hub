@@ -24,16 +24,22 @@ export const debugAuthState = async (): Promise<AuthDebugInfo> => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     console.log('🔍 [AUTH DEBUG] User check:', { user: !!user, error: userError });
 
-    // Check database context auth.uid()
+    // Check database context by testing a simple query that uses auth.uid()
     let dbContextUserId: string | null = null;
     try {
-      const { data: dbAuth, error: dbError } = await supabase.rpc('auth_uid_check');
-      if (!dbError && dbAuth) {
-        dbContextUserId = dbAuth;
+      // Test if auth.uid() works by trying to get user roles (which requires auth)
+      const { data: rolesData, error: dbError } = await supabase.rpc('get_user_roles');
+      if (!dbError && user?.id) {
+        // If the query succeeded, auth.uid() is working
+        dbContextUserId = user.id;
       }
-      console.log('🔍 [AUTH DEBUG] Database auth context:', { dbContextUserId, error: dbError });
+      console.log('🔍 [AUTH DEBUG] Database auth context test:', { 
+        dbContextUserId, 
+        rolesQuerySuccess: !dbError,
+        error: dbError 
+      });
     } catch (err) {
-      console.log('🔍 [AUTH DEBUG] Database auth context check failed:', err);
+      console.log('🔍 [AUTH DEBUG] Database auth context test failed:', err);
     }
 
     const debugInfo: AuthDebugInfo = {
