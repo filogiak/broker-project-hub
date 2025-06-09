@@ -91,9 +91,11 @@ export type Database = {
           brokerage_id: string | null
           created_at: string | null
           email: string
+          email_sent_at: string | null
           expires_at: string
           id: string
           invitation_code: string | null
+          invitation_token: string | null
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -104,9 +106,11 @@ export type Database = {
           brokerage_id?: string | null
           created_at?: string | null
           email: string
+          email_sent_at?: string | null
           expires_at?: string
           id?: string
           invitation_code?: string | null
+          invitation_token?: string | null
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -117,9 +121,11 @@ export type Database = {
           brokerage_id?: string | null
           created_at?: string | null
           email?: string
+          email_sent_at?: string | null
           expires_at?: string
           id?: string
           invitation_code?: string | null
+          invitation_token?: string | null
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -333,6 +339,10 @@ export type Database = {
         Returns: string
       }
       generate_invitation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
