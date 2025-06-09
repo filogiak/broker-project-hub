@@ -97,11 +97,9 @@ export type Database = {
           expires_at: string
           id: string
           invitation_code: string | null
-          invitation_token: string | null
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
-          token: string
           used_at: string | null
         }
         Insert: {
@@ -115,11 +113,9 @@ export type Database = {
           expires_at?: string
           id?: string
           invitation_code?: string | null
-          invitation_token?: string | null
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
-          token?: string
           used_at?: string | null
         }
         Update: {
@@ -133,11 +129,9 @@ export type Database = {
           expires_at?: string
           id?: string
           invitation_code?: string | null
-          invitation_token?: string | null
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
-          token?: string
           used_at?: string | null
         }
         Relationships: [

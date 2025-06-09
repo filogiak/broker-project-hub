@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { encryptInvitationData } from '@/utils/invitationCrypto';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -43,7 +42,7 @@ export const createEmailInvitation = async (
       throw new Error('Project not found');
     }
 
-    // Generate encrypted token using the correct function name
+    // Generate encrypted token using the updated function
     const { data: encryptedToken, error: tokenError } = await supabase
       .rpc('generate_encrypted_invitation_token');
 
@@ -54,7 +53,7 @@ export const createEmailInvitation = async (
 
     console.log('✅ [EMAIL INVITATION] Token generated successfully');
 
-    // Create invitation record
+    // Create invitation record with simplified data structure
     const invitationData = {
       email,
       role,
@@ -62,7 +61,6 @@ export const createEmailInvitation = async (
       invited_by: session.user.id,
       encrypted_token: encryptedToken,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      token: crypto.randomUUID(),
     };
 
     const { data: invitation, error: invitationError } = await supabase

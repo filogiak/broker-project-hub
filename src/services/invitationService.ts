@@ -1,101 +1,28 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { debugAuthState, validateSessionBeforeOperation, enforceSingleSession } from './authDebugService';
 import { createEmailInvitation } from './emailInvitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
 type Invitation = Database['public']['Tables']['invitations']['Row'];
 
-// New email-based invitation creation (preferred method)
+// Email-based invitation creation (primary method)
 export const createProjectInvitation = async (
   projectId: string,
   role: UserRole,
   email: string
-): Promise<{ invitation: Invitation; invitationCode?: string; success: boolean }> => {
-  console.log('🎯 [INVITATION SERVICE] Starting invitation creation (email-based)');
+): Promise<{ invitation: Invitation; success: boolean }> => {
+  console.log('🎯 [INVITATION SERVICE] Creating email-based invitation');
   console.log('🎯 [INVITATION SERVICE] Parameters:', { projectId, role, email });
   
   try {
     const { invitation, success } = await createEmailInvitation(projectId, role, email);
     
-    if (success) {
-      console.log('🎉 [INVITATION SERVICE] Email invitation created successfully');
-      return { invitation, success: true };
-    } else {
-      console.warn('⚠️ [INVITATION SERVICE] Email invitation created but email failed to send');
-      return { invitation, success: false };
-    }
+    console.log('🎉 [INVITATION SERVICE] Invitation creation completed, success:', success);
+    return { invitation, success };
     
   } catch (error) {
-    console.error('❌ [INVITATION SERVICE] Email invitation failed, falling back to code-based');
-    
-    // Fallback to original code-based invitation
-    return createCodeBasedInvitation(projectId, role, email);
-  }
-};
-
-// Legacy code-based invitation (kept for backward compatibility)
-const createCodeBasedInvitation = async (
-  projectId: string,
-  role: UserRole,
-  email: string
-): Promise<{ invitation: Invitation; invitationCode: string; success: boolean }> => {
-  console.log('🔄 [INVITATION SERVICE] Using legacy code-based invitation');
-  
-  // Phase 1: Enhanced session validation with automatic recovery
-  const { valid: sessionValid, session } = await validateSessionBeforeOperation();
-  
-  if (!sessionValid || !session?.user) {
-    console.error('❌ [INVITATION SERVICE] Session validation failed');
-    await enforceSingleSession();
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const { valid: retryValid, session: retrySession } = await validateSessionBeforeOperation();
-    
-    if (!retryValid || !retrySession?.user) {
-      throw new Error('Authentication failed - please log in again');
-    }
-  }
-
-  const { data: { session: finalSession } } = await supabase.auth.getSession();
-  if (!finalSession?.user) {
-    throw new Error('No valid session after validation');
-  }
-
-  try {
-    // Generate invitation code
-    const { data: code, error: codeError } = await supabase
-      .rpc('generate_invitation_code');
-
-    if (codeError || !code) {
-      throw new Error('Failed to generate invitation code');
-    }
-
-    // Create invitation record
-    const invitationData = {
-      email,
-      role,
-      project_id: projectId,
-      invited_by: finalSession.user.id,
-      invitation_code: code,
-      token: crypto.randomUUID(),
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-
-    const { data: invitation, error: invitationError } = await supabase
-      .from('invitations')
-      .insert(invitationData)
-      .select()
-      .single();
-
-    if (invitationError || !invitation) {
-      throw new Error('Failed to create invitation: ' + invitationError?.message);
-    }
-
-    return { invitation, invitationCode: code, success: true };
-
-  } catch (error) {
-    console.error('❌ [INVITATION SERVICE] Code-based invitation failed:', error);
+    console.error('❌ [INVITATION SERVICE] Invitation creation failed:', error);
     throw error;
   }
 };
@@ -189,14 +116,6 @@ export const acceptInvitation = async (
   console.log('🤝 [INVITATION SERVICE] Starting invitation acceptance:', { invitationId, userId });
   
   try {
-    // Validate session before proceeding
-    console.log('🔍 [INVITATION SERVICE] Validating session before acceptance...');
-    const { valid: sessionValid, session } = await validateSessionBeforeOperation();
-    
-    if (!sessionValid || !session?.user || session.user.id !== userId) {
-      throw new Error('Invalid session or user mismatch');
-    }
-
     // Get the invitation details first
     console.log('📋 [INVITATION SERVICE] Fetching invitation details...');
     const { data: invitation, error: fetchError } = await supabase
