@@ -43,13 +43,16 @@ export const createEmailInvitation = async (
       throw new Error('Project not found');
     }
 
-    // Generate encrypted token
+    // Generate encrypted token using the correct function name
     const { data: encryptedToken, error: tokenError } = await supabase
       .rpc('generate_encrypted_invitation_token');
 
     if (tokenError || !encryptedToken) {
-      throw new Error('Failed to generate invitation token');
+      console.error('❌ [EMAIL INVITATION] Token generation failed:', tokenError);
+      throw new Error('Failed to generate invitation token: ' + (tokenError?.message || 'Unknown error'));
     }
+
+    console.log('✅ [EMAIL INVITATION] Token generated successfully');
 
     // Create invitation record
     const invitationData = {
@@ -69,6 +72,7 @@ export const createEmailInvitation = async (
       .single();
 
     if (invitationError || !invitation) {
+      console.error('❌ [EMAIL INVITATION] Failed to create invitation:', invitationError);
       throw new Error('Failed to create invitation: ' + invitationError?.message);
     }
 
