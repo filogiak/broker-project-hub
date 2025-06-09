@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationToken } from '@/services/invitationService';
+import { validateInvitationToken, acceptInvitation } from '@/services/invitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -30,8 +31,6 @@ const InviteJoinPage = () => {
     const validateToken = async () => {
       console.log('🔍 [INVITE JOIN] Starting token validation process');
       console.log('🔍 [INVITE JOIN] Raw token from URL params:', token);
-      console.log('🔍 [INVITE JOIN] Current URL:', window.location.href);
-      console.log('🔍 [INVITE JOIN] URL pathname:', window.location.pathname);
       
       if (!token) {
         console.error('❌ [INVITE JOIN] No token provided in URL params');
@@ -42,7 +41,6 @@ const InviteJoinPage = () => {
       try {
         console.log('🔍 [INVITE JOIN] Validating invitation token with service...');
         
-        // Use the invitation service to validate the token
         const validInvitation = await validateInvitationToken(token);
         
         if (!validInvitation) {
@@ -76,6 +74,39 @@ const InviteJoinPage = () => {
     validateToken();
   }, [token, toast]);
 
+  const waitForSession = async (maxAttempts = 10): Promise<{ session: any; user: any } | null> => {
+    console.log('⏳ [INVITE JOIN] Waiting for session to stabilize...');
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error(`❌ [INVITE JOIN] Session error on attempt ${attempt}:`, error);
+          continue;
+        }
+        
+        if (session?.user) {
+          console.log(`✅ [INVITE JOIN] Session found on attempt ${attempt}`);
+          return { session, user: session.user };
+        }
+        
+        if (attempt < maxAttempts) {
+          console.log(`⏳ [INVITE JOIN] No session yet, waiting... (${attempt}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`❌ [INVITE JOIN] Session check error on attempt ${attempt}:`, error);
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    console.error('❌ [INVITE JOIN] Session timeout after all attempts');
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -102,9 +133,9 @@ const InviteJoinPage = () => {
     setIsSubmitting(true);
 
     try {
-      console.log('👤 [INVITE JOIN] Creating account for:', invitation.email);
+      console.log('👤 [INVITE JOIN] Starting signup process for:', invitation.email);
 
-      // Create user account
+      // Step 1: Create user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
         password: formData.password,
@@ -131,63 +162,22 @@ const InviteJoinPage = () => {
         throw new Error('No user returned from signup');
       }
 
-      console.log('✅ [INVITE JOIN] Account created successfully');
+      console.log('✅ [INVITE JOIN] Account created successfully, waiting for session...');
 
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: invitation.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-        });
-
-      if (profileError) {
-        console.error('❌ [INVITE JOIN] Profile creation error:', profileError);
-        // Continue - profile might already exist
+      // Step 2: Wait for session to be established
+      const sessionData = await waitForSession();
+      
+      if (!sessionData) {
+        throw new Error('Session was not established after signup. Please try logging in.');
       }
 
-      // Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: invitation.role as any,
-        });
+      const { user } = sessionData;
+      console.log('✅ [INVITE JOIN] Session established for user:', user.id);
 
-      if (roleError) {
-        console.error('❌ [INVITE JOIN] Role assignment error:', roleError);
-        // Continue if role already exists
-      }
-
-      // Add to project if project_id exists
-      if (invitation.project_id) {
-        const { error: memberError } = await supabase
-          .from('project_members')
-          .insert({
-            project_id: invitation.project_id,
-            user_id: authData.user.id,
-            role: invitation.role as any,
-            invited_by: invitation.invited_by,
-            joined_at: new Date().toISOString(),
-          });
-
-        if (memberError) {
-          console.error('❌ [INVITE JOIN] Project member error:', memberError);
-          // Continue if already a member
-        }
-      }
-
-      // Mark invitation as used
-      const { error: inviteError } = await supabase
-        .from('invitations')
-        .update({ accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id);
-
-      if (inviteError) {
-        console.error('❌ [INVITE JOIN] Error marking invitation as accepted:', inviteError);
-      }
+      // Step 3: Use the invitation service to handle role assignment and project membership
+      console.log('🤝 [INVITE JOIN] Accepting invitation and assigning roles...');
+      
+      await acceptInvitation(invitation.id, user.id);
 
       console.log('🎉 [INVITE JOIN] Complete signup flow successful');
 
@@ -196,7 +186,7 @@ const InviteJoinPage = () => {
         description: "Your account has been created successfully. Welcome to the project!",
       });
 
-      // Redirect to project dashboard if project exists, otherwise to main dashboard
+      // Step 4: Navigate to the appropriate dashboard
       if (invitation.project_id) {
         navigate(`/project/${invitation.project_id}`);
       } else {
@@ -205,9 +195,11 @@ const InviteJoinPage = () => {
 
     } catch (error) {
       console.error('❌ [INVITE JOIN] Complete signup error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating your account. Please try again.';
+      
       toast({
         title: "Signup Failed",
-        description: "An error occurred while creating your account. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
