@@ -9,13 +9,25 @@ import AuthPage from '@/pages/Auth/AuthPage';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
 import InvitePage from '@/pages/Invite/InvitePage';
+import Dashboard from '@/pages/Dashboard/Dashboard';
+import Index from '@/pages/Index';
+import NotFound from '@/pages/NotFound';
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/invite" element={<InvitePage />} />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/brokerage/:brokerageId" 
           element={
@@ -50,6 +62,7 @@ const AppRouter = () => {
             </ProtectedRoute>
           } 
         />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
