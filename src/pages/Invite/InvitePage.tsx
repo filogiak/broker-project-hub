@@ -111,11 +111,20 @@ const InvitePage = () => {
     setIsLoading(true);
 
     try {
-      // Store the invitation code for later retrieval
-      sessionStorage.setItem('pendingInvitationCode', invitationCode);
+      // Store the invitation details securely for later retrieval
+      const invitationData = {
+        code: invitationCode,
+        invitationId: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        projectId: invitation.project_id
+      };
+      
+      sessionStorage.setItem('pendingInvitation', JSON.stringify(invitationData));
 
-      // Create user account with email confirmation enabled
-      console.log('👤 [INVITE PAGE] Creating user account with email confirmation...');
+      console.log('📧 [INVITE PAGE] Creating user account with simplified redirect...');
+      
+      // Use simplified redirect URL without query parameters
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userDetails.email,
         password: userDetails.password,
@@ -124,7 +133,7 @@ const InvitePage = () => {
             first_name: userDetails.firstName,
             last_name: userDetails.lastName,
           },
-          emailRedirectTo: `${window.location.origin}/invite/verify?code=${invitationCode}`,
+          emailRedirectTo: `${window.location.origin}/invite/verify`,
         },
       });
 
@@ -172,7 +181,7 @@ const InvitePage = () => {
       } else {
         // If somehow no confirmation is needed, redirect to verification callback
         console.log('🔄 [INVITE PAGE] No email confirmation needed, redirecting to verification...');
-        navigate(`/invite/verify?code=${invitationCode}`);
+        navigate('/invite/verify');
       }
 
     } catch (error) {
@@ -209,7 +218,7 @@ const InvitePage = () => {
 
   const handleVerificationComplete = () => {
     console.log('✅ [INVITE PAGE] Email verification completed, redirecting...');
-    navigate(`/invite/verify?code=${invitationCode}`);
+    navigate('/invite/verify');
   };
 
   const formatRole = (role: string) => {

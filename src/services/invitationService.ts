@@ -308,6 +308,14 @@ export const acceptInvitation = async (
   console.log('🤝 [INVITATION SERVICE] Starting invitation acceptance:', { invitationId, userId });
   
   try {
+    // Validate session before proceeding
+    console.log('🔍 [INVITATION SERVICE] Validating session before acceptance...');
+    const { valid: sessionValid, session } = await validateSessionBeforeOperation();
+    
+    if (!sessionValid || !session?.user || session.user.id !== userId) {
+      throw new Error('Invalid session or user mismatch');
+    }
+
     // Get the invitation details first
     console.log('📋 [INVITATION SERVICE] Fetching invitation details...');
     const { data: invitation, error: fetchError } = await supabase
@@ -328,6 +336,12 @@ export const acceptInvitation = async (
       project_id: invitation.project_id,
       invited_by: invitation.invited_by
     });
+
+    // Verify invitation hasn't already been accepted
+    if (invitation.accepted_at) {
+      console.log('⚠️ [INVITATION SERVICE] Invitation already accepted, skipping...');
+      return; // Don't throw error, just return as it's already done
+    }
 
     // Step 1: Ensure user has the correct role assigned
     console.log('👤 [INVITATION SERVICE] Ensuring user role is assigned...');
@@ -369,37 +383,56 @@ export const acceptInvitation = async (
           role: invitation.role
         });
       }
+    } else {
+      console.log('✅ [INVITATION SERVICE] User role already exists');
     }
 
     // Step 2: Add user to project members
     if (invitation.project_id) {
       console.log('👥 [INVITATION SERVICE] Adding user to project members...');
       
-      const { error: memberError } = await supabase
+      // Check if already a member
+      const { data: existingMember, error: memberCheckError } = await supabase
         .from('project_members')
-        .insert({
-          project_id: invitation.project_id,
-          user_id: userId,
-          role: invitation.role,
-          invited_by: invitation.invited_by,
-          joined_at: new Date().toISOString(),
-        });
+        .select('*')
+        .eq('project_id', invitation.project_id)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (memberError) {
-        console.error('❌ [INVITATION SERVICE] Error adding project member:', memberError);
-        
-        // Check if it's a duplicate user error (unique constraint violation)
-        if (memberError.code === '23505' && memberError.message.includes('unique_project_user')) {
-          console.warn('⚠️ [INVITATION SERVICE] User already a member of project, continuing...');
+      if (memberCheckError) {
+        console.error('❌ [INVITATION SERVICE] Error checking project membership:', memberCheckError);
+        throw new Error('Failed to check project membership: ' + memberCheckError.message);
+      }
+
+      if (!existingMember) {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: invitation.project_id,
+            user_id: userId,
+            role: invitation.role,
+            invited_by: invitation.invited_by,
+            joined_at: new Date().toISOString(),
+          });
+
+        if (memberError) {
+          console.error('❌ [INVITATION SERVICE] Error adding project member:', memberError);
+          
+          // Check if it's a duplicate user error (unique constraint violation)
+          if (memberError.code === '23505' && memberError.message.includes('unique_project_user')) {
+            console.warn('⚠️ [INVITATION SERVICE] User already a member of project, continuing...');
+          } else {
+            throw new Error('Failed to add to project: ' + memberError.message);
+          }
         } else {
-          throw new Error('Failed to add to project: ' + memberError.message);
+          console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
+            project_id: invitation.project_id,
+            user_id: userId,
+            role: invitation.role
+          });
         }
       } else {
-        console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
-          project_id: invitation.project_id,
-          user_id: userId,
-          role: invitation.role
-        });
+        console.log('✅ [INVITATION SERVICE] User already a project member');
       }
     }
 
@@ -415,7 +448,36 @@ export const acceptInvitation = async (
       throw new Error('Failed to accept invitation: ' + updateError.message);
     }
 
-    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed successfully');
+    // Final verification: ensure all operations succeeded
+    console.log('🔍 [INVITATION SERVICE] Performing final verification...');
+    
+    // Verify role was assigned
+    const { data: finalRoleCheck } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', invitation.role)
+      .maybeSingle();
+
+    if (!finalRoleCheck) {
+      throw new Error('Role assignment verification failed');
+    }
+
+    // Verify project membership if applicable
+    if (invitation.project_id) {
+      const { data: finalMemberCheck } = await supabase
+        .from('project_members')
+        .select('role')
+        .eq('project_id', invitation.project_id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!finalMemberCheck) {
+        throw new Error('Project membership verification failed');
+      }
+    }
+
+    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed and verified successfully');
 
   } catch (error) {
     console.error('❌ [INVITATION SERVICE] Failed to accept invitation:', {
