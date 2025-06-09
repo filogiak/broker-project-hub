@@ -109,6 +109,85 @@ export const validateInvitationCode = async (code: string): Promise<Invitation |
   }
 };
 
+export const validateInvitationToken = async (encryptedToken: string): Promise<Invitation | null> => {
+  console.log('🔍 [INVITATION SERVICE] Starting invitation token validation:', encryptedToken.substring(0, 10) + '...');
+  
+  if (!encryptedToken) {
+    console.warn('⚠️ [INVITATION SERVICE] No token provided');
+    return null;
+  }
+
+  try {
+    console.log('📞 [INVITATION SERVICE] Querying invitations table for token validation...');
+    
+    const { data: invitation, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('encrypted_token', encryptedToken)
+      .maybeSingle();
+
+    if (error) {
+      console.error('❌ [INVITATION SERVICE] Database error during token validation:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return null;
+    }
+
+    if (!invitation) {
+      console.warn('⚠️ [INVITATION SERVICE] No invitation found for token');
+      return null;
+    }
+
+    console.log('📋 [INVITATION SERVICE] Invitation found via token:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      expires_at: invitation.expires_at,
+      accepted_at: invitation.accepted_at,
+      project_id: invitation.project_id
+    });
+
+    // Check if invitation has expired
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at);
+    
+    if (expiresAt <= now) {
+      console.warn('⚠️ [INVITATION SERVICE] Invitation has expired:', {
+        expires_at: invitation.expires_at,
+        current_time: now.toISOString()
+      });
+      return null;
+    }
+
+    // Check if invitation has already been accepted
+    if (invitation.accepted_at) {
+      console.warn('⚠️ [INVITATION SERVICE] Invitation has already been accepted:', {
+        accepted_at: invitation.accepted_at
+      });
+      return null;
+    }
+
+    console.log('✅ [INVITATION SERVICE] Valid invitation found via token:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      project_id: invitation.project_id
+    });
+    
+    return invitation;
+
+  } catch (error) {
+    console.error('❌ [INVITATION SERVICE] Token validation failed:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return null;
+  }
+};
+
 export const acceptInvitation = async (
   invitationId: string,
   userId: string
