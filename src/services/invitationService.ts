@@ -51,6 +51,9 @@ export const createProjectInvitation = async (
     console.log('✅ [INVITATION SERVICE] Invitation code generated successfully:', invitationCode);
 
     // Step 2: Create the invitation record
+    // The database RLS policies will automatically validate:
+    // - User has brokerage_owner role
+    // - User owns the project's brokerage
     console.log('📝 [INVITATION SERVICE] Creating invitation record in database...');
     
     const invitationData = {
