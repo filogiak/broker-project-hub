@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationCode } from '@/services/invitationService';
+import { validateInvitationToken } from '@/services/invitationService';
 import PostVerificationSetup from '@/components/auth/PostVerificationSetup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -13,7 +13,7 @@ import type { Database } from '@/integrations/supabase/types';
 type Invitation = Database['public']['Tables']['invitations']['Row'];
 
 interface PendingInvitation {
-  code: string;
+  token: string;
   invitationId: string;
   email: string;
   role: string;
@@ -118,17 +118,17 @@ const VerificationCallback = () => {
           }
         }
 
-        if (!pendingInvitation?.code) {
-          throw new Error('No invitation code found. Please start the invitation process again.');
+        if (!pendingInvitation?.token) {
+          throw new Error('No invitation token found. Please start the invitation process again.');
         }
 
-        console.log('📋 [VERIFICATION CALLBACK] Validating invitation code:', pendingInvitation.code);
+        console.log('📋 [VERIFICATION CALLBACK] Validating invitation token:', pendingInvitation.token.substring(0, 10) + '...');
 
-        // Validate the invitation code
-        const validInvitation = await validateInvitationCode(pendingInvitation.code);
+        // Validate the invitation token
+        const validInvitation = await validateInvitationToken(pendingInvitation.token);
         
         if (!validInvitation) {
-          throw new Error('Invalid or expired invitation code.');
+          throw new Error('Invalid or expired invitation token.');
         }
 
         setInvitation(validInvitation);

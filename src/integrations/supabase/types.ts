@@ -55,7 +55,6 @@ export type Database = {
           encrypted_token: string | null
           expires_at: string
           id: string
-          invitation_code: string | null
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -71,7 +70,6 @@ export type Database = {
           encrypted_token?: string | null
           expires_at?: string
           id?: string
-          invitation_code?: string | null
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -87,7 +85,6 @@ export type Database = {
           encrypted_token?: string | null
           expires_at?: string
           id?: string
-          invitation_code?: string | null
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -301,10 +298,6 @@ export type Database = {
         Returns: string
       }
       generate_encrypted_invitation_token: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_invitation_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

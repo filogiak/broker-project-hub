@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationCode } from '@/services/invitationService';
+import { validateInvitationToken } from '@/services/invitationService';
 import EmailVerificationScreen from '@/components/auth/EmailVerificationScreen';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
 
 const InvitePage = () => {
-  const [invitationCode, setInvitationCode] = useState('');
+  const [invitationToken, setInvitationToken] = useState('');
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [userDetails, setUserDetails] = useState({
     email: '',
@@ -23,20 +23,20 @@ const InvitePage = () => {
     lastName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'code' | 'register' | 'verify'>('code');
+  const [step, setStep] = useState<'token' | 'register' | 'verify'>('token');
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleCodeSubmit = async (e: React.FormEvent) => {
+  const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🚀 [INVITE PAGE] Form submission started with code:', invitationCode);
+    console.log('🚀 [INVITE PAGE] Form submission started with token:', invitationToken.substring(0, 10) + '...');
     
-    if (invitationCode.length !== 6) {
-      console.warn('⚠️ [INVITE PAGE] Invalid code length:', invitationCode.length);
+    if (!invitationToken.trim()) {
+      console.warn('⚠️ [INVITE PAGE] Empty token provided');
       toast({
-        title: "Invalid Code",
-        description: "Please enter a 6-digit invitation code",
+        title: "Invalid Token",
+        description: "Please enter a valid invitation token",
         variant: "destructive",
       });
       return;
@@ -45,14 +45,14 @@ const InvitePage = () => {
     setIsLoading(true);
 
     try {
-      console.log('📞 [INVITE PAGE] Calling validateInvitationCode service...');
-      const validInvitation = await validateInvitationCode(invitationCode);
+      console.log('📞 [INVITE PAGE] Calling validateInvitationToken service...');
+      const validInvitation = await validateInvitationToken(invitationToken);
       
       if (!validInvitation) {
-        console.warn('⚠️ [INVITE PAGE] Invitation validation failed for code:', invitationCode);
+        console.warn('⚠️ [INVITE PAGE] Invitation validation failed for token:', invitationToken.substring(0, 10) + '...');
         toast({
-          title: "Invalid Code",
-          description: "The invitation code is invalid, expired, or has already been used",
+          title: "Invalid Token",
+          description: "The invitation token is invalid, expired, or has already been used",
           variant: "destructive",
         });
         return;
@@ -69,24 +69,24 @@ const InvitePage = () => {
       setStep('register');
 
       toast({
-        title: "Code Validated",
+        title: "Token Validated",
         description: `Welcome! Please complete your registration for ${validInvitation.email}`,
       });
 
     } catch (error) {
-      console.error('❌ [INVITE PAGE] Error validating code:', {
+      console.error('❌ [INVITE PAGE] Error validating token:', {
         error,
-        code: invitationCode,
+        token: invitationToken.substring(0, 10) + '...',
         errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
       
       toast({
         title: "Validation Error",
-        description: "Failed to validate invitation code. Please try again.",
+        description: "Failed to validate invitation token. Please try again.",
         variant: "destructive",
       });
     } finally {
-      console.log('🏁 [INVITE PAGE] Code validation completed');
+      console.log('🏁 [INVITE PAGE] Token validation completed');
       setIsLoading(false);
     }
   };
@@ -113,7 +113,7 @@ const InvitePage = () => {
     try {
       // Store the invitation details securely for later retrieval
       const invitationData = {
-        code: invitationCode,
+        token: invitationToken,
         invitationId: invitation.id,
         email: invitation.email,
         role: invitation.role,
@@ -229,7 +229,7 @@ const InvitePage = () => {
     step,
     isLoading,
     hasInvitation: !!invitation,
-    codeLength: invitationCode.length
+    tokenLength: invitationToken.length
   });
 
   return (
@@ -238,8 +238,8 @@ const InvitePage = () => {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Join Project</CardTitle>
           <p className="text-muted-foreground">
-            {step === 'code' 
-              ? 'Enter your 6-digit invitation code to get started'
+            {step === 'token' 
+              ? 'Enter your invitation token to get started'
               : step === 'register'
               ? 'Complete your account setup'
               : 'Verify your email address'
@@ -247,25 +247,24 @@ const InvitePage = () => {
           </p>
         </CardHeader>
         <CardContent>
-          {step === 'code' ? (
-            <form onSubmit={handleCodeSubmit} className="space-y-4">
+          {step === 'token' ? (
+            <form onSubmit={handleTokenSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Invitation Code</Label>
+                <Label htmlFor="token">Invitation Token</Label>
                 <Input
-                  id="code"
+                  id="token"
                   type="text"
-                  value={invitationCode}
-                  onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Enter 6-digit code"
-                  className="text-center text-lg tracking-wider font-mono"
-                  maxLength={6}
+                  value={invitationToken}
+                  onChange={(e) => setInvitationToken(e.target.value.trim())}
+                  placeholder="Enter your invitation token"
+                  className="text-center text-sm font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter the 6-digit code you received from your project manager
+                  Enter the token you received in the invitation email
                 </p>
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading || invitationCode.length !== 6}>
+              <Button type="submit" className="w-full" disabled={isLoading || !invitationToken.trim()}>
                 {isLoading ? 'Validating...' : 'Continue'}
               </Button>
             </form>
@@ -339,7 +338,7 @@ const InvitePage = () => {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setStep('code')}
+                    onClick={() => setStep('token')}
                     className="flex-1"
                   >
                     Back
