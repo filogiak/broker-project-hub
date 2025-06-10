@@ -76,24 +76,6 @@ export const validateInvitationToken = async (encryptedToken: string): Promise<I
     }
 
     console.warn('⚠️ [INVITATION SERVICE] No invitation found for any token variant');
-    
-    // Debug: Check what tokens exist in database
-    const { data: allInvitations, error: debugError } = await supabase
-      .from('invitations')
-      .select('id, encrypted_token, email, expires_at, accepted_at')
-      .not('encrypted_token', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(5);
-      
-    if (!debugError && allInvitations) {
-      console.log('🔍 [INVITATION SERVICE] Recent tokens in database:');
-      allInvitations.forEach((inv, index) => {
-        const dbToken = inv.encrypted_token || '';
-        const matches = tokenVariants.some(variant => variant === dbToken);
-        console.log(`  ${index + 1}. ${dbToken.substring(0, 20)}... (${inv.email}) - Length: ${dbToken.length} - Matches: ${matches}`);
-      });
-    }
-    
     return null;
 
   } catch (error) {
@@ -128,13 +110,8 @@ const validateInvitationExpiry = (invitation: Invitation): Invitation | null => 
     return null;
   }
 
-  // Check if invitation has already been accepted
-  if (invitation.accepted_at) {
-    console.warn('⚠️ [INVITATION SERVICE] Invitation has already been accepted:', {
-      accepted_at: invitation.accepted_at
-    });
-    return null;
-  }
+  // Note: We no longer check accepted_at since users might need to validate 
+  // tokens during the signup process even if the trigger will mark it as accepted
 
   console.log('✅ [INVITATION SERVICE] Valid invitation found via token:', {
     id: invitation.id,
@@ -146,181 +123,53 @@ const validateInvitationExpiry = (invitation: Invitation): Invitation | null => 
   return invitation;
 };
 
+// Check if an invitation has been processed (used for verification)
+export const checkInvitationStatus = async (invitationId: string): Promise<{
+  processed: boolean;
+  error?: string;
+}> => {
+  try {
+    const { data: invitation, error } = await supabase
+      .from('invitations')
+      .select('accepted_at')
+      .eq('id', invitationId)
+      .single();
+
+    if (error) {
+      console.error('❌ [INVITATION SERVICE] Error checking invitation status:', error);
+      return { processed: false, error: error.message };
+    }
+
+    return { processed: !!invitation.accepted_at };
+  } catch (error) {
+    console.error('❌ [INVITATION SERVICE] Failed to check invitation status:', error);
+    return { 
+      processed: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};
+
+// Legacy function - kept for backward compatibility but simplified
+// The database trigger now handles most of this automatically
 export const acceptInvitation = async (
   invitationId: string,
   userId: string
 ): Promise<void> => {
-  console.log('🤝 [INVITATION SERVICE] Starting invitation acceptance:', { invitationId, userId });
+  console.log('🤝 [INVITATION SERVICE] Legacy acceptInvitation called - database trigger should handle this automatically');
+  console.log('📋 [INVITATION SERVICE] Parameters:', { invitationId, userId });
   
-  try {
-    // Get the invitation details first
-    console.log('📋 [INVITATION SERVICE] Fetching invitation details...');
-    const { data: invitation, error: fetchError } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('id', invitationId)
-      .single();
-
-    if (fetchError || !invitation) {
-      console.error('❌ [INVITATION SERVICE] Error fetching invitation:', fetchError);
-      throw new Error('Invitation not found');
-    }
-
-    console.log('📋 [INVITATION SERVICE] Invitation details retrieved:', {
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role,
-      project_id: invitation.project_id,
-      invited_by: invitation.invited_by
-    });
-
-    // Verify invitation hasn't already been accepted
-    if (invitation.accepted_at) {
-      console.log('⚠️ [INVITATION SERVICE] Invitation already accepted, skipping...');
-      return; // Don't throw error, just return as it's already done
-    }
-
-    // Get the user's profile (which should exist by now due to the trigger)
-    console.log('👤 [INVITATION SERVICE] Getting user profile...');
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      console.error('❌ [INVITATION SERVICE] Error fetching user profile:', profileError);
-      throw new Error('User profile not found. Profile should be created automatically.');
-    }
-
-    // Verify the profile email matches the invitation email
-    if (profile.email !== invitation.email) {
-      console.error('❌ [INVITATION SERVICE] Email mismatch:', {
-        profileEmail: profile.email,
-        invitationEmail: invitation.email
-      });
-      throw new Error('Email mismatch between profile and invitation');
-    }
-
-    console.log('✅ [INVITATION SERVICE] Profile verified:', {
-      profileId: profile.id,
-      email: profile.email
-    });
-
-    // Step 1: Ensure user has the correct role assigned (using profile ID)
-    console.log('👤 [INVITATION SERVICE] Ensuring user role is assigned...');
-    
-    // Check if role already exists
-    const { data: existingRole, error: roleCheckError } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', profile.id)
-      .eq('role', invitation.role)
-      .maybeSingle();
-
-    if (roleCheckError) {
-      console.error('❌ [INVITATION SERVICE] Error checking user role:', roleCheckError);
-      throw new Error('Failed to check user role: ' + roleCheckError.message);
-    }
-
-    if (!existingRole) {
-      console.log('📝 [INVITATION SERVICE] Creating user role assignment...');
-      const { error: roleCreateError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: profile.id,
-          role: invitation.role
-        });
-
-      if (roleCreateError) {
-        console.error('❌ [INVITATION SERVICE] Error creating user role:', roleCreateError);
-        
-        // Check if it's a duplicate role error (unique constraint violation)
-        if (roleCreateError.code === '23505') {
-          console.warn('⚠️ [INVITATION SERVICE] User role already exists, continuing...');
-        } else {
-          throw new Error('Failed to assign role: ' + roleCreateError.message);
-        }
-      } else {
-        console.log('✅ [INVITATION SERVICE] User role assigned successfully:', {
-          user_id: profile.id,
-          role: invitation.role
-        });
-      }
-    } else {
-      console.log('✅ [INVITATION SERVICE] User role already exists');
-    }
-
-    // Step 2: Add user to project members (using profile ID)
-    if (invitation.project_id) {
-      console.log('👥 [INVITATION SERVICE] Adding user to project members...');
-      
-      // Check if already a member
-      const { data: existingMember, error: memberCheckError } = await supabase
-        .from('project_members')
-        .select('*')
-        .eq('project_id', invitation.project_id)
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      if (memberCheckError) {
-        console.error('❌ [INVITATION SERVICE] Error checking project membership:', memberCheckError);
-        throw new Error('Failed to check project membership: ' + memberCheckError.message);
-      }
-
-      if (!existingMember) {
-        const { error: memberError } = await supabase
-          .from('project_members')
-          .insert({
-            project_id: invitation.project_id,
-            user_id: profile.id,
-            role: invitation.role,
-            invited_by: invitation.invited_by,
-            joined_at: new Date().toISOString(),
-          });
-
-        if (memberError) {
-          console.error('❌ [INVITATION SERVICE] Error adding project member:', memberError);
-          
-          // Check if it's a duplicate user error (unique constraint violation)
-          if (memberError.code === '23505' && memberError.message.includes('unique_project_user')) {
-            console.warn('⚠️ [INVITATION SERVICE] User already a member of project, continuing...');
-          } else {
-            throw new Error('Failed to add to project: ' + memberError.message);
-          }
-        } else {
-          console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
-            project_id: invitation.project_id,
-            user_id: profile.id,
-            role: invitation.role
-          });
-        }
-      } else {
-        console.log('✅ [INVITATION SERVICE] User already a project member');
-      }
-    }
-
-    // Step 3: Mark invitation as accepted
-    console.log('✅ [INVITATION SERVICE] Marking invitation as accepted...');
-    const { error: updateError } = await supabase
-      .from('invitations')
-      .update({ accepted_at: new Date().toISOString() })
-      .eq('id', invitationId);
-
-    if (updateError) {
-      console.error('❌ [INVITATION SERVICE] Error accepting invitation:', updateError);
-      throw new Error('Failed to accept invitation: ' + updateError.message);
-    }
-
-    console.log('🎉 [INVITATION SERVICE] Invitation acceptance completed successfully');
-
-  } catch (error) {
-    console.error('❌ [INVITATION SERVICE] Failed to accept invitation:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      invitationId,
-      userId
-    });
-    throw error instanceof Error ? error : new Error('Failed to accept invitation');
+  // Just check if the invitation was processed by the trigger
+  const { processed, error } = await checkInvitationStatus(invitationId);
+  
+  if (error) {
+    throw new Error(`Failed to verify invitation processing: ${error}`);
   }
+  
+  if (!processed) {
+    console.warn('⚠️ [INVITATION SERVICE] Invitation not processed by trigger - this might indicate an issue');
+    throw new Error('Invitation was not processed automatically. Please contact support.');
+  }
+  
+  console.log('✅ [INVITATION SERVICE] Invitation was processed successfully by database trigger');
 };

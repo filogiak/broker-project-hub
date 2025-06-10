@@ -111,20 +111,9 @@ const InvitePage = () => {
     setIsLoading(true);
 
     try {
-      // Store the invitation details securely for later retrieval
-      const invitationData = {
-        token: invitationToken,
-        invitationId: invitation.id,
-        email: invitation.email,
-        role: invitation.role,
-        projectId: invitation.project_id
-      };
+      console.log('📧 [INVITE PAGE] Creating user account...');
       
-      sessionStorage.setItem('pendingInvitation', JSON.stringify(invitationData));
-
-      console.log('📧 [INVITE PAGE] Creating user account with simplified redirect...');
-      
-      // Use simplified redirect URL without query parameters
+      // Create user account - the database trigger will handle invitation acceptance automatically
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userDetails.email,
         password: userDetails.password,
@@ -133,7 +122,7 @@ const InvitePage = () => {
             first_name: userDetails.firstName,
             last_name: userDetails.lastName,
           },
-          emailRedirectTo: `${window.location.origin}/invite/verify`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
@@ -179,9 +168,19 @@ const InvitePage = () => {
           description: "We've sent a verification link to complete your account setup.",
         });
       } else {
-        // If somehow no confirmation is needed, redirect to verification callback
-        console.log('🔄 [INVITE PAGE] No email confirmation needed, redirecting to verification...');
-        navigate('/invite/verify');
+        // If no confirmation is needed, the trigger has already processed the invitation
+        console.log('🎉 [INVITE PAGE] No email confirmation needed, invitation processed automatically');
+        
+        toast({
+          title: "Welcome!",
+          description: "Your account has been created and you've been added to the project!",
+        });
+
+        if (invitation.project_id) {
+          navigate(`/project/${invitation.project_id}`);
+        } else {
+          navigate('/dashboard');
+        }
       }
 
     } catch (error) {
@@ -191,23 +190,9 @@ const InvitePage = () => {
         invitationId: invitation.id
       });
       
-      let errorMessage = "Failed to complete registration";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('already a member')) {
-          errorMessage = "You're already a member of this project. Please try logging in instead.";
-        } else if (error.message.includes('authentication')) {
-          errorMessage = "Authentication failed. Please try again or contact support.";
-        } else if (error.message.includes('session')) {
-          errorMessage = "Session expired. Please refresh the page and try again.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       toast({
         title: "Registration Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to complete registration",
         variant: "destructive",
       });
     } finally {
@@ -218,7 +203,17 @@ const InvitePage = () => {
 
   const handleVerificationComplete = () => {
     console.log('✅ [INVITE PAGE] Email verification completed, redirecting...');
-    navigate('/invite/verify');
+    
+    toast({
+      title: "Welcome!",
+      description: "Your account has been verified and you've been added to the project!",
+    });
+    
+    if (invitation?.project_id) {
+      navigate(`/project/${invitation.project_id}`);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const formatRole = (role: string) => {
@@ -276,7 +271,7 @@ const InvitePage = () => {
                   <p><strong>Role:</strong> {formatRole(invitation.role)}</p>
                   {invitation.project_id && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      You'll be added to the project after email verification
+                      You'll be added to the project automatically
                     </p>
                   )}
                 </div>

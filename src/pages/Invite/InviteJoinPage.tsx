@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationToken, acceptInvitation } from '@/services/invitationService';
+import { validateInvitationToken } from '@/services/invitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -30,7 +30,6 @@ const InviteJoinPage = () => {
   useEffect(() => {
     const validateToken = async () => {
       console.log('🔍 [INVITE JOIN] Starting token validation process');
-      console.log('🔍 [INVITE JOIN] Raw token from URL params:', token);
       
       if (!token) {
         console.error('❌ [INVITE JOIN] No token provided in URL params');
@@ -74,39 +73,6 @@ const InviteJoinPage = () => {
     validateToken();
   }, [token, toast]);
 
-  const waitForSession = async (maxAttempts = 10): Promise<{ session: any; user: any } | null> => {
-    console.log('⏳ [INVITE JOIN] Waiting for session to stabilize...');
-    
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error(`❌ [INVITE JOIN] Session error on attempt ${attempt}:`, error);
-          continue;
-        }
-        
-        if (session?.user) {
-          console.log(`✅ [INVITE JOIN] Session found on attempt ${attempt}`);
-          return { session, user: session.user };
-        }
-        
-        if (attempt < maxAttempts) {
-          console.log(`⏳ [INVITE JOIN] No session yet, waiting... (${attempt}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (error) {
-        console.error(`❌ [INVITE JOIN] Session check error on attempt ${attempt}:`, error);
-        if (attempt < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-    
-    console.error('❌ [INVITE JOIN] Session timeout after all attempts');
-    return null;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -135,7 +101,7 @@ const InviteJoinPage = () => {
     try {
       console.log('👤 [INVITE JOIN] Starting signup process for:', invitation.email);
 
-      // Step 1: Create user account
+      // Create user account - the database trigger will handle the rest automatically
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
         password: formData.password,
@@ -162,39 +128,37 @@ const InviteJoinPage = () => {
         throw new Error('No user returned from signup');
       }
 
-      console.log('✅ [INVITE JOIN] Account created successfully, waiting for session...');
-
-      // Step 2: Wait for session to be established
-      const sessionData = await waitForSession();
-      
-      if (!sessionData) {
-        throw new Error('Session was not established after signup. Please try logging in.');
-      }
-
-      const { user } = sessionData;
-      console.log('✅ [INVITE JOIN] Session established for user:', user.id);
-
-      // Step 3: Use the invitation service to handle role assignment and project membership
-      console.log('🤝 [INVITE JOIN] Accepting invitation and assigning roles...');
-      
-      await acceptInvitation(invitation.id, user.id);
-
-      console.log('🎉 [INVITE JOIN] Complete signup flow successful');
-
-      toast({
-        title: "Welcome!",
-        description: "Your account has been created successfully. Welcome to the project!",
+      console.log('✅ [INVITE JOIN] Account created successfully:', {
+        userId: authData.user.id,
+        email: authData.user.email,
+        needsConfirmation: !authData.session
       });
 
-      // Step 4: Navigate to the appropriate dashboard
-      if (invitation.project_id) {
-        navigate(`/project/${invitation.project_id}`);
+      if (!authData.session) {
+        // User needs to confirm email
+        toast({
+          title: "Check Your Email",
+          description: "Please check your email and click the verification link to complete your account setup.",
+        });
       } else {
-        navigate('/dashboard');
+        // User is immediately signed in - database trigger has handled role assignment
+        console.log('🎉 [INVITE JOIN] User signed in immediately, trigger will handle invitation acceptance');
+        
+        toast({
+          title: "Welcome!",
+          description: "Your account has been created successfully. Welcome to the project!",
+        });
+
+        // Navigate to appropriate dashboard
+        if (invitation.project_id) {
+          navigate(`/project/${invitation.project_id}`);
+        } else {
+          navigate('/dashboard');
+        }
       }
 
     } catch (error) {
-      console.error('❌ [INVITE JOIN] Complete signup error:', error);
+      console.error('❌ [INVITE JOIN] Signup error:', error);
       const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating your account. Please try again.';
       
       toast({
