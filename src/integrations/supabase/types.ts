@@ -44,47 +44,6 @@ export type Database = {
           },
         ]
       }
-      invitation_verifications: {
-        Row: {
-          created_at: string
-          id: string
-          invitation_id: string
-          profile_created_at: string | null
-          project_added_at: string | null
-          user_id: string
-          verification_token: string
-          verified_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invitation_id: string
-          profile_created_at?: string | null
-          project_added_at?: string | null
-          user_id: string
-          verification_token?: string
-          verified_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invitation_id?: string
-          profile_created_at?: string | null
-          project_added_at?: string | null
-          user_id?: string
-          verification_token?: string
-          verified_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitation_verifications_invitation_id_fkey"
-            columns: ["invitation_id"]
-            isOneToOne: false
-            referencedRelation: "invitations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       invitations: {
         Row: {
           accepted_at: string | null
