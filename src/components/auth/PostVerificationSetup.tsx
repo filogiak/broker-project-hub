@@ -38,21 +38,15 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
     },
     {
       id: 'profile',
-      label: 'Creating your profile',
+      label: 'Verifying your profile',
       status: 'pending',
       icon: <User className="h-4 w-4" />
     },
     {
-      id: 'role',
-      label: 'Assigning your role',
+      id: 'invitation',
+      label: 'Processing invitation',
       status: 'pending',
       icon: <UserCheck className="h-4 w-4" />
-    },
-    {
-      id: 'project',
-      label: 'Adding you to the project',
-      status: 'pending',
-      icon: <Users className="h-4 w-4" />
     }
   ]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -131,104 +125,57 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       updateStepStatus('auth', 'complete');
       await delay(500);
 
-      // Step 1: Create/verify profile
+      // Step 1: Verify profile exists (should be created by trigger)
       updateStepStatus('profile', 'loading');
       setCurrentStep(1);
 
-      console.log('📝 [POST-VERIFICATION] Creating/verifying user profile...');
+      console.log('📝 [POST-VERIFICATION] Verifying user profile exists...');
       
-      // Check if profile already exists
-      const { data: existingProfile, error: profileCheckError } = await supabase
+      // Wait a bit for the trigger to complete profile creation
+      await delay(2000);
+      
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      if (profileCheckError) {
-        console.error('❌ [POST-VERIFICATION] Error checking profile:', profileCheckError);
-        throw new Error('Failed to check profile: ' + profileCheckError.message);
+      if (profileError) {
+        console.error('❌ [POST-VERIFICATION] Error checking profile:', profileError);
+        throw new Error('Failed to verify profile: ' + profileError.message);
       }
 
-      if (!existingProfile) {
-        console.log('📝 [POST-VERIFICATION] Creating new profile...');
-        
-        const { error: profileCreateError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: invitation.email,
-            first_name: session.user.user_metadata?.first_name || '',
-            last_name: session.user.user_metadata?.last_name || ''
-          });
-
-        if (profileCreateError) {
-          console.error('❌ [POST-VERIFICATION] Error creating profile:', profileCreateError);
-          throw new Error('Failed to create profile: ' + profileCreateError.message);
-        }
-        
-        console.log('✅ [POST-VERIFICATION] Profile created successfully');
-      } else {
-        console.log('✅ [POST-VERIFICATION] Profile already exists');
+      if (!profile) {
+        console.error('❌ [POST-VERIFICATION] Profile not found, this should have been created by trigger');
+        throw new Error('Profile was not created automatically. Please contact support.');
       }
+
+      // Verify profile email matches invitation
+      if (profile.email !== invitation.email) {
+        console.error('❌ [POST-VERIFICATION] Email mismatch:', {
+          profileEmail: profile.email,
+          invitationEmail: invitation.email
+        });
+        throw new Error('Email mismatch between profile and invitation.');
+      }
+
+      console.log('✅ [POST-VERIFICATION] Profile verified successfully:', {
+        profileId: profile.id,
+        email: profile.email
+      });
 
       updateStepStatus('profile', 'complete');
       await delay(500);
 
-      // Step 2: Assign user role
-      updateStepStatus('role', 'loading');
+      // Step 2: Accept invitation (this will handle roles and project membership)
+      updateStepStatus('invitation', 'loading');
       setCurrentStep(2);
 
-      console.log('👤 [POST-VERIFICATION] Assigning user role...');
-      
-      // Check if role already exists
-      const { data: existingRole, error: roleCheckError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('role', invitation.role)
-        .maybeSingle();
-
-      if (roleCheckError) {
-        console.error('❌ [POST-VERIFICATION] Error checking user role:', roleCheckError);
-        throw new Error('Failed to check user role: ' + roleCheckError.message);
-      }
-
-      if (!existingRole) {
-        const { error: roleCreateError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: invitation.role
-          });
-
-        if (roleCreateError) {
-          console.error('❌ [POST-VERIFICATION] Error creating user role:', roleCreateError);
-          
-          // Check if it's a duplicate constraint error
-          if (roleCreateError.code === '23505') {
-            console.log('⚠️ [POST-VERIFICATION] Role already exists (race condition)');
-          } else {
-            throw new Error('Failed to assign role: ' + roleCreateError.message);
-          }
-        } else {
-          console.log('✅ [POST-VERIFICATION] Role assigned successfully');
-        }
-      } else {
-        console.log('✅ [POST-VERIFICATION] Role already exists');
-      }
-
-      updateStepStatus('role', 'complete');
-      await delay(500);
-
-      // Step 3: Add to project and accept invitation
-      updateStepStatus('project', 'loading');
-      setCurrentStep(3);
-
-      console.log('🤝 [POST-VERIFICATION] Accepting invitation and adding to project...');
+      console.log('🤝 [POST-VERIFICATION] Accepting invitation and assigning roles/project membership...');
       
       await acceptInvitation(invitation.id, userId);
 
-      // Verify the user was actually added to the project
+      // Verify everything was set up correctly
       if (invitation.project_id) {
         console.log('🔍 [POST-VERIFICATION] Verifying project membership...');
         
@@ -236,7 +183,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
           .from('project_members')
           .select('*')
           .eq('project_id', invitation.project_id)
-          .eq('user_id', userId)
+          .eq('user_id', profile.id)
           .maybeSingle();
 
         if (memberCheckError) {
@@ -251,7 +198,26 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
         console.log('✅ [POST-VERIFICATION] Project membership verified');
       }
 
-      updateStepStatus('project', 'complete');
+      // Verify role assignment
+      const { data: userRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('role', invitation.role)
+        .maybeSingle();
+
+      if (roleCheckError) {
+        console.error('❌ [POST-VERIFICATION] Error checking user role:', roleCheckError);
+        throw new Error('Failed to verify user role: ' + roleCheckError.message);
+      }
+
+      if (!userRole) {
+        throw new Error('User role was not assigned successfully. Please contact support.');
+      }
+
+      console.log('✅ [POST-VERIFICATION] Role assignment verified');
+
+      updateStepStatus('invitation', 'complete');
       await delay(500);
 
       console.log('🎉 [POST-VERIFICATION] Setup completed successfully');

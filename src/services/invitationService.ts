@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { createEmailInvitation } from './emailInvitationService';
 import type { Database } from '@/integrations/supabase/types';
@@ -261,14 +262,41 @@ export const acceptInvitation = async (
       return; // Don't throw error, just return as it's already done
     }
 
-    // Step 1: Ensure user has the correct role assigned
+    // Get the user's profile (which should exist by now due to the trigger)
+    console.log('👤 [INVITATION SERVICE] Getting user profile...');
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('❌ [INVITATION SERVICE] Error fetching user profile:', profileError);
+      throw new Error('User profile not found. Profile should be created automatically.');
+    }
+
+    // Verify the profile email matches the invitation email
+    if (profile.email !== invitation.email) {
+      console.error('❌ [INVITATION SERVICE] Email mismatch:', {
+        profileEmail: profile.email,
+        invitationEmail: invitation.email
+      });
+      throw new Error('Email mismatch between profile and invitation');
+    }
+
+    console.log('✅ [INVITATION SERVICE] Profile verified:', {
+      profileId: profile.id,
+      email: profile.email
+    });
+
+    // Step 1: Ensure user has the correct role assigned (using profile ID)
     console.log('👤 [INVITATION SERVICE] Ensuring user role is assigned...');
     
     // Check if role already exists
     const { data: existingRole, error: roleCheckError } = await supabase
       .from('user_roles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', profile.id)
       .eq('role', invitation.role)
       .maybeSingle();
 
@@ -282,7 +310,7 @@ export const acceptInvitation = async (
       const { error: roleCreateError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: userId,
+          user_id: profile.id,
           role: invitation.role
         });
 
@@ -297,7 +325,7 @@ export const acceptInvitation = async (
         }
       } else {
         console.log('✅ [INVITATION SERVICE] User role assigned successfully:', {
-          user_id: userId,
+          user_id: profile.id,
           role: invitation.role
         });
       }
@@ -305,7 +333,7 @@ export const acceptInvitation = async (
       console.log('✅ [INVITATION SERVICE] User role already exists');
     }
 
-    // Step 2: Add user to project members
+    // Step 2: Add user to project members (using profile ID)
     if (invitation.project_id) {
       console.log('👥 [INVITATION SERVICE] Adding user to project members...');
       
@@ -314,7 +342,7 @@ export const acceptInvitation = async (
         .from('project_members')
         .select('*')
         .eq('project_id', invitation.project_id)
-        .eq('user_id', userId)
+        .eq('user_id', profile.id)
         .maybeSingle();
 
       if (memberCheckError) {
@@ -327,7 +355,7 @@ export const acceptInvitation = async (
           .from('project_members')
           .insert({
             project_id: invitation.project_id,
-            user_id: userId,
+            user_id: profile.id,
             role: invitation.role,
             invited_by: invitation.invited_by,
             joined_at: new Date().toISOString(),
@@ -345,7 +373,7 @@ export const acceptInvitation = async (
         } else {
           console.log('✅ [INVITATION SERVICE] User successfully added to project:', {
             project_id: invitation.project_id,
-            user_id: userId,
+            user_id: profile.id,
             role: invitation.role
           });
         }
