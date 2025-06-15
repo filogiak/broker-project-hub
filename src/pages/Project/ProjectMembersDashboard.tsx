@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -161,6 +162,16 @@ const ProjectMembersDashboard = () => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatParticipantDesignation = (designation: string | null) => {
+    if (!designation) return 'Not assigned';
+    return designation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatApplicantCount = (count: string | null) => {
+    if (!count) return 'Not set';
+    return count.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not joined yet';
     return new Date(dateString).toLocaleDateString();
@@ -213,7 +224,7 @@ const ProjectMembersDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-primary">{project.name}</h1>
             <p className="text-muted-foreground mt-1">
-              Project Members Dashboard
+              Project Members Dashboard - {formatApplicantCount(project.applicant_count)}
             </p>
           </div>
           <Button 
@@ -223,6 +234,25 @@ const ProjectMembersDashboard = () => {
             Back to Project
           </Button>
         </div>
+
+        {/* Project Info Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Applicant Count</label>
+                <p className="text-lg">{formatApplicantCount(project.applicant_count)}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Project Type</label>
+                <p className="text-lg">{project.project_type ? formatRole(project.project_type) : 'Not set'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Project Members */}
         <Card>
@@ -262,6 +292,7 @@ const ProjectMembersDashboard = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Participant Type</TableHead>
                     <TableHead>Joined Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -273,6 +304,7 @@ const ProjectMembersDashboard = () => {
                       </TableCell>
                       <TableCell>{member.profiles?.email || 'Unknown'}</TableCell>
                       <TableCell>{formatRole(member.role)}</TableCell>
+                      <TableCell>{formatParticipantDesignation(member.participant_designation)}</TableCell>
                       <TableCell>{formatDate(member.joined_at)}</TableCell>
                     </TableRow>
                   ))}

@@ -270,7 +270,9 @@ export type Database = {
           created_at: string
           id: string
           item_id: string
-          participant_designation: string | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           status: Database["public"]["Enums"]["checklist_status"] | null
           updated_at: string
@@ -280,7 +282,9 @@ export type Database = {
           created_at?: string
           id?: string
           item_id: string
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
           updated_at?: string
@@ -290,7 +294,9 @@ export type Database = {
           created_at?: string
           id?: string
           item_id?: string
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
           updated_at?: string
@@ -324,7 +330,7 @@ export type Database = {
           id: string
           is_paid_off: boolean | null
           monthly_payment: number | null
-          participant_designation: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           updated_at: string
         }
@@ -338,7 +344,7 @@ export type Database = {
           id?: string
           is_paid_off?: boolean | null
           monthly_payment?: number | null
-          participant_designation: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           updated_at?: string
         }
@@ -352,7 +358,7 @@ export type Database = {
           id?: string
           is_paid_off?: boolean | null
           monthly_payment?: number | null
-          participant_designation?: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id?: string
           updated_at?: string
         }
@@ -374,7 +380,7 @@ export type Database = {
           dependent_on_taxes: boolean | null
           group_index: number
           id: string
-          participant_designation: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           relationship: string | null
           social_security_number: string | null
@@ -387,7 +393,7 @@ export type Database = {
           dependent_on_taxes?: boolean | null
           group_index?: number
           id?: string
-          participant_designation: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           relationship?: string | null
           social_security_number?: string | null
@@ -400,7 +406,7 @@ export type Database = {
           dependent_on_taxes?: boolean | null
           group_index?: number
           id?: string
-          participant_designation?: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id?: string
           relationship?: string | null
           social_security_number?: string | null
@@ -425,7 +431,9 @@ export type Database = {
           id: string
           item_id: string | null
           mime_type: string | null
-          participant_designation: string | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           status: Database["public"]["Enums"]["checklist_status"] | null
           updated_at: string
@@ -439,7 +447,9 @@ export type Database = {
           id?: string
           item_id?: string | null
           mime_type?: string | null
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
           updated_at?: string
@@ -453,7 +463,9 @@ export type Database = {
           id?: string
           item_id?: string | null
           mime_type?: string | null
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
           updated_at?: string
@@ -489,7 +501,9 @@ export type Database = {
           invited_at: string | null
           invited_by: string
           joined_at: string | null
-          participant_designation: string | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -499,7 +513,9 @@ export type Database = {
           invited_at?: string | null
           invited_by: string
           joined_at?: string | null
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -509,7 +525,9 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string
           joined_at?: string | null
-          participant_designation?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
@@ -547,7 +565,7 @@ export type Database = {
           is_primary_residence: boolean | null
           monthly_payment: number | null
           outstanding_mortgage: number | null
-          participant_designation: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           property_address: string
           property_type: string | null
@@ -562,7 +580,7 @@ export type Database = {
           is_primary_residence?: boolean | null
           monthly_payment?: number | null
           outstanding_mortgage?: number | null
-          participant_designation: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           property_address: string
           property_type?: string | null
@@ -577,7 +595,7 @@ export type Database = {
           is_primary_residence?: boolean | null
           monthly_payment?: number | null
           outstanding_mortgage?: number | null
-          participant_designation?: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id?: string
           property_address?: string
           property_type?: string | null
@@ -605,7 +623,7 @@ export type Database = {
           income_type: string | null
           is_current: boolean | null
           monthly_amount: number | null
-          participant_designation: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           start_date: string | null
           updated_at: string
@@ -620,7 +638,7 @@ export type Database = {
           income_type?: string | null
           is_current?: boolean | null
           monthly_amount?: number | null
-          participant_designation: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id: string
           start_date?: string | null
           updated_at?: string
@@ -635,7 +653,7 @@ export type Database = {
           income_type?: string | null
           is_current?: boolean | null
           monthly_amount?: number | null
-          participant_designation?: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
           project_id?: string
           start_date?: string | null
           updated_at?: string
@@ -652,6 +670,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          applicant_count: Database["public"]["Enums"]["applicant_count"] | null
           brokerage_id: string
           checklist_generated_at: string | null
           created_at: string | null
@@ -659,12 +678,14 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          number_of_applicants: number | null
           project_type: Database["public"]["Enums"]["project_type"] | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          applicant_count?:
+            | Database["public"]["Enums"]["applicant_count"]
+            | null
           brokerage_id: string
           checklist_generated_at?: string | null
           created_at?: string | null
@@ -672,12 +693,14 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          number_of_applicants?: number | null
           project_type?: Database["public"]["Enums"]["project_type"] | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          applicant_count?:
+            | Database["public"]["Enums"]["applicant_count"]
+            | null
           brokerage_id?: string
           checklist_generated_at?: string | null
           created_at?: string | null
@@ -685,7 +708,6 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          number_of_applicants?: number | null
           project_type?: Database["public"]["Enums"]["project_type"] | null
           status?: string | null
           updated_at?: string | null
@@ -900,6 +922,10 @@ export type Database = {
       }
     }
     Enums: {
+      applicant_count:
+        | "one_applicant"
+        | "two_applicants"
+        | "three_or_more_applicants"
       checklist_status: "pending" | "submitted" | "approved" | "rejected"
       condition_operator:
         | "EQUALS"
@@ -916,6 +942,10 @@ export type Database = {
         | "repeatable_group"
         | "single_choice_dropdown"
         | "multiple_choice_checkbox"
+      participant_designation:
+        | "solo_applicant"
+        | "applicant_one"
+        | "applicant_two"
       project_type:
         | "first_home_purchase"
         | "refinance"
@@ -1044,6 +1074,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      applicant_count: [
+        "one_applicant",
+        "two_applicants",
+        "three_or_more_applicants",
+      ],
       checklist_status: ["pending", "submitted", "approved", "rejected"],
       condition_operator: [
         "EQUALS",
@@ -1061,6 +1096,11 @@ export const Constants = {
         "repeatable_group",
         "single_choice_dropdown",
         "multiple_choice_checkbox",
+      ],
+      participant_designation: [
+        "solo_applicant",
+        "applicant_one",
+        "applicant_two",
       ],
       project_type: [
         "first_home_purchase",

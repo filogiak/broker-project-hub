@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,13 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { createProjectInvitation } from '@/services/invitationService';
-import { Mail, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Mail, CheckCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
+type ApplicantCount = Database['public']['Enums']['applicant_count'];
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -25,6 +28,8 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [invitationSuccess, setInvitationSuccess] = useState(false);
+  const [projectApplicantCount, setProjectApplicantCount] = useState<ApplicantCount | null>(null);
+  const [currentApplicantCount, setCurrentApplicantCount] = useState(0);
   const { toast } = useToast();
 
   const roleOptions = [
@@ -32,6 +37,65 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
     { value: 'broker_assistant' as UserRole, label: 'Broker Assistant' },
     { value: 'mortgage_applicant' as UserRole, label: 'Customer/Mortgage Applicant' },
   ];
+
+  useEffect(() => {
+    const loadProjectInfo = async () => {
+      if (!isOpen || !projectId) return;
+
+      try {
+        // Get project applicant count
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('applicant_count')
+          .eq('id', projectId)
+          .single();
+
+        if (projectError) {
+          console.error('Error loading project:', projectError);
+          return;
+        }
+
+        setProjectApplicantCount(projectData.applicant_count);
+
+        // Count current mortgage applicants
+        const { data: membersData, error: membersError } = await supabase
+          .from('project_members')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('role', 'mortgage_applicant');
+
+        if (membersError) {
+          console.error('Error counting applicants:', membersError);
+          return;
+        }
+
+        setCurrentApplicantCount(membersData?.length || 0);
+
+      } catch (error) {
+        console.error('Error loading project info:', error);
+      }
+    };
+
+    loadProjectInfo();
+  }, [isOpen, projectId]);
+
+  const getApplicantInfo = () => {
+    if (!projectApplicantCount) return null;
+
+    const maxApplicants = projectApplicantCount === 'one_applicant' ? 1 : 
+                         projectApplicantCount === 'two_applicants' ? 2 : 3;
+
+    const canAddApplicant = currentApplicantCount < maxApplicants;
+    const nextDesignation = projectApplicantCount === 'one_applicant' ? 'solo_applicant' :
+                           currentApplicantCount === 0 ? 'applicant_one' : 'applicant_two';
+
+    return {
+      maxApplicants,
+      canAddApplicant,
+      nextDesignation,
+      currentCount: currentApplicantCount
+    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +120,17 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if trying to add mortgage applicant when limit reached
+    const applicantInfo = getApplicantInfo();
+    if (role === 'mortgage_applicant' && applicantInfo && !applicantInfo.canAddApplicant) {
+      toast({
+        title: "Cannot Add Applicant",
+        description: `This project already has the maximum number of applicants (${applicantInfo.maxApplicants})`,
         variant: "destructive",
       });
       return;
@@ -126,13 +201,17 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
     onClose();
   };
 
+  const applicantInfo = getApplicantInfo();
+
   console.log('🎨 [ADD MEMBER MODAL] Rendering modal with state:', { 
     isOpen, 
     isLoading, 
     emailSent,
     invitationSuccess,
     email,
-    role 
+    role,
+    projectApplicantCount,
+    currentApplicantCount
   });
 
   return (
@@ -144,6 +223,21 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
 
         {!emailSent ? (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Project Applicant Info */}
+            {projectApplicantCount && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Project Configuration: {projectApplicantCount.replace(/_/g, ' ')}
+                  {applicantInfo && (
+                    <div className="mt-1">
+                      Current applicants: {applicantInfo.currentCount} / {applicantInfo.maxApplicants}
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -159,14 +253,34 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
             <div className="space-y-3">
               <Label>Member Role</Label>
               <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                {roleOptions.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="cursor-pointer">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
+                {roleOptions.map((option) => {
+                  const isApplicantDisabled = option.value === 'mortgage_applicant' && 
+                                            applicantInfo && !applicantInfo.canAddApplicant;
+                  
+                  return (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem 
+                        value={option.value} 
+                        id={option.value}
+                        disabled={isApplicantDisabled}
+                      />
+                      <Label 
+                        htmlFor={option.value} 
+                        className={`cursor-pointer ${isApplicantDisabled ? 'text-muted-foreground' : ''}`}
+                      >
+                        {option.label}
+                        {option.value === 'mortgage_applicant' && applicantInfo && (
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {applicantInfo.canAddApplicant 
+                              ? `(will be assigned as ${applicantInfo.nextDesignation.replace(/_/g, ' ')})`
+                              : '(maximum reached)'
+                            }
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                  );
+                })}
               </RadioGroup>
             </div>
 
