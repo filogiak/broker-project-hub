@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -32,6 +31,11 @@ interface ProjectData {
   applicant_count: 'one_applicant' | 'two_applicants' | 'three_or_more_applicants';
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 const ProjectDocuments = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -40,11 +44,12 @@ const ProjectDocuments = () => {
   
   const [viewState, setViewState] = useState<ViewState>({ type: 'categories' });
   const [projectData, setProjectData] = useState<ProjectData | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProjectData = async () => {
+    const fetchData = async () => {
       if (!projectId) {
         setError('Project ID is required');
         setIsLoading(false);
@@ -52,9 +57,10 @@ const ProjectDocuments = () => {
       }
 
       try {
-        console.log('Fetching project data for ID:', projectId);
+        console.log('Fetching project and category data for ID:', projectId);
         
-        const { data, error: projectError } = await supabase
+        // Fetch project data
+        const { data: projectData, error: projectError } = await supabase
           .from('projects')
           .select('id, name, applicant_count')
           .eq('id', projectId)
@@ -67,14 +73,30 @@ const ProjectDocuments = () => {
           return;
         }
 
-        if (!data) {
+        if (!projectData) {
           setError('Project not found');
           setIsLoading(false);
           return;
         }
 
-        console.log('Project data loaded:', data);
-        setProjectData(data as ProjectData);
+        // Fetch categories from the database
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('items_categories')
+          .select('id, name')
+          .order('display_order', { ascending: true });
+
+        if (categoriesError) {
+          console.error('Error fetching categories:', categoriesError);
+          setError('Failed to load categories');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Project data loaded:', projectData);
+        console.log('Categories loaded:', categoriesData);
+        
+        setProjectData(projectData as ProjectData);
+        setCategories(categoriesData || []);
         setError(null);
       } catch (err) {
         console.error('Unexpected error:', err);
@@ -84,7 +106,7 @@ const ProjectDocuments = () => {
       }
     };
 
-    fetchProjectData();
+    fetchData();
   }, [projectId]);
 
   const handleLogout = async () => {
@@ -218,7 +240,7 @@ const ProjectDocuments = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MOCK_CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <CategoryBox
                   key={category.id}
                   name={category.name}
@@ -248,6 +270,7 @@ const ProjectDocuments = () => {
       case 'questions':
         return (
           <CategoryQuestions
+            categoryId={viewState.categoryId}
             categoryName={viewState.categoryName}
             applicant={viewState.applicant}
             onBack={viewState.applicant ? handleBackToApplicantSelection : handleBackToCategories}

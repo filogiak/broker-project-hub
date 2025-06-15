@@ -11,12 +11,13 @@ import { useParams } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 interface CategoryQuestionsProps {
+  categoryId: string;
   categoryName: string;
   applicant?: 'applicant_1' | 'applicant_2';
   onBack: () => void;
 }
 
-const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestionsProps) => {
+const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: CategoryQuestionsProps) => {
   const { projectId } = useParams();
   const [formData, setFormData] = useState<Record<string, any>>({});
   
@@ -29,17 +30,17 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
   const {
     items,
     loading,
-    createItem,
     updateItem,
     validateAndConvertValue,
-  } = useTypedChecklistItems(projectId!, undefined, participantDesignation);
+  } = useTypedChecklistItems(projectId!, categoryId, participantDesignation);
 
-  // Filter items by category name (we'll need to get the category ID eventually)
-  const categoryItems = items.filter(item => {
-    // For now, we'll match by category name in the mock data structure
-    // In a real implementation, this would filter by category_id
-    return true; // Show all items for now since we don't have category filtering set up
-  });
+  // Filter and sort items by category and priority
+  const categoryItems = items
+    .filter(item => item.categoryId === categoryId)
+    .sort((a, b) => {
+      // Sort by priority (ascending - smallest first)
+      return (a.priority || 0) - (b.priority || 0);
+    });
 
   const handleInputChange = (itemId: string, value: any) => {
     setFormData(prev => ({
@@ -52,16 +53,23 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
     if (!projectId) return;
 
     try {
+      const savePromises = [];
+      
       for (const item of categoryItems) {
         const inputValue = formData[item.id];
-        if (!inputValue) continue;
+        if (inputValue === undefined || inputValue === '') continue;
 
         // Validate and convert the value based on item type
         const typedValue = validateAndConvertValue(item.itemType, inputValue);
 
         // Update existing item
-        await updateItem(item.id, typedValue, 'submitted');
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
+
+      await Promise.all(savePromises);
+      
+      // Clear form data after successful save
+      setFormData({});
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -77,6 +85,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
             value={currentValue}
             onChange={(e) => handleInputChange(item.id, e.target.value)}
             placeholder="Enter text..."
+            className="w-full"
           />
         );
 
@@ -87,6 +96,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
             value={currentValue}
             onChange={(e) => handleInputChange(item.id, e.target.value)}
             placeholder="Enter number..."
+            className="w-full"
           />
         );
 
@@ -96,6 +106,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
             type="date"
             value={currentValue}
             onChange={(e) => handleInputChange(item.id, e.target.value)}
+            className="w-full"
           />
         );
 
@@ -105,10 +116,10 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
             value={currentValue}
             onValueChange={(value) => handleInputChange(item.id, value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select an option..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg">
               <SelectItem value="option1">Option 1</SelectItem>
               <SelectItem value="option2">Option 2</SelectItem>
               <SelectItem value="option3">Option 3</SelectItem>
@@ -121,9 +132,9 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
         const availableOptions = ['Option A', 'Option B', 'Option C']; // This should come from item_options table
         
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {availableOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
+              <div key={option} className="flex items-center space-x-3">
                 <Checkbox
                   id={`${item.id}-${option}`}
                   checked={selectedOptions.includes(option)}
@@ -134,7 +145,9 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
                     handleInputChange(item.id, newValue);
                   }}
                 />
-                <Label htmlFor={`${item.id}-${option}`}>{option}</Label>
+                <Label htmlFor={`${item.id}-${option}`} className="text-sm font-normal">
+                  {option}
+                </Label>
               </div>
             ))}
           </div>
@@ -152,6 +165,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
                   handleInputChange(item.id, file.name);
                 }
               }}
+              className="w-full"
             />
             {currentValue && (
               <p className="text-sm text-muted-foreground">
@@ -212,14 +226,21 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
       {categoryItems.length > 0 ? (
         <div className="space-y-6">
           <div className="bg-card p-6 rounded-lg border">
-            <div className="space-y-6">
-              {categoryItems.map((item) => (
-                <div key={item.id} className="space-y-2">
-                  <Label className="text-base font-medium">
-                    {item.itemName}
-                    <span className="text-red-500 ml-1">*</span>
-                  </Label>
-                  {renderQuestionInput(item)}
+            <div className="space-y-8">
+              {categoryItems.map((item, index) => (
+                <div key={item.id} className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <Label className="text-base font-medium leading-relaxed">
+                      {index + 1}. {item.itemName}
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                      Priority: {item.priority || 0}
+                    </span>
+                  </div>
+                  <div className="ml-0">
+                    {renderQuestionInput(item)}
+                  </div>
                 </div>
               ))}
             </div>

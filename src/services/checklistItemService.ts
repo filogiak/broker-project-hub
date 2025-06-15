@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -30,6 +29,7 @@ export interface TypedChecklistItem {
   itemType: ItemType;
   scope: Database['public']['Enums']['item_scope'];
   categoryId?: string;
+  priority?: number;
   displayValue?: string;
   typedValue: TypedChecklistItemValue;
 }
@@ -91,7 +91,7 @@ export class ChecklistItemService {
   }
 
   /**
-   * Retrieves typed checklist items for a project with proper typing
+   * Retrieves typed checklist items for a project with proper typing and priority ordering
    */
   static async getProjectChecklistItems(
     projectId: string,
@@ -106,13 +106,14 @@ export class ChecklistItemService {
           item_name,
           item_type,
           scope,
-          category_id
+          category_id,
+          priority
         )
       `)
       .eq('project_id', projectId);
 
     if (participantDesignation) {
-      query = query.eq('participant_designation', participantDesignation);
+      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
     }
 
     const { data, error } = await query;
@@ -136,6 +137,7 @@ export class ChecklistItemService {
         itemType: requiredItem?.item_type || 'text',
         scope: requiredItem?.scope || 'PROJECT',
         categoryId: requiredItem?.category_id,
+        priority: requiredItem?.priority || 0,
         displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
         typedValue: {
           textValue: item.text_value,
@@ -148,6 +150,9 @@ export class ChecklistItemService {
       };
     }) || [];
 
+    // Sort by priority
+    typedData.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+
     return { data: typedData, error: null };
   }
 
@@ -159,14 +164,64 @@ export class ChecklistItemService {
     categoryId: string,
     participantDesignation?: ParticipantDesignation
   ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
-    const { data, error } = await this.getProjectChecklistItems(projectId, participantDesignation);
-    
+    // Query with category filter directly in the database query for better performance
+    let query = supabase
+      .from('project_checklist_items')
+      .select(`
+        *,
+        required_items!inner (
+          item_name,
+          item_type,
+          scope,
+          category_id,
+          priority
+        )
+      `)
+      .eq('project_id', projectId)
+      .eq('required_items.category_id', categoryId);
+
+    if (participantDesignation) {
+      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       return { data: null, error };
     }
 
-    const filteredData = data?.filter(item => item.categoryId === categoryId) || [];
-    return { data: filteredData, error: null };
+    // Transform the data to include properly typed values
+    const typedData: TypedChecklistItem[] = data?.map(item => {
+      const requiredItem = item.required_items as any;
+      return {
+        id: item.id,
+        projectId: item.project_id,
+        itemId: item.item_id,
+        participantDesignation: item.participant_designation,
+        status: item.status,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        itemName: requiredItem?.item_name || '',
+        itemType: requiredItem?.item_type || 'text',
+        scope: requiredItem?.scope || 'PROJECT',
+        categoryId: requiredItem?.category_id,
+        priority: requiredItem?.priority || 0,
+        displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
+        typedValue: {
+          textValue: item.text_value,
+          numericValue: item.numeric_value,
+          dateValue: item.date_value,
+          booleanValue: item.boolean_value,
+          jsonValue: item.json_value,
+          documentReferenceId: item.document_reference_id,
+        },
+      };
+    }) || [];
+
+    // Sort by priority
+    typedData.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+
+    return { data: typedData, error: null };
   }
 
   /**
