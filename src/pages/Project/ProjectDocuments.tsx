@@ -131,7 +131,10 @@ const ProjectDocuments = () => {
                 This category requires applicant-specific information
               </p>
             </div>
-            <ApplicantSelector onSelectApplicant={handleApplicantSelect} />
+            <ApplicantSelector 
+              onSelectApplicant={handleApplicantSelect}
+              onBack={handleBackToCategories}
+            />
           </div>
         );
 
