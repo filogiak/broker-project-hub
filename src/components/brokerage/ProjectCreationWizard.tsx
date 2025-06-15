@@ -29,12 +29,12 @@ interface ProjectCreationWizardProps {
 }
 
 const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  purchase: 'Purchase',
+  first_home_purchase: 'First Home Purchase',
   refinance: 'Refinance',
-  cash_out_refinance: 'Cash-Out Refinance',
-  heloc: 'Home Equity Line of Credit (HELOC)',
-  construction: 'Construction Loan',
-  bridge: 'Bridge Loan'
+  investment_property: 'Investment Property',
+  construction_loan: 'Construction Loan',
+  home_equity_loan: 'Home Equity Loan',
+  reverse_mortgage: 'Reverse Mortgage'
 };
 
 const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
