@@ -11,12 +11,19 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
-import type { Database } from '@/integrations/supabase/types';
 
-type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
-type ItemType = Database['public']['Enums']['item_type'];
-type ItemScope = Database['public']['Enums']['item_scope'];
-type ProjectType = Database['public']['Enums']['project_type'];
+// Simplified form data interface to avoid type recursion
+interface QuestionFormData {
+  item_name: string;
+  category_id?: string;
+  subcategory?: string;
+  subcategory_2?: string;
+  priority: number;
+  scope: 'PROJECT' | 'PARTICIPANT';
+  item_type: 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
+  project_types_applicable: string[];
+  validation_rules: Record<string, any>;
+}
 
 interface QuestionFormProps {
   onSuccess: () => void;
@@ -24,7 +31,7 @@ interface QuestionFormProps {
   onCancel?: () => void;
 }
 
-const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
+const ITEM_TYPE_OPTIONS = [
   { value: 'text', label: 'Text Input' },
   { value: 'number', label: 'Number Input' },
   { value: 'date', label: 'Date Input' },
@@ -34,12 +41,12 @@ const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
   { value: 'multiple_choice_checkbox', label: 'Multiple Choice Checkbox' }
 ];
 
-const SCOPE_OPTIONS: { value: ItemScope; label: string }[] = [
+const SCOPE_OPTIONS = [
   { value: 'PROJECT', label: 'Project Level' },
   { value: 'PARTICIPANT', label: 'Participant Level' }
 ];
 
-const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
+const PROJECT_TYPE_OPTIONS = [
   { value: 'first_home_purchase', label: 'First Home Purchase' },
   { value: 'refinance', label: 'Refinance' },
   { value: 'investment_property', label: 'Investment Property' },
@@ -52,10 +59,10 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<any[]>([]);
-  const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
-  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>([]);
+  const [selectedItemType, setSelectedItemType] = useState<string>('text');
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>([]);
 
-  const form = useForm<RequiredItemInsert>({
+  const form = useForm<QuestionFormData>({
     defaultValues: {
       item_name: '',
       category_id: undefined,
@@ -72,7 +79,6 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   useEffect(() => {
     loadCategories();
     if (editingQuestion) {
-      // Populate form with editing data
       form.reset({
         item_name: editingQuestion.item_name,
         category_id: editingQuestion.category_id,
@@ -102,7 +108,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleSubmit = async (data: RequiredItemInsert) => {
+  const handleSubmit = async (data: QuestionFormData) => {
     try {
       setLoading(true);
       
@@ -131,7 +137,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleProjectTypeChange = (projectType: ProjectType, checked: boolean) => {
+  const handleProjectTypeChange = (projectType: string, checked: boolean) => {
     const updated = checked 
       ? [...selectedProjectTypes, projectType]
       : selectedProjectTypes.filter(type => type !== projectType);
@@ -273,7 +279,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <FormItem>
                   <FormLabel>Question Type</FormLabel>
                   <Select 
-                    onValueChange={(value: ItemType) => {
+                    onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedItemType(value);
                     }} 
