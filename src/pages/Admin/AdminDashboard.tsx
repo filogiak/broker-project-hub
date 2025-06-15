@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building, Settings, UserPlus, LogOut, FolderOpen, RefreshCw, HelpCircle } from 'lucide-react';
+import { Users, Building, Settings, UserPlus, LogOut, FolderOpen, RefreshCw, HelpCircle, GitBranch } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getTotalUsersCount, getTotalBrokeragesCount, getTotalProjectsCount } from '@/services/adminService';
@@ -15,6 +14,7 @@ import BrokerageOwnersList from '@/components/admin/BrokerageOwnersList';
 import BrokeragesList from '@/components/admin/BrokeragesList';
 import QuestionForm from '@/components/admin/QuestionForm';
 import QuestionsList from '@/components/admin/QuestionsList';
+import LogicRulesManager from '@/components/admin/LogicRulesManager';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
@@ -200,7 +200,7 @@ const AdminDashboard = () => {
 
           {/* Management Tabs */}
           <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 User Management
@@ -212,6 +212,10 @@ const AdminDashboard = () => {
               <TabsTrigger value="questions" className="flex items-center gap-2">
                 <HelpCircle className="h-4 w-4" />
                 Question Management
+              </TabsTrigger>
+              <TabsTrigger value="logic" className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4" />
+                Logic Rules
               </TabsTrigger>
             </TabsList>
 
@@ -279,6 +283,10 @@ const AdminDashboard = () => {
                   onCancel={handleCancelQuestion}
                 />
               )}
+            </TabsContent>
+
+            <TabsContent value="logic" className="space-y-6">
+              <LogicRulesManager />
             </TabsContent>
           </Tabs>
         </div>
