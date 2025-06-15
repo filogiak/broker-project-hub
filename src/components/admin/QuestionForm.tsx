@@ -23,6 +23,8 @@ interface QuestionFormData {
   category_id?: string;
   subcategory?: string;
   subcategory_2?: string;
+  subcategory_1_initiator: boolean;
+  subcategory_2_initiator: boolean;
   priority: number;
   scope: ItemScope;
   item_type: ItemType;
@@ -80,6 +82,8 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       category_id: undefined,
       subcategory: '',
       subcategory_2: '',
+      subcategory_1_initiator: false,
+      subcategory_2_initiator: false,
       priority: 0,
       scope: 'PROJECT',
       item_type: 'text',
@@ -96,6 +100,8 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         category_id: editingQuestion.category_id,
         subcategory: editingQuestion.subcategory || '',
         subcategory_2: editingQuestion.subcategory_2 || '',
+        subcategory_1_initiator: editingQuestion.subcategory_1_initiator || false,
+        subcategory_2_initiator: editingQuestion.subcategory_2_initiator || false,
         priority: editingQuestion.priority || 0,
         scope: editingQuestion.scope,
         item_type: editingQuestion.item_type,
@@ -267,6 +273,31 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
 
               <FormField
                 control={form.control}
+                name="subcategory_1_initiator"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Subcategory 1 Initiator
+                      </FormLabel>
+                      <FormDescription>
+                        Check if this item initiates subcategory 1 logic
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="subcategory_2"
                 render={({ field }) => (
                   <FormItem>
@@ -275,6 +306,29 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                       <Input {...field} placeholder="Optional second subcategory" />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="subcategory_2_initiator"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Subcategory 2 Initiator
+                      </FormLabel>
+                      <FormDescription>
+                        Check if this item initiates subcategory 2 logic
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />
