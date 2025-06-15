@@ -142,19 +142,25 @@ export class ConditionalLogicService {
     categoryId: string,
     participantDesignation?: Database['public']['Enums']['participant_designation']
   ) {
+    // First get the item IDs to delete
+    const { data: itemIds } = await supabase
+      .from('required_items')
+      .select('id')
+      .eq('category_id', categoryId)
+      .not('subcategory', 'is', null);
+
+    if (!itemIds || itemIds.length === 0) {
+      return { data: null, error: null };
+    }
+
+    const itemIdArray = itemIds.map(item => item.id);
+
     let query = supabase
       .from('project_checklist_items')
       .delete()
       .eq('project_id', projectId)
-      .in('status', ['pending', 'draft']) // Only clear non-submitted questions
-      .in(
-        'item_id',
-        supabase
-          .from('required_items')
-          .select('id')
-          .eq('category_id', categoryId)
-          .not('subcategory', 'is', null)
-      );
+      .in('status', ['pending', 'submitted']) // Only clear non-approved questions
+      .in('item_id', itemIdArray);
 
     if (participantDesignation) {
       query = query.eq('participant_designation', participantDesignation);
