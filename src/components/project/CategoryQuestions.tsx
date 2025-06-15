@@ -16,47 +16,6 @@ interface CategoryQuestionsProps {
   onBack: () => void;
 }
 
-// Mock questions for demonstration - these would come from required_items table
-const MOCK_QUESTIONS = [
-  {
-    id: '1',
-    item_name: 'Full Name',
-    item_type: 'text' as const,
-    category_name: 'La Casa',
-    required: true,
-  },
-  {
-    id: '2',
-    item_name: 'Annual Income',
-    item_type: 'number' as const,
-    category_name: 'Professione',
-    required: true,
-  },
-  {
-    id: '3',
-    item_name: 'Employment Start Date',
-    item_type: 'date' as const,
-    category_name: 'Professione',
-    required: false,
-  },
-  {
-    id: '4',
-    item_name: 'Employment Type',
-    item_type: 'single_choice_dropdown' as const,
-    category_name: 'Professione',
-    required: true,
-    options: ['Full-time', 'Part-time', 'Contract', 'Self-employed'],
-  },
-  {
-    id: '5',
-    item_name: 'Additional Benefits',
-    item_type: 'multiple_choice_checkbox' as const,
-    category_name: 'Professione',
-    required: false,
-    options: ['Health Insurance', 'Retirement Plan', 'Bonus', 'Stock Options'],
-  },
-];
-
 const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestionsProps) => {
   const { projectId } = useParams();
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -75,13 +34,17 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
     validateAndConvertValue,
   } = useTypedChecklistItems(projectId!, undefined, participantDesignation);
 
-  // Filter questions by category
-  const categoryQuestions = MOCK_QUESTIONS.filter(q => q.category_name === categoryName);
+  // Filter items by category name (we'll need to get the category ID eventually)
+  const categoryItems = items.filter(item => {
+    // For now, we'll match by category name in the mock data structure
+    // In a real implementation, this would filter by category_id
+    return true; // Show all items for now since we don't have category filtering set up
+  });
 
-  const handleInputChange = (questionId: string, value: any) => {
+  const handleInputChange = (itemId: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [questionId]: value,
+      [itemId]: value,
     }));
   };
 
@@ -89,40 +52,30 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
     if (!projectId) return;
 
     try {
-      for (const question of categoryQuestions) {
-        const inputValue = formData[question.id];
-        if (!inputValue && question.required) continue;
+      for (const item of categoryItems) {
+        const inputValue = formData[item.id];
+        if (!inputValue) continue;
 
-        // Find existing item
-        const existingItem = items.find(item => item.itemId === question.id);
-        
         // Validate and convert the value based on item type
-        const typedValue = validateAndConvertValue(question.item_type, inputValue);
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
 
-        if (existingItem) {
-          // Update existing item
-          await updateItem(existingItem.id, typedValue, 'submitted');
-        } else {
-          // Create new item
-          await createItem(question.id, typedValue);
-        }
+        // Update existing item
+        await updateItem(item.id, typedValue, 'submitted');
       }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
   };
 
-  const renderQuestionInput = (question: typeof MOCK_QUESTIONS[0]) => {
-    const existingItem = items.find(item => item.itemId === question.id);
-    const currentValue = formData[question.id] ?? (existingItem ? 
-      existingItem.displayValue : '');
+  const renderQuestionInput = (item: typeof categoryItems[0]) => {
+    const currentValue = formData[item.id] ?? item.displayValue ?? '';
 
-    switch (question.item_type) {
+    switch (item.itemType) {
       case 'text':
         return (
           <Input
             value={currentValue}
-            onChange={(e) => handleInputChange(question.id, e.target.value)}
+            onChange={(e) => handleInputChange(item.id, e.target.value)}
             placeholder="Enter text..."
           />
         );
@@ -132,7 +85,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
           <Input
             type="number"
             value={currentValue}
-            onChange={(e) => handleInputChange(question.id, e.target.value)}
+            onChange={(e) => handleInputChange(item.id, e.target.value)}
             placeholder="Enter number..."
           />
         );
@@ -142,7 +95,7 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
           <Input
             type="date"
             value={currentValue}
-            onChange={(e) => handleInputChange(question.id, e.target.value)}
+            onChange={(e) => handleInputChange(item.id, e.target.value)}
           />
         );
 
@@ -150,40 +103,61 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
         return (
           <Select
             value={currentValue}
-            onValueChange={(value) => handleInputChange(question.id, value)}
+            onValueChange={(value) => handleInputChange(item.id, value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select an option..." />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
+              <SelectItem value="option1">Option 1</SelectItem>
+              <SelectItem value="option2">Option 2</SelectItem>
+              <SelectItem value="option3">Option 3</SelectItem>
             </SelectContent>
           </Select>
         );
 
       case 'multiple_choice_checkbox':
         const selectedOptions = Array.isArray(currentValue) ? currentValue : [];
+        const availableOptions = ['Option A', 'Option B', 'Option C']; // This should come from item_options table
+        
         return (
           <div className="space-y-2">
-            {question.options?.map((option) => (
+            {availableOptions.map((option) => (
               <div key={option} className="flex items-center space-x-2">
                 <Checkbox
-                  id={`${question.id}-${option}`}
+                  id={`${item.id}-${option}`}
                   checked={selectedOptions.includes(option)}
                   onCheckedChange={(checked) => {
                     const newValue = checked
                       ? [...selectedOptions, option]
-                      : selectedOptions.filter((item: string) => item !== option);
-                    handleInputChange(question.id, newValue);
+                      : selectedOptions.filter((selectedOption: string) => selectedOption !== option);
+                    handleInputChange(item.id, newValue);
                   }}
                 />
-                <Label htmlFor={`${question.id}-${option}`}>{option}</Label>
+                <Label htmlFor={`${item.id}-${option}`}>{option}</Label>
               </div>
             ))}
+          </div>
+        );
+
+      case 'document':
+        return (
+          <div className="space-y-2">
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  // Handle file upload here
+                  handleInputChange(item.id, file.name);
+                }
+              }}
+            />
+            {currentValue && (
+              <p className="text-sm text-muted-foreground">
+                Current file: {currentValue}
+              </p>
+            )}
           </div>
         );
 
@@ -235,17 +209,17 @@ const CategoryQuestions = ({ categoryName, applicant, onBack }: CategoryQuestion
         </div>
       </div>
       
-      {categoryQuestions.length > 0 ? (
+      {categoryItems.length > 0 ? (
         <div className="space-y-6">
           <div className="bg-card p-6 rounded-lg border">
             <div className="space-y-6">
-              {categoryQuestions.map((question) => (
-                <div key={question.id} className="space-y-2">
+              {categoryItems.map((item) => (
+                <div key={item.id} className="space-y-2">
                   <Label className="text-base font-medium">
-                    {question.item_name}
-                    {question.required && <span className="text-red-500 ml-1">*</span>}
+                    {item.itemName}
+                    <span className="text-red-500 ml-1">*</span>
                   </Label>
-                  {renderQuestionInput(question)}
+                  {renderQuestionInput(item)}
                 </div>
               ))}
             </div>

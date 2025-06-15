@@ -44,7 +44,7 @@ export class ChecklistItemService {
     value: TypedChecklistItemValue,
     participantDesignation?: ParticipantDesignation
   ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const insertData: ChecklistItemInsert = {
+    const insertData: any = {
       project_id: projectId,
       item_id: itemId,
       participant_designation: participantDesignation,
@@ -71,7 +71,7 @@ export class ChecklistItemService {
     value: TypedChecklistItemValue,
     status?: Database['public']['Enums']['checklist_status']
   ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const updateData: ChecklistItemUpdate = {
+    const updateData: any = {
       text_value: value.textValue,
       numeric_value: value.numericValue,
       date_value: value.dateValue,
@@ -97,9 +97,18 @@ export class ChecklistItemService {
     projectId: string,
     participantDesignation?: ParticipantDesignation
   ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
+    // Query the project_checklist_items table and join with required_items for metadata
     let query = supabase
-      .from('project_checklist_items_typed')
-      .select('*')
+      .from('project_checklist_items')
+      .select(`
+        *,
+        required_items (
+          item_name,
+          item_type,
+          scope,
+          category_id
+        )
+      `)
       .eq('project_id', projectId);
 
     if (participantDesignation) {
@@ -113,28 +122,31 @@ export class ChecklistItemService {
     }
 
     // Transform the data to include properly typed values
-    const typedData: TypedChecklistItem[] = data?.map(item => ({
-      id: item.id,
-      projectId: item.project_id,
-      itemId: item.item_id,
-      participantDesignation: item.participant_designation,
-      status: item.status,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-      itemName: item.item_name,
-      itemType: item.item_type,
-      scope: item.scope,
-      categoryId: item.category_id,
-      displayValue: item.display_value,
-      typedValue: {
-        textValue: item.text_value,
-        numericValue: item.numeric_value,
-        dateValue: item.date_value,
-        booleanValue: item.boolean_value,
-        jsonValue: item.json_value,
-        documentReferenceId: item.document_reference_id,
-      },
-    })) || [];
+    const typedData: TypedChecklistItem[] = data?.map(item => {
+      const requiredItem = item.required_items as any;
+      return {
+        id: item.id,
+        projectId: item.project_id,
+        itemId: item.item_id,
+        participantDesignation: item.participant_designation,
+        status: item.status,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        itemName: requiredItem?.item_name || '',
+        itemType: requiredItem?.item_type || 'text',
+        scope: requiredItem?.scope || 'PROJECT',
+        categoryId: requiredItem?.category_id,
+        displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
+        typedValue: {
+          textValue: (item as any).text_value,
+          numericValue: (item as any).numeric_value,
+          dateValue: (item as any).date_value,
+          booleanValue: (item as any).boolean_value,
+          jsonValue: (item as any).json_value,
+          documentReferenceId: (item as any).document_reference_id,
+        },
+      };
+    }) || [];
 
     return { data: typedData, error: null };
   }
@@ -191,6 +203,34 @@ export class ChecklistItemService {
       
       default:
         throw new Error(`Unsupported item type: ${itemType}`);
+    }
+  }
+
+  /**
+   * Gets the display value from a checklist item based on its type
+   */
+  private static getDisplayValueFromItem(item: any, itemType: string): string {
+    switch (itemType) {
+      case 'text':
+      case 'single_choice_dropdown':
+        return item.text_value || '';
+      
+      case 'number':
+        return item.numeric_value?.toString() || '';
+      
+      case 'date':
+        return item.date_value || '';
+      
+      case 'multiple_choice_checkbox':
+        return Array.isArray(item.json_value) 
+          ? item.json_value.join(', ') 
+          : '';
+      
+      case 'document':
+        return item.document_reference_id || '';
+      
+      default:
+        return '';
     }
   }
 
