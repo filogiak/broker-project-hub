@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
-import type { Database } from '@/integrations/supabase/types';
+import { useItemOptions } from '@/hooks/useItemOptions';
+import TextQuestion from './questions/TextQuestion';
+import NumberQuestion from './questions/NumberQuestion';
+import DateQuestion from './questions/DateQuestion';
+import SingleChoiceQuestion from './questions/SingleChoiceQuestion';
+import MultipleChoiceQuestion from './questions/MultipleChoiceQuestion';
 
 interface CategoryQuestionsProps {
   categoryId: string;
@@ -37,10 +39,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
   // Filter and sort items by category and priority
   const categoryItems = items
     .filter(item => item.categoryId === categoryId)
-    .sort((a, b) => {
-      // Sort by priority (ascending - smallest first)
-      return (a.priority || 0) - (b.priority || 0);
-    });
+    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
   const handleInputChange = (itemId: string, value: any) => {
     setFormData(prev => ({
@@ -75,108 +74,61 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
     }
   };
 
-  const renderQuestionInput = (item: typeof categoryItems[0]) => {
+  const QuestionComponent = ({ item }: { item: typeof categoryItems[0] }) => {
     const currentValue = formData[item.id] ?? item.displayValue ?? '';
+    const { options } = useItemOptions(item.itemId);
 
     switch (item.itemType) {
       case 'text':
         return (
-          <Input
+          <TextQuestion
             value={currentValue}
-            onChange={(e) => handleInputChange(item.id, e.target.value)}
-            placeholder="Enter text..."
-            className="w-full"
+            onChange={(value) => handleInputChange(item.id, value)}
+            required
           />
         );
 
       case 'number':
         return (
-          <Input
-            type="number"
+          <NumberQuestion
             value={currentValue}
-            onChange={(e) => handleInputChange(item.id, e.target.value)}
-            placeholder="Enter number..."
-            className="w-full"
+            onChange={(value) => handleInputChange(item.id, value)}
+            required
           />
         );
 
       case 'date':
         return (
-          <Input
-            type="date"
+          <DateQuestion
             value={currentValue}
-            onChange={(e) => handleInputChange(item.id, e.target.value)}
-            className="w-full"
+            onChange={(value) => handleInputChange(item.id, value)}
+            required
           />
         );
 
       case 'single_choice_dropdown':
         return (
-          <Select
+          <SingleChoiceQuestion
             value={currentValue}
-            onValueChange={(value) => handleInputChange(item.id, value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select an option..." />
-            </SelectTrigger>
-            <SelectContent className="bg-white border shadow-lg">
-              <SelectItem value="option1">Option 1</SelectItem>
-              <SelectItem value="option2">Option 2</SelectItem>
-              <SelectItem value="option3">Option 3</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => handleInputChange(item.id, value)}
+            options={options.map(opt => ({ value: opt.value, label: opt.label }))}
+            required
+          />
         );
 
       case 'multiple_choice_checkbox':
-        const selectedOptions = Array.isArray(currentValue) ? currentValue : [];
-        const availableOptions = ['Option A', 'Option B', 'Option C']; // This should come from item_options table
-        
+        const selectedValues = Array.isArray(currentValue) ? currentValue : [];
         return (
-          <div className="space-y-3">
-            {availableOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-3">
-                <Checkbox
-                  id={`${item.id}-${option}`}
-                  checked={selectedOptions.includes(option)}
-                  onCheckedChange={(checked) => {
-                    const newValue = checked
-                      ? [...selectedOptions, option]
-                      : selectedOptions.filter((selectedOption: string) => selectedOption !== option);
-                    handleInputChange(item.id, newValue);
-                  }}
-                />
-                <Label htmlFor={`${item.id}-${option}`} className="text-sm font-normal">
-                  {option}
-                </Label>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'document':
-        return (
-          <div className="space-y-2">
-            <Input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  // Handle file upload here
-                  handleInputChange(item.id, file.name);
-                }
-              }}
-              className="w-full"
-            />
-            {currentValue && (
-              <p className="text-sm text-muted-foreground">
-                Current file: {currentValue}
-              </p>
-            )}
-          </div>
+          <MultipleChoiceQuestion
+            value={selectedValues}
+            onChange={(value) => handleInputChange(item.id, value)}
+            options={options.map(opt => ({ value: opt.value, label: opt.label }))}
+            required
+          />
         );
 
       default:
-        return <div className="text-muted-foreground">Unsupported question type</div>;
+        return <div className="text-muted-foreground">Unsupported question type: {item.itemType}</div>;
     }
   };
 
@@ -239,7 +191,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
                     </span>
                   </div>
                   <div className="ml-0">
-                    {renderQuestionInput(item)}
+                    <QuestionComponent item={item} />
                   </div>
                 </div>
               ))}
