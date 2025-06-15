@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
+import type { Database } from '@/integrations/supabase/types';
+
+// Use the proper enum types from the database
+type ProjectType = Database['public']['Enums']['project_type'];
+type ItemType = Database['public']['Enums']['item_type'];
+type ItemScope = Database['public']['Enums']['item_scope'];
 
 // Simplified interfaces to avoid TypeScript deep instantiation issues
 interface QuestionFormData {
@@ -19,9 +24,9 @@ interface QuestionFormData {
   subcategory?: string;
   subcategory_2?: string;
   priority: number;
-  scope: 'PROJECT' | 'PARTICIPANT';
-  item_type: 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
-  project_types_applicable: string[];
+  scope: ItemScope;
+  item_type: ItemType;
+  project_types_applicable: ProjectType[];
   validation_rules: Record<string, any>;
 }
 
@@ -46,12 +51,12 @@ const ITEM_TYPE_OPTIONS = [
   { value: 'repeatable_group', label: 'Repeatable Group' },
   { value: 'single_choice_dropdown', label: 'Single Choice Dropdown' },
   { value: 'multiple_choice_checkbox', label: 'Multiple Choice Checkbox' }
-];
+] as const;
 
 const SCOPE_OPTIONS = [
   { value: 'PROJECT', label: 'Project Level' },
   { value: 'PARTICIPANT', label: 'Participant Level' }
-];
+] as const;
 
 const PROJECT_TYPE_OPTIONS = [
   { value: 'first_home_purchase', label: 'First Home Purchase' },
@@ -60,14 +65,14 @@ const PROJECT_TYPE_OPTIONS = [
   { value: 'construction_loan', label: 'Construction Loan' },
   { value: 'home_equity_loan', label: 'Home Equity Loan' },
   { value: 'reverse_mortgage', label: 'Reverse Mortgage' }
-];
+] as const;
 
 const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<QuestionOption[]>([]);
-  const [selectedItemType, setSelectedItemType] = useState<string>('text');
-  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>([]);
+  const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>([]);
 
   const form = useForm<QuestionFormData>({
     defaultValues: {
@@ -183,7 +188,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleProjectTypeChange = (projectType: string, checked: boolean) => {
+  const handleProjectTypeChange = (projectType: ProjectType, checked: boolean) => {
     const updated = checked 
       ? [...selectedProjectTypes, projectType]
       : selectedProjectTypes.filter(type => type !== projectType);
@@ -360,9 +365,9 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   <div key={option.value} className="flex items-center space-x-2">
                     <Checkbox
                       id={option.value}
-                      checked={selectedProjectTypes.includes(option.value)}
+                      checked={selectedProjectTypes.includes(option.value as ProjectType)}
                       onCheckedChange={(checked) => 
-                        handleProjectTypeChange(option.value, checked as boolean)
+                        handleProjectTypeChange(option.value as ProjectType, checked as boolean)
                       }
                     />
                     <Label htmlFor={option.value} className="text-sm">
