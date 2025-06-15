@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -9,6 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Updated categories to match actual database data
 const MOCK_CATEGORIES = [
@@ -19,17 +21,16 @@ const MOCK_CATEGORIES = [
   { id: '5', name: 'Patrimonio' },
 ];
 
-// Mock project data - will be replaced with actual data fetching later
-const MOCK_PROJECT = {
-  id: 'project-1',
-  name: 'Sample Project',
-  applicant_count: 'two_applicants' as const,
-};
-
 type ViewState = 
   | { type: 'categories' }
   | { type: 'applicant_selection'; categoryId: string; categoryName: string }
   | { type: 'questions'; categoryId: string; categoryName: string; applicant?: 'applicant_1' | 'applicant_2' };
+
+interface ProjectData {
+  id: string;
+  name: string;
+  applicant_count: 'one_applicant' | 'two_applicants' | 'three_or_more_applicants';
+}
 
 const ProjectDocuments = () => {
   const { projectId } = useParams();
@@ -38,6 +39,53 @@ const ProjectDocuments = () => {
   const { toast } = useToast();
   
   const [viewState, setViewState] = useState<ViewState>({ type: 'categories' });
+  const [projectData, setProjectData] = useState<ProjectData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProjectData = async () => {
+      if (!projectId) {
+        setError('Project ID is required');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Fetching project data for ID:', projectId);
+        
+        const { data, error: projectError } = await supabase
+          .from('projects')
+          .select('id, name, applicant_count')
+          .eq('id', projectId)
+          .single();
+
+        if (projectError) {
+          console.error('Error fetching project:', projectError);
+          setError('Failed to load project data');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!data) {
+          setError('Project not found');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Project data loaded:', data);
+        setProjectData(data as ProjectData);
+        setError(null);
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        setError('An unexpected error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjectData();
+  }, [projectId]);
 
   const handleLogout = async () => {
     try {
@@ -58,9 +106,13 @@ const ProjectDocuments = () => {
   };
 
   const handleCategoryClick = (categoryId: string, categoryName: string) => {
+    if (!projectData) return;
+
     // Check if this is "La Casa" category or if project has only one applicant
     const isLaCasaCategory = categoryName.toLowerCase() === 'la casa';
-    const hasMultipleApplicants = MOCK_PROJECT.applicant_count === 'two_applicants';
+    const hasMultipleApplicants = projectData.applicant_count === 'two_applicants' || projectData.applicant_count === 'three_or_more_applicants';
+    
+    console.log('Category clicked:', categoryName, 'Project applicant count:', projectData.applicant_count, 'Has multiple applicants:', hasMultipleApplicants);
     
     if (isLaCasaCategory || !hasMultipleApplicants) {
       // Go directly to questions
@@ -104,6 +156,45 @@ const ProjectDocuments = () => {
     }
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <MainLayout
+        title="Loading Project..."
+        userEmail={user?.email || ''}
+        onLogout={handleLogout}
+      >
+        <div className="flex items-center justify-center min-h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading project data...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show error state
+  if (error || !projectData) {
+    return (
+      <MainLayout
+        title="Error"
+        userEmail={user?.email || ''}
+        onLogout={handleLogout}
+      >
+        <div className="flex items-center justify-center min-h-64">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error || 'Project not found'}</p>
+            <Button onClick={handleBackToProject}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Projects
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   const renderContent = () => {
     switch (viewState.type) {
       case 'categories':
@@ -120,6 +211,9 @@ const ProjectDocuments = () => {
               <h1 className="text-3xl font-bold text-primary">Project Documents</h1>
               <p className="text-muted-foreground mt-1">
                 Select a category to view and manage related documents and information
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Project type: {projectData.applicant_count.replace('_', ' ')}
               </p>
             </div>
             
@@ -167,7 +261,7 @@ const ProjectDocuments = () => {
 
   return (
     <MainLayout
-      title={`${MOCK_PROJECT.name} - Documents`}
+      title={`${projectData.name} - Documents`}
       userEmail={user?.email || ''}
       onLogout={handleLogout}
     >
