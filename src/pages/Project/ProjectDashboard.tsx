@@ -165,20 +165,22 @@ const ProjectDashboard = () => {
             </Link>
           </Card>
 
-          {/* Project Documents Card */}
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Documents
-              </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Coming Soon</div>
-              <p className="text-xs text-muted-foreground">
-                Project documents and files
-              </p>
-            </CardContent>
+          {/* Project Documents Card - now clickable */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-2 border-blue-500 hover:border-blue-600">
+            <Link to={`/project/${projectId}/documents`} className="block">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Documents
+                </CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">Manage</div>
+                <p className="text-xs text-muted-foreground">
+                  View and manage project documents and information
+                </p>
+              </CardContent>
+            </Link>
           </Card>
 
           {/* Project Analytics Card */}

@@ -334,7 +334,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <FormItem>
                   <FormLabel>Question Type</FormLabel>
                   <Select 
-                    onValueChange={(value) => {
+                    onValueChange={(value: ItemType) => {
                       field.onChange(value);
                       setSelectedItemType(value);
                     }} 
