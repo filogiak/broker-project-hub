@@ -13,6 +13,8 @@ import CreateBrokerageOwnerForm from '@/components/admin/CreateBrokerageOwnerFor
 import CreateBrokerageForm from '@/components/admin/CreateBrokerageForm';
 import BrokerageOwnersList from '@/components/admin/BrokerageOwnersList';
 import BrokeragesList from '@/components/admin/BrokeragesList';
+import QuestionForm from '@/components/admin/QuestionForm';
+import QuestionsList from '@/components/admin/QuestionsList';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
