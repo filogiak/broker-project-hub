@@ -92,6 +92,42 @@ export type Database = {
           },
         ]
       }
+      form_generation_rules: {
+        Row: {
+          condition_logic: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          priority: number
+          rule_name: string
+          rule_type: string
+          target_criteria: Json
+          updated_at: string
+        }
+        Insert: {
+          condition_logic?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          rule_name: string
+          rule_type: string
+          target_criteria?: Json
+          updated_at?: string
+        }
+        Update: {
+          condition_logic?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          rule_name?: string
+          rule_type?: string
+          target_criteria?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -267,38 +303,56 @@ export type Database = {
       }
       project_checklist_items: {
         Row: {
+          boolean_value: boolean | null
           created_at: string
+          date_value: string | null
+          document_reference_id: string | null
           id: string
           item_id: string
+          json_value: Json | null
+          numeric_value: number | null
           participant_designation:
             | Database["public"]["Enums"]["participant_designation"]
             | null
           project_id: string
           status: Database["public"]["Enums"]["checklist_status"] | null
+          text_value: string | null
           updated_at: string
           value: string | null
         }
         Insert: {
+          boolean_value?: boolean | null
           created_at?: string
+          date_value?: string | null
+          document_reference_id?: string | null
           id?: string
           item_id: string
+          json_value?: Json | null
+          numeric_value?: number | null
           participant_designation?:
             | Database["public"]["Enums"]["participant_designation"]
             | null
           project_id: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
           value?: string | null
         }
         Update: {
+          boolean_value?: boolean | null
           created_at?: string
+          date_value?: string | null
+          document_reference_id?: string | null
           id?: string
           item_id?: string
+          json_value?: Json | null
+          numeric_value?: number | null
           participant_designation?:
             | Database["public"]["Enums"]["participant_designation"]
             | null
           project_id?: string
           status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
           value?: string | null
         }
@@ -840,6 +894,10 @@ export type Database = {
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_project_checklist_items: {
+        Args: { p_project_id: string }
+        Returns: number
       }
       get_all_brokerage_owners: {
         Args: Record<PropertyKey, never>

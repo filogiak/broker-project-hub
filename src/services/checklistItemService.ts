@@ -44,7 +44,7 @@ export class ChecklistItemService {
     value: TypedChecklistItemValue,
     participantDesignation?: ParticipantDesignation
   ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const insertData: any = {
+    const insertData: ChecklistItemInsert = {
       project_id: projectId,
       item_id: itemId,
       participant_designation: participantDesignation,
@@ -71,7 +71,7 @@ export class ChecklistItemService {
     value: TypedChecklistItemValue,
     status?: Database['public']['Enums']['checklist_status']
   ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const updateData: any = {
+    const updateData: ChecklistItemUpdate = {
       text_value: value.textValue,
       numeric_value: value.numericValue,
       date_value: value.dateValue,
@@ -138,12 +138,12 @@ export class ChecklistItemService {
         categoryId: requiredItem?.category_id,
         displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
         typedValue: {
-          textValue: (item as any).text_value,
-          numericValue: (item as any).numeric_value,
-          dateValue: (item as any).date_value,
-          booleanValue: (item as any).boolean_value,
-          jsonValue: (item as any).json_value,
-          documentReferenceId: (item as any).document_reference_id,
+          textValue: item.text_value,
+          numericValue: item.numeric_value,
+          dateValue: item.date_value,
+          booleanValue: item.boolean_value,
+          jsonValue: item.json_value,
+          documentReferenceId: item.document_reference_id,
         },
       };
     }) || [];
