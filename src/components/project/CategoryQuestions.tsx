@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
@@ -132,6 +132,53 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
     }
   };
 
+  const MainQuestionsContent = () => {
+    if (categoryItems.length > 0) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-6 rounded-lg border">
+            <div className="space-y-8">
+              {categoryItems.map((item, index) => (
+                <div key={item.id} className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <Label className="text-base font-medium leading-relaxed">
+                      {index + 1}. {item.itemName}
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                      Priority: {item.priority || 0}
+                    </span>
+                  </div>
+                  <div className="ml-0">
+                    <QuestionComponent item={item} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button onClick={handleSave} className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Answers
+            </Button>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="bg-muted/50 p-8 rounded-lg text-center">
+          <p className="text-lg text-muted-foreground">
+            No questions available for this category yet.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Questions will be automatically generated based on the project configuration.
+          </p>
+        </div>
+      );
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -175,46 +222,40 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
         </div>
       </div>
       
-      {categoryItems.length > 0 ? (
-        <div className="space-y-6">
-          <div className="bg-card p-6 rounded-lg border">
-            <div className="space-y-8">
-              {categoryItems.map((item, index) => (
-                <div key={item.id} className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <Label className="text-base font-medium leading-relaxed">
-                      {index + 1}. {item.itemName}
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      Priority: {item.priority || 0}
-                    </span>
-                  </div>
-                  <div className="ml-0">
-                    <QuestionComponent item={item} />
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Tabs Section */}
+      <Tabs defaultValue="main-questions" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="main-questions">Main Questions</TabsTrigger>
+          <TabsTrigger value="additional-questions">Additional Questions</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="main-questions" className="mt-6">
+          <MainQuestionsContent />
+        </TabsContent>
+        
+        <TabsContent value="additional-questions" className="mt-6">
+          <div className="bg-muted/50 p-8 rounded-lg text-center">
+            <p className="text-lg text-muted-foreground">
+              Additional questions will be available here soon.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              This section will contain supplementary questions based on your responses.
+            </p>
           </div>
-          
-          <div className="flex justify-end">
-            <Button onClick={handleSave} className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              Save Answers
-            </Button>
+        </TabsContent>
+        
+        <TabsContent value="documents" className="mt-6">
+          <div className="bg-muted/50 p-8 rounded-lg text-center">
+            <p className="text-lg text-muted-foreground">
+              Document management will be available here soon.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              You'll be able to upload and manage required documents for this category.
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="bg-muted/50 p-8 rounded-lg text-center">
-          <p className="text-lg text-muted-foreground">
-            No questions available for this category yet.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Questions will be automatically generated based on the project configuration.
-          </p>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
