@@ -1,17 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock categories data - will be replaced with actual data fetching later
+// Updated categories to match actual database data
 const MOCK_CATEGORIES = [
-  { id: '1', name: 'Offerta' },
+  { id: '1', name: 'La Casa' },
   { id: '2', name: 'Professione' },
   { id: '3', name: 'Redditi Secondari' },
   { id: '4', name: 'Finanziamenti' },
@@ -32,6 +33,7 @@ type ViewState =
 
 const ProjectDocuments = () => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -49,6 +51,10 @@ const ProjectDocuments = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBackToProject = () => {
+    navigate(`/project/${projectId}`);
   };
 
   const handleCategoryClick = (categoryId: string, categoryName: string) => {
@@ -103,6 +109,13 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" onClick={handleBackToProject}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Project
+              </Button>
+            </div>
+            
             <div>
               <h1 className="text-3xl font-bold text-primary">Project Documents</h1>
               <p className="text-muted-foreground mt-1">
