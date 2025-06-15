@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,15 +18,12 @@ interface QuestionOptionManagerProps {
 }
 
 const QuestionOptionManager = ({ options, onChange }: QuestionOptionManagerProps) => {
-  const [localOptions, setLocalOptions] = useState<QuestionOption[]>(options);
-
-  const updateLocalOptions = (newOptions: QuestionOption[]) => {
+  const updateOptions = (newOptions: QuestionOption[]) => {
     // Update display_order based on array position
     const updatedOptions = newOptions.map((option, index) => ({
       ...option,
       display_order: index
     }));
-    setLocalOptions(updatedOptions);
     onChange(updatedOptions);
   };
 
@@ -34,28 +31,28 @@ const QuestionOptionManager = ({ options, onChange }: QuestionOptionManagerProps
     const newOption: QuestionOption = {
       option_value: '',
       option_label: '',
-      display_order: localOptions.length
+      display_order: options.length
     };
-    updateLocalOptions([...localOptions, newOption]);
+    updateOptions([...options, newOption]);
   };
 
   const updateOption = (index: number, field: 'option_value' | 'option_label', value: string) => {
-    const updated = localOptions.map((option, i) => 
+    const updated = options.map((option, i) => 
       i === index ? { ...option, [field]: value } : option
     );
-    updateLocalOptions(updated);
+    updateOptions(updated);
   };
 
   const removeOption = (index: number) => {
-    const updated = localOptions.filter((_, i) => i !== index);
-    updateLocalOptions(updated);
+    const updated = options.filter((_, i) => i !== index);
+    updateOptions(updated);
   };
 
   const moveOption = (fromIndex: number, toIndex: number) => {
-    const updated = [...localOptions];
+    const updated = [...options];
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);
-    updateLocalOptions(updated);
+    updateOptions(updated);
   };
 
   return (
@@ -64,7 +61,7 @@ const QuestionOptionManager = ({ options, onChange }: QuestionOptionManagerProps
         <CardTitle className="text-lg">Question Options</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {localOptions.map((option, index) => (
+        {options.map((option, index) => (
           <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
             <div className="cursor-move">
               <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -97,10 +94,17 @@ const QuestionOptionManager = ({ options, onChange }: QuestionOptionManagerProps
             </Button>
           </div>
         ))}
+        
         <Button onClick={addOption} variant="outline" className="w-full">
           <Plus className="h-4 w-4 mr-2" />
           Add Option
         </Button>
+        
+        {options.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground">
+            No options added yet. Click "Add Option" to get started.
+          </div>
+        )}
       </CardContent>
     </Card>
   );

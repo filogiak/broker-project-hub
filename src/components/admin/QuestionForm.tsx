@@ -11,14 +11,26 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
-import type { Database } from '@/integrations/supabase/types';
 
-type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
+// Simplified interfaces to avoid TypeScript deep instantiation issues
+interface QuestionFormData {
+  item_name: string;
+  category_id?: string;
+  subcategory?: string;
+  subcategory_2?: string;
+  priority: number;
+  scope: 'PROJECT' | 'PARTICIPANT';
+  item_type: 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
+  project_types_applicable: string[];
+  validation_rules: Record<string, any>;
+}
 
-// Define the enums explicitly to avoid TypeScript issues
-type ItemType = 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
-type ItemScope = 'PROJECT' | 'PARTICIPANT';
-type ProjectType = 'first_home_purchase' | 'refinance' | 'investment_property' | 'construction_loan' | 'home_equity_loan' | 'reverse_mortgage';
+interface QuestionOption {
+  id?: string;
+  option_value: string;
+  option_label: string;
+  display_order: number;
+}
 
 interface QuestionFormProps {
   onSuccess: () => void;
@@ -26,7 +38,7 @@ interface QuestionFormProps {
   onCancel?: () => void;
 }
 
-const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
+const ITEM_TYPE_OPTIONS = [
   { value: 'text', label: 'Text Input' },
   { value: 'number', label: 'Number Input' },
   { value: 'date', label: 'Date Input' },
@@ -36,12 +48,12 @@ const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
   { value: 'multiple_choice_checkbox', label: 'Multiple Choice Checkbox' }
 ];
 
-const SCOPE_OPTIONS: { value: ItemScope; label: string }[] = [
+const SCOPE_OPTIONS = [
   { value: 'PROJECT', label: 'Project Level' },
   { value: 'PARTICIPANT', label: 'Participant Level' }
 ];
 
-const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
+const PROJECT_TYPE_OPTIONS = [
   { value: 'first_home_purchase', label: 'First Home Purchase' },
   { value: 'refinance', label: 'Refinance' },
   { value: 'investment_property', label: 'Investment Property' },
@@ -53,11 +65,11 @@ const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
 const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [options, setOptions] = useState<any[]>([]);
-  const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
-  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>([]);
+  const [options, setOptions] = useState<QuestionOption[]>([]);
+  const [selectedItemType, setSelectedItemType] = useState<string>('text');
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>([]);
 
-  const form = useForm<RequiredItemInsert>({
+  const form = useForm<QuestionFormData>({
     defaultValues: {
       item_name: '',
       category_id: undefined,
@@ -103,9 +115,37 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleSubmit = async (data: RequiredItemInsert) => {
+  // Validate options before saving
+  const validateOptions = (options: QuestionOption[]): string | null => {
+    if (options.length === 0) {
+      return 'At least one option is required for dropdown and checkbox questions';
+    }
+
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+      if (!option.option_value?.trim()) {
+        return `Option ${i + 1} is missing a value`;
+      }
+      if (!option.option_label?.trim()) {
+        return `Option ${i + 1} is missing a label`;
+      }
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (data: QuestionFormData) => {
     try {
       setLoading(true);
+      
+      // Validate options for dropdown/checkbox types
+      if (data.item_type === 'single_choice_dropdown' || data.item_type === 'multiple_choice_checkbox') {
+        const validationError = validateOptions(options);
+        if (validationError) {
+          toast.error(validationError);
+          return;
+        }
+      }
       
       let questionId: string;
       
@@ -119,7 +159,18 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
 
       // Handle options for dropdown/checkbox types
       if (data.item_type === 'single_choice_dropdown' || data.item_type === 'multiple_choice_checkbox') {
-        await questionService.replaceItemOptions(questionId, options);
+        // Filter out incomplete options and prepare for database
+        const validOptions = options
+          .filter(option => option.option_value?.trim() && option.option_label?.trim())
+          .map(option => ({
+            option_value: option.option_value.trim(),
+            option_label: option.option_label.trim(),
+            display_order: option.display_order
+          }));
+
+        if (validOptions.length > 0) {
+          await questionService.replaceItemOptions(questionId, validOptions);
+        }
       }
 
       toast.success(editingQuestion ? 'Question updated successfully' : 'Question created successfully');
@@ -132,13 +183,17 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleProjectTypeChange = (projectType: ProjectType, checked: boolean) => {
+  const handleProjectTypeChange = (projectType: string, checked: boolean) => {
     const updated = checked 
       ? [...selectedProjectTypes, projectType]
       : selectedProjectTypes.filter(type => type !== projectType);
     
     setSelectedProjectTypes(updated);
     form.setValue('project_types_applicable', updated);
+  };
+
+  const handleOptionsChange = (newOptions: QuestionOption[]) => {
+    setOptions(newOptions);
   };
 
   const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
@@ -274,7 +329,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <FormItem>
                   <FormLabel>Question Type</FormLabel>
                   <Select 
-                    onValueChange={(value: ItemType) => {
+                    onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedItemType(value);
                     }} 
@@ -321,7 +376,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
             {showOptionsManager && (
               <QuestionOptionManager
                 options={options}
-                onChange={setOptions}
+                onChange={handleOptionsChange}
               />
             )}
 
