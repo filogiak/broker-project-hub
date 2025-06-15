@@ -786,6 +786,54 @@ export type Database = {
           },
         ]
       }
+      question_logic_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          target_category_id: string | null
+          target_subcategory: string
+          trigger_item_id: string
+          trigger_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          target_category_id?: string | null
+          target_subcategory: string
+          trigger_item_id: string
+          trigger_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          target_category_id?: string | null
+          target_subcategory?: string
+          trigger_item_id?: string
+          trigger_value?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_logic_rules_target_category_id_fkey"
+            columns: ["target_category_id"]
+            isOneToOne: false
+            referencedRelation: "items_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_logic_rules_trigger_item_id_fkey"
+            columns: ["trigger_item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       required_items: {
         Row: {
           category_id: string | null
