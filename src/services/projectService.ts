@@ -1,12 +1,26 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
+type ProjectType = Database['public']['Enums']['project_type'];
+type ApplicantCount = Database['public']['Enums']['applicant_count'];
+
+interface ProjectCreationData {
+  name: string;
+  description: string;
+  projectType: ProjectType | null;
+  applicantCount: ApplicantCount;
+  hasGuarantor: boolean;
+}
 
 export const createProject = async (projectData: {
   name: string;
   description?: string;
   brokerageId: string;
+  projectType?: ProjectType | null;
+  applicantCount?: ApplicantCount;
+  hasGuarantor?: boolean;
 }): Promise<Project> => {
   console.log('🚀 Starting project creation with data:', projectData);
   
@@ -26,15 +40,18 @@ export const createProject = async (projectData: {
   console.log('✅ User authenticated:', session.user.id);
 
   try {
-    // Use the new safe database function
+    // Use the updated safe database function
     console.log('🛡️ Creating project using safe database function...');
     
-    // Call the function with proper typing
+    // Call the function with proper typing including new parameters
     const { data: projectId, error: functionError } = await supabase
       .rpc('safe_create_project', {
         p_name: projectData.name,
         p_brokerage_id: projectData.brokerageId,
-        p_description: projectData.description || null
+        p_description: projectData.description || null,
+        p_project_type: projectData.projectType || null,
+        p_applicant_count: projectData.applicantCount || 'one_applicant',
+        p_has_guarantor: projectData.hasGuarantor || false
       });
 
     if (functionError) {

@@ -185,7 +185,13 @@ const BrokerageOwnerDashboard = () => {
     setBrokerage(updatedBrokerage);
   };
 
-  const handleCreateProject = async (projectData: { name: string; description?: string }) => {
+  const handleCreateProject = async (projectData: { 
+    name: string; 
+    description: string;
+    projectType: any;
+    applicantCount: any;
+    hasGuarantor: boolean;
+  }) => {
     if (!brokerage) {
       toast({
         title: "Error",
@@ -202,6 +208,9 @@ const BrokerageOwnerDashboard = () => {
         name: projectData.name,
         description: projectData.description,
         brokerageId: brokerage.id,
+        projectType: projectData.projectType,
+        applicantCount: projectData.applicantCount,
+        hasGuarantor: projectData.hasGuarantor,
       });
 
       setProjects(prev => [newProject, ...prev]);

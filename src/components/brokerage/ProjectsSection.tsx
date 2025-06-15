@@ -2,20 +2,46 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Users, Calendar, Trash2, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, FileText, Users, Calendar, Trash2, ExternalLink, Building2, UserCheck, Shield } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import CreateProjectModal from './CreateProjectModal';
+import ProjectCreationWizard from './ProjectCreationWizard';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
+type ProjectType = Database['public']['Enums']['project_type'];
+type ApplicantCount = Database['public']['Enums']['applicant_count'];
+
+interface ProjectData {
+  name: string;
+  description: string;
+  projectType: ProjectType | null;
+  applicantCount: ApplicantCount;
+  hasGuarantor: boolean;
+}
 
 interface ProjectsSectionProps {
   projects: Project[];
   brokerageId: string;
-  onCreateProject: (projectData: { name: string; description?: string }) => Promise<void>;
+  onCreateProject: (projectData: ProjectData) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
   onOpenProject: (projectId: string) => void;
 }
+
+const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  purchase: 'Purchase',
+  refinance: 'Refinance',
+  cash_out_refinance: 'Cash-Out Refinance',
+  heloc: 'HELOC',
+  construction: 'Construction',
+  bridge: 'Bridge Loan'
+};
+
+const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
+  one_applicant: 'Single',
+  two_applicants: 'Two',
+  three_or_more_applicants: '3+ Applicants'
+};
 
 const ProjectsSection = ({ 
   projects, 
@@ -24,7 +50,7 @@ const ProjectsSection = ({
   onDeleteProject,
   onOpenProject
 }: ProjectsSectionProps) => {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
 
   const formatDate = (dateString: string | null) => {
@@ -52,7 +78,7 @@ const ProjectsSection = ({
               Manage all mortgage projects for your brokerage
             </CardDescription>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
+          <Button onClick={() => setIsWizardOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             New Project
           </Button>
@@ -66,7 +92,7 @@ const ProjectsSection = ({
             <p className="text-muted-foreground mb-4">
               Create your first project to start managing mortgage applications
             </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Button onClick={() => setIsWizardOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create First Project
             </Button>
@@ -80,7 +106,29 @@ const ProjectsSection = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h4 className="font-medium text-lg">{project.name}</h4>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium text-lg">{project.name}</h4>
+                      <div className="flex gap-1">
+                        {project.project_type && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {PROJECT_TYPE_LABELS[project.project_type]}
+                          </Badge>
+                        )}
+                        {project.applicant_count && (
+                          <Badge variant="outline" className="text-xs">
+                            <Users className="h-3 w-3 mr-1" />
+                            {APPLICANT_COUNT_LABELS[project.applicant_count]}
+                          </Badge>
+                        )}
+                        {project.has_guarantor && (
+                          <Badge variant="default" className="text-xs">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Guarantor
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                     {project.description && (
                       <p className="text-muted-foreground text-sm mt-1">
                         {project.description}
@@ -127,10 +175,10 @@ const ProjectsSection = ({
         )}
       </CardContent>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+      {/* Project Creation Wizard */}
+      <ProjectCreationWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
         onCreateProject={onCreateProject}
       />
 

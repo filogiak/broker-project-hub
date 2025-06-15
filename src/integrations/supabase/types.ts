@@ -676,6 +676,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           description: string | null
+          has_guarantor: boolean | null
           id: string
           name: string
           project_type: Database["public"]["Enums"]["project_type"] | null
@@ -691,6 +692,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           description?: string | null
+          has_guarantor?: boolean | null
           id?: string
           name: string
           project_type?: Database["public"]["Enums"]["project_type"] | null
@@ -706,6 +708,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           description?: string | null
+          has_guarantor?: boolean | null
           id?: string
           name?: string
           project_type?: Database["public"]["Enums"]["project_type"] | null
@@ -889,7 +892,16 @@ export type Database = {
         Returns: boolean
       }
       safe_create_project: {
-        Args: { p_name: string; p_brokerage_id: string; p_description?: string }
+        Args:
+          | { p_name: string; p_brokerage_id: string; p_description?: string }
+          | {
+              p_name: string
+              p_brokerage_id: string
+              p_description?: string
+              p_project_type?: Database["public"]["Enums"]["project_type"]
+              p_applicant_count?: Database["public"]["Enums"]["applicant_count"]
+              p_has_guarantor?: boolean
+            }
         Returns: string
       }
       user_can_access_project: {
