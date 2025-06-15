@@ -14,9 +14,11 @@ import QuestionOptionManager from './QuestionOptionManager';
 import type { Database } from '@/integrations/supabase/types';
 
 type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
-type ItemType = Database['public']['Enums']['item_type'];
-type ItemScope = Database['public']['Enums']['item_scope'];
-type ProjectType = Database['public']['Enums']['project_type'];
+
+// Define the enums explicitly to avoid TypeScript issues
+type ItemType = 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
+type ItemScope = 'PROJECT' | 'PARTICIPANT';
+type ProjectType = 'first_home_purchase' | 'refinance' | 'investment_property' | 'construction_loan' | 'home_equity_loan' | 'reverse_mortgage';
 
 interface QuestionFormProps {
   onSuccess: () => void;
@@ -93,7 +95,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
 
   const loadCategories = async () => {
     try {
-      const data = await questionService.getDocumentCategories();
+      const data = await questionService.getItemsCategories();
       setCategories(data);
     } catch (error) {
       console.error('Error loading categories:', error);

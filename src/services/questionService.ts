@@ -7,13 +7,13 @@ type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert
 type RequiredItemUpdate = Database['public']['Tables']['required_items']['Update'];
 type ItemOption = Database['public']['Tables']['item_options']['Row'];
 type ItemOptionInsert = Database['public']['Tables']['item_options']['Insert'];
-type DocumentCategory = Database['public']['Tables']['document_categories']['Row'];
+type ItemsCategory = Database['public']['Tables']['items_categories']['Row'];
 
 export const questionService = {
-  // Document Categories
-  async getDocumentCategories(): Promise<DocumentCategory[]> {
+  // Items Categories (renamed from Document Categories)
+  async getItemsCategories(): Promise<ItemsCategory[]> {
     const { data, error } = await supabase
-      .from('document_categories')
+      .from('items_categories')
       .select('*')
       .order('display_order', { ascending: true });
 
@@ -27,7 +27,7 @@ export const questionService = {
       .from('required_items')
       .select(`
         *,
-        document_categories(name),
+        items_categories(name),
         item_options(*)
       `)
       .order('created_at', { ascending: false });
@@ -41,7 +41,7 @@ export const questionService = {
       .from('required_items')
       .select(`
         *,
-        document_categories(name),
+        items_categories(name),
         item_options(*)
       `)
       .eq('id', id)

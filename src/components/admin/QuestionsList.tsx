@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
 
   const filteredQuestions = questions.filter(question =>
     question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.document_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -161,16 +160,16 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                         </div>
                       </TableCell>
                       <TableCell>
-                        {question.document_categories?.name || 'No Category'}
+                        {question.items_categories?.name || 'No Category'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {getItemTypeLabel(question.item_type)}
+                          {question.item_type}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {getScopeLabel(question.scope)}
+                          {question.scope}
                         </Badge>
                       </TableCell>
                       <TableCell>{question.priority}</TableCell>

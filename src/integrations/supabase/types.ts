@@ -92,30 +92,6 @@ export type Database = {
           },
         ]
       }
-      document_categories: {
-        Row: {
-          created_at: string
-          display_order: number | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -223,6 +199,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      items_categories: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -786,7 +786,7 @@ export type Database = {
             foreignKeyName: "required_items_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "document_categories"
+            referencedRelation: "items_categories"
             referencedColumns: ["id"]
           },
         ]
