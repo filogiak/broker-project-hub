@@ -44,6 +44,78 @@ export type Database = {
           },
         ]
       }
+      checklist_rules: {
+        Row: {
+          condition_operator: Database["public"]["Enums"]["condition_operator"]
+          condition_value: string
+          created_at: string
+          id: string
+          is_iterative: boolean | null
+          source_item_id: string
+          target_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition_operator: Database["public"]["Enums"]["condition_operator"]
+          condition_value: string
+          created_at?: string
+          id?: string
+          is_iterative?: boolean | null
+          source_item_id: string
+          target_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition_operator?: Database["public"]["Enums"]["condition_operator"]
+          condition_value?: string
+          created_at?: string
+          id?: string
+          is_iterative?: boolean | null
+          source_item_id?: string
+          target_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_rules_source_item_id_fkey"
+            columns: ["source_item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_rules_target_item_id_fkey"
+            columns: ["target_item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_categories: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -114,6 +186,44 @@ export type Database = {
           },
         ]
       }
+      item_options: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          item_id: string
+          option_label: string
+          option_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          item_id: string
+          option_label: string
+          option_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          item_id?: string
+          option_label?: string
+          option_value?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_options_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           brokerage_id: string | null
@@ -155,12 +265,231 @@ export type Database = {
           },
         ]
       }
+      project_checklist_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          participant_designation: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          participant_designation?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          participant_designation?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_checklist_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_checklist_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_debts: {
+        Row: {
+          account_number: string | null
+          created_at: string
+          creditor_name: string | null
+          current_balance: number | null
+          debt_type: string
+          group_index: number
+          id: string
+          is_paid_off: boolean | null
+          monthly_payment: number | null
+          participant_designation: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          created_at?: string
+          creditor_name?: string | null
+          current_balance?: number | null
+          debt_type: string
+          group_index?: number
+          id?: string
+          is_paid_off?: boolean | null
+          monthly_payment?: number | null
+          participant_designation: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          created_at?: string
+          creditor_name?: string | null
+          current_balance?: number | null
+          debt_type?: string
+          group_index?: number
+          id?: string
+          is_paid_off?: boolean | null
+          monthly_payment?: number | null
+          participant_designation?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_debts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_dependents: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          dependent_name: string
+          dependent_on_taxes: boolean | null
+          group_index: number
+          id: string
+          participant_designation: string
+          project_id: string
+          relationship: string | null
+          social_security_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          dependent_name: string
+          dependent_on_taxes?: boolean | null
+          group_index?: number
+          id?: string
+          participant_designation: string
+          project_id: string
+          relationship?: string | null
+          social_security_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          dependent_name?: string
+          dependent_on_taxes?: boolean | null
+          group_index?: number
+          id?: string
+          participant_designation?: string
+          project_id?: string
+          relationship?: string | null
+          social_security_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_dependents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          item_id: string | null
+          mime_type: string | null
+          participant_designation: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          item_id?: string | null
+          mime_type?: string | null
+          participant_designation?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          item_id?: string | null
+          mime_type?: string | null
+          participant_designation?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           id: string
           invited_at: string | null
           invited_by: string
           joined_at: string | null
+          participant_designation: string | null
           project_id: string
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -170,6 +499,7 @@ export type Database = {
           invited_at?: string | null
           invited_by: string
           joined_at?: string | null
+          participant_designation?: string | null
           project_id: string
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -179,6 +509,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string
           joined_at?: string | null
+          participant_designation?: string | null
           project_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
@@ -207,34 +538,155 @@ export type Database = {
           },
         ]
       }
+      project_properties: {
+        Row: {
+          created_at: string
+          current_value: number | null
+          group_index: number
+          id: string
+          is_primary_residence: boolean | null
+          monthly_payment: number | null
+          outstanding_mortgage: number | null
+          participant_designation: string
+          project_id: string
+          property_address: string
+          property_type: string | null
+          rental_income: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number | null
+          group_index?: number
+          id?: string
+          is_primary_residence?: boolean | null
+          monthly_payment?: number | null
+          outstanding_mortgage?: number | null
+          participant_designation: string
+          project_id: string
+          property_address: string
+          property_type?: string | null
+          rental_income?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number | null
+          group_index?: number
+          id?: string
+          is_primary_residence?: boolean | null
+          monthly_payment?: number | null
+          outstanding_mortgage?: number | null
+          participant_designation?: string
+          project_id?: string
+          property_address?: string
+          property_type?: string | null
+          rental_income?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_properties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_secondary_incomes: {
+        Row: {
+          created_at: string
+          documentation_provided: boolean | null
+          employer_name: string | null
+          end_date: string | null
+          group_index: number
+          id: string
+          income_type: string | null
+          is_current: boolean | null
+          monthly_amount: number | null
+          participant_designation: string
+          project_id: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documentation_provided?: boolean | null
+          employer_name?: string | null
+          end_date?: string | null
+          group_index?: number
+          id?: string
+          income_type?: string | null
+          is_current?: boolean | null
+          monthly_amount?: number | null
+          participant_designation: string
+          project_id: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documentation_provided?: boolean | null
+          employer_name?: string | null
+          end_date?: string | null
+          group_index?: number
+          id?: string
+          income_type?: string | null
+          is_current?: boolean | null
+          monthly_amount?: number | null
+          participant_designation?: string
+          project_id?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_secondary_incomes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           brokerage_id: string
+          checklist_generated_at: string | null
           created_at: string | null
           created_by: string
           description: string | null
           id: string
           name: string
+          number_of_applicants: number | null
+          project_type: Database["public"]["Enums"]["project_type"] | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
           brokerage_id: string
+          checklist_generated_at?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
           id?: string
           name: string
+          number_of_applicants?: number | null
+          project_type?: Database["public"]["Enums"]["project_type"] | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           brokerage_id?: string
+          checklist_generated_at?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
           id?: string
           name?: string
+          number_of_applicants?: number | null
+          project_type?: Database["public"]["Enums"]["project_type"] | null
           status?: string | null
           updated_at?: string | null
         }
@@ -251,6 +703,65 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      required_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          id: string
+          item_name: string
+          item_type: Database["public"]["Enums"]["item_type"]
+          priority: number | null
+          project_types_applicable:
+            | Database["public"]["Enums"]["project_type"][]
+            | null
+          scope: Database["public"]["Enums"]["item_scope"]
+          subcategory: string | null
+          subcategory_2: string | null
+          updated_at: string
+          validation_rules: Json | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          item_type?: Database["public"]["Enums"]["item_type"]
+          priority?: number | null
+          project_types_applicable?:
+            | Database["public"]["Enums"]["project_type"][]
+            | null
+          scope?: Database["public"]["Enums"]["item_scope"]
+          subcategory?: string | null
+          subcategory_2?: string | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_type?: Database["public"]["Enums"]["item_type"]
+          priority?: number | null
+          project_types_applicable?:
+            | Database["public"]["Enums"]["project_type"][]
+            | null
+          scope?: Database["public"]["Enums"]["item_scope"]
+          subcategory?: string | null
+          subcategory_2?: string | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "required_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "document_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -389,6 +900,29 @@ export type Database = {
       }
     }
     Enums: {
+      checklist_status: "pending" | "submitted" | "approved" | "rejected"
+      condition_operator:
+        | "EQUALS"
+        | "NOT_EQUALS"
+        | "GREATER_THAN"
+        | "LESS_THAN"
+        | "CONTAINS"
+      item_scope: "PROJECT" | "PARTICIPANT"
+      item_type:
+        | "text"
+        | "number"
+        | "date"
+        | "document"
+        | "repeatable_group"
+        | "single_choice_dropdown"
+        | "multiple_choice_checkbox"
+      project_type:
+        | "first_home_purchase"
+        | "refinance"
+        | "investment_property"
+        | "construction_loan"
+        | "home_equity_loan"
+        | "reverse_mortgage"
       user_role:
         | "superadmin"
         | "brokerage_owner"
@@ -510,6 +1044,32 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      checklist_status: ["pending", "submitted", "approved", "rejected"],
+      condition_operator: [
+        "EQUALS",
+        "NOT_EQUALS",
+        "GREATER_THAN",
+        "LESS_THAN",
+        "CONTAINS",
+      ],
+      item_scope: ["PROJECT", "PARTICIPANT"],
+      item_type: [
+        "text",
+        "number",
+        "date",
+        "document",
+        "repeatable_group",
+        "single_choice_dropdown",
+        "multiple_choice_checkbox",
+      ],
+      project_type: [
+        "first_home_purchase",
+        "refinance",
+        "investment_property",
+        "construction_loan",
+        "home_equity_loan",
+        "reverse_mortgage",
+      ],
       user_role: [
         "superadmin",
         "brokerage_owner",
