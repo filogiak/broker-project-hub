@@ -11,19 +11,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
+import type { Database } from '@/integrations/supabase/types';
 
-// Simplified form data interface to avoid type recursion
-interface QuestionFormData {
-  item_name: string;
-  category_id?: string;
-  subcategory?: string;
-  subcategory_2?: string;
-  priority: number;
-  scope: 'PROJECT' | 'PARTICIPANT';
-  item_type: 'text' | 'number' | 'date' | 'document' | 'repeatable_group' | 'single_choice_dropdown' | 'multiple_choice_checkbox';
-  project_types_applicable: string[];
-  validation_rules: Record<string, any>;
-}
+type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
+type ItemType = Database['public']['Enums']['item_type'];
+type ItemScope = Database['public']['Enums']['item_scope'];
+type ProjectType = Database['public']['Enums']['project_type'];
 
 interface QuestionFormProps {
   onSuccess: () => void;
@@ -31,7 +24,7 @@ interface QuestionFormProps {
   onCancel?: () => void;
 }
 
-const ITEM_TYPE_OPTIONS = [
+const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
   { value: 'text', label: 'Text Input' },
   { value: 'number', label: 'Number Input' },
   { value: 'date', label: 'Date Input' },
@@ -41,12 +34,12 @@ const ITEM_TYPE_OPTIONS = [
   { value: 'multiple_choice_checkbox', label: 'Multiple Choice Checkbox' }
 ];
 
-const SCOPE_OPTIONS = [
+const SCOPE_OPTIONS: { value: ItemScope; label: string }[] = [
   { value: 'PROJECT', label: 'Project Level' },
   { value: 'PARTICIPANT', label: 'Participant Level' }
 ];
 
-const PROJECT_TYPE_OPTIONS = [
+const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
   { value: 'first_home_purchase', label: 'First Home Purchase' },
   { value: 'refinance', label: 'Refinance' },
   { value: 'investment_property', label: 'Investment Property' },
@@ -59,10 +52,10 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<any[]>([]);
-  const [selectedItemType, setSelectedItemType] = useState<string>('text');
-  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>([]);
+  const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>([]);
 
-  const form = useForm<QuestionFormData>({
+  const form = useForm<RequiredItemInsert>({
     defaultValues: {
       item_name: '',
       category_id: undefined,
@@ -108,7 +101,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleSubmit = async (data: QuestionFormData) => {
+  const handleSubmit = async (data: RequiredItemInsert) => {
     try {
       setLoading(true);
       
@@ -137,7 +130,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   };
 
-  const handleProjectTypeChange = (projectType: string, checked: boolean) => {
+  const handleProjectTypeChange = (projectType: ProjectType, checked: boolean) => {
     const updated = checked 
       ? [...selectedProjectTypes, projectType]
       : selectedProjectTypes.filter(type => type !== projectType);
@@ -279,7 +272,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <FormItem>
                   <FormLabel>Question Type</FormLabel>
                   <Select 
-                    onValueChange={(value) => {
+                    onValueChange={(value: ItemType) => {
                       field.onChange(value);
                       setSelectedItemType(value);
                     }} 

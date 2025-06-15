@@ -5,7 +5,7 @@ import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building, Settings, UserPlus, LogOut, FolderOpen, RefreshCw } from 'lucide-react';
+import { Users, Building, Settings, UserPlus, LogOut, FolderOpen, RefreshCw, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getTotalUsersCount, getTotalBrokeragesCount, getTotalProjectsCount } from '@/services/adminService';
@@ -20,6 +20,9 @@ import { toast } from 'sonner';
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [questionsRefreshTrigger, setQuestionsRefreshTrigger] = useState(0);
+  const [questionViewMode, setQuestionViewMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalBrokerages: 0,
@@ -40,6 +43,27 @@ const AdminDashboard = () => {
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
     loadStats();
+  };
+
+  const handleQuestionSuccess = () => {
+    setQuestionsRefreshTrigger(prev => prev + 1);
+    setQuestionViewMode('list');
+    setEditingQuestion(null);
+  };
+
+  const handleCreateQuestion = () => {
+    setEditingQuestion(null);
+    setQuestionViewMode('create');
+  };
+
+  const handleEditQuestion = (question: any) => {
+    setEditingQuestion(question);
+    setQuestionViewMode('edit');
+  };
+
+  const handleCancelQuestion = () => {
+    setQuestionViewMode('list');
+    setEditingQuestion(null);
   };
 
   const loadStats = async () => {
@@ -176,7 +200,7 @@ const AdminDashboard = () => {
 
           {/* Management Tabs */}
           <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 User Management
@@ -184,6 +208,10 @@ const AdminDashboard = () => {
               <TabsTrigger value="brokerages" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
                 Brokerage Management
+              </TabsTrigger>
+              <TabsTrigger value="questions" className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                Question Management
               </TabsTrigger>
             </TabsList>
 
@@ -235,6 +263,22 @@ const AdminDashboard = () => {
               </div>
               
               <BrokeragesList refreshTrigger={refreshTrigger} />
+            </TabsContent>
+
+            <TabsContent value="questions" className="space-y-6">
+              {questionViewMode === 'list' ? (
+                <QuestionsList
+                  onCreateNew={handleCreateQuestion}
+                  onEdit={handleEditQuestion}
+                  refreshTrigger={questionsRefreshTrigger}
+                />
+              ) : (
+                <QuestionForm
+                  onSuccess={handleQuestionSuccess}
+                  editingQuestion={editingQuestion}
+                  onCancel={handleCancelQuestion}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>
