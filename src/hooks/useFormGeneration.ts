@@ -13,6 +13,7 @@ export const useFormGeneration = () => {
       setLoading(true);
       setResult(null);
 
+      console.log('🔧 Hook: Starting generation for project:', projectId);
       const generationResult = await FormGenerationService.generateChecklistForProject(
         projectId,
         forceRegenerate
@@ -36,6 +37,7 @@ export const useFormGeneration = () => {
       return generationResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Hook: Generation failed:', error);
       toast({
         title: "Form generation failed",
         description: errorMessage,
@@ -52,6 +54,7 @@ export const useFormGeneration = () => {
       setLoading(true);
       setResult(null);
 
+      console.log('🔄 Hook: Starting regeneration for project:', projectId);
       const generationResult = await FormGenerationService.regenerateChecklistForProject(projectId);
       setResult(generationResult);
 
@@ -63,6 +66,7 @@ export const useFormGeneration = () => {
       return generationResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Hook: Regeneration failed:', error);
       toast({
         title: "Checklist regeneration failed",
         description: errorMessage,

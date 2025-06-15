@@ -5,19 +5,9 @@ import type { Database } from '@/integrations/supabase/types';
 type Project = Database['public']['Tables']['projects']['Row'];
 type RequiredItem = Database['public']['Tables']['required_items']['Row'];
 type ChecklistItem = Database['public']['Tables']['project_checklist_items']['Row'];
-type FormGenerationRule = Database['public']['Tables']['form_generation_rules']['Row'];
 type ProjectType = Database['public']['Enums']['project_type'];
 type ApplicantCount = Database['public']['Enums']['applicant_count'];
 type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
-type ItemScope = Database['public']['Enums']['item_scope'];
-
-export interface GenerationContext {
-  projectId: string;
-  projectType?: ProjectType | null;
-  applicantCount: ApplicantCount;
-  hasGuarantor: boolean;
-  existingAnswers?: Record<string, any>;
-}
 
 export interface GenerationResult {
   itemsCreated: number;
@@ -59,24 +49,23 @@ export class FormGenerationService {
         };
       }
 
-      // Create generation context
-      const context: GenerationContext = {
-        projectId: project.id,
-        projectType: project.project_type,
-        applicantCount: project.applicant_count || 'one_applicant',
-        hasGuarantor: project.has_guarantor || false,
-      };
+      // Get all required items
+      const { data: allItems, error: itemsError } = await supabase
+        .from('required_items')
+        .select('*')
+        .order('priority', { ascending: true })
+        .order('created_at', { ascending: true });
 
-      // Phase 1: Base question selection
-      const baseItems = await this.selectBaseItems(context);
-      console.log(`📝 Selected ${baseItems.length} base items`);
+      if (itemsError) {
+        throw new Error(`Failed to fetch required items: ${itemsError.message}`);
+      }
 
-      // Phase 2: Apply conditional rules
-      const conditionalItems = await this.applyConditionalRules(baseItems, context);
-      console.log(`⚡ Applied conditional rules, now ${conditionalItems.length} items`);
+      // Apply filtering rules
+      const applicableItems = this.filterItemsByRules(allItems || [], project);
+      console.log(`📝 Filtered to ${applicableItems.length} applicable items`);
 
-      // Phase 3: Generate checklist items with proper participant designation
-      const result = await this.instantiateChecklistItems(conditionalItems, context);
+      // Generate checklist items
+      const result = await this.createChecklistItems(applicableItems, project);
       console.log(`✅ Generated ${result.itemsCreated} checklist items`);
 
       // Update project to mark as generated
@@ -98,109 +87,31 @@ export class FormGenerationService {
   }
 
   /**
-   * Phase 1: Select base items that apply to the project
+   * Apply the two core filtering rules
    */
-  private static async selectBaseItems(context: GenerationContext): Promise<RequiredItem[]> {
-    let query = supabase
-      .from('required_items')
-      .select('*')
-      .order('priority', { ascending: true })
-      .order('created_at', { ascending: true });
-
-    const { data: allItems, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch required items: ${error.message}`);
-    }
-
-    // Filter items based on project criteria
-    const applicableItems = allItems?.filter(item => {
-      // Check if item applies to this project type
+  private static filterItemsByRules(items: RequiredItem[], project: Project): RequiredItem[] {
+    return items.filter(item => {
+      // Rule 1: Check project_types_applicable
       if (item.project_types_applicable && 
           item.project_types_applicable.length > 0 && 
-          context.projectType &&
-          !item.project_types_applicable.includes(context.projectType)) {
-        return false;
+          project.project_type) {
+        const isApplicable = item.project_types_applicable.includes(project.project_type);
+        if (!isApplicable) {
+          console.log(`Skipping item ${item.item_name}: project type ${project.project_type} not in applicable types`);
+          return false;
+        }
       }
 
       return true;
-    }) || [];
-
-    return applicableItems;
+    });
   }
 
   /**
-   * Phase 2: Apply conditional rules to modify the item list
+   * Create checklist items with proper participant designations
    */
-  private static async applyConditionalRules(
-    baseItems: RequiredItem[],
-    context: GenerationContext
-  ): Promise<RequiredItem[]> {
-    // Get active conditional rules
-    const { data: rules, error } = await supabase
-      .from('form_generation_rules')
-      .select('*')
-      .eq('is_active', true)
-      .eq('rule_type', 'conditional')
-      .order('priority', { ascending: true });
-
-    if (error) {
-      console.warn('Could not fetch conditional rules:', error.message);
-      return baseItems;
-    }
-
-    let resultItems = [...baseItems];
-
-    // Apply each rule
-    for (const rule of rules || []) {
-      resultItems = await this.applyConditionalRule(rule, resultItems, context);
-    }
-
-    return resultItems;
-  }
-
-  /**
-   * Apply a single conditional rule
-   */
-  private static async applyConditionalRule(
-    rule: FormGenerationRule,
+  private static async createChecklistItems(
     items: RequiredItem[],
-    context: GenerationContext
-  ): Promise<RequiredItem[]> {
-    try {
-      const conditionLogic = rule.condition_logic as any;
-      const targetCriteria = rule.target_criteria as any;
-
-      // Evaluate condition based on project context
-      const conditionMet = this.evaluateCondition(conditionLogic, context);
-
-      if (!conditionMet) {
-        return items;
-      }
-
-      // Apply the rule based on target criteria
-      if (targetCriteria.action === 'add_items') {
-        // Add additional items based on criteria
-        const additionalItems = await this.getAdditionalItems(targetCriteria);
-        return [...items, ...additionalItems];
-      } else if (targetCriteria.action === 'remove_items') {
-        // Remove items based on criteria
-        return items.filter(item => !this.itemMatchesCriteria(item, targetCriteria));
-      }
-
-      return items;
-    } catch (error) {
-      console.warn(`Failed to apply rule ${rule.rule_name}:`, error);
-      return items;
-    }
-  }
-
-  /**
-   * Phase 3: Create actual checklist items with proper participant designations
-   */
-  private static async instantiateChecklistItems(
-    items: RequiredItem[],
-    context: GenerationContext
+    project: Project
   ): Promise<GenerationResult> {
     const result: GenerationResult = {
       itemsCreated: 0,
@@ -209,34 +120,36 @@ export class FormGenerationService {
       generatedItems: []
     };
 
-    // Determine participant designations
-    const participantDesignations = this.getParticipantDesignations(context.applicantCount);
-
-    // Create checklist items for each required item
     for (const item of items) {
       try {
         if (item.scope === 'PROJECT') {
-          // Single project-level item
-          const checklistItem = await this.createChecklistItem(
-            context.projectId,
+          // Rule 2a: PROJECT scope - create one item without participant designation
+          const checklistItem = await this.createSingleChecklistItem(
+            project.id,
             item.id,
-            undefined // no participant designation for project-level items
+            undefined
           );
           if (checklistItem) {
             result.generatedItems.push(checklistItem);
             result.itemsCreated++;
+            console.log(`Created PROJECT item: ${item.item_name}`);
           }
         } else if (item.scope === 'PARTICIPANT') {
-          // Create one item per participant
+          // Rule 2b: PARTICIPANT scope - create items based on applicant count
+          const participantDesignations = this.getParticipantDesignations(
+            project.applicant_count || 'one_applicant'
+          );
+
           for (const designation of participantDesignations) {
-            const checklistItem = await this.createChecklistItem(
-              context.projectId,
+            const checklistItem = await this.createSingleChecklistItem(
+              project.id,
               item.id,
               designation
             );
             if (checklistItem) {
               result.generatedItems.push(checklistItem);
               result.itemsCreated++;
+              console.log(`Created PARTICIPANT item: ${item.item_name} for ${designation}`);
             }
           }
         }
@@ -244,6 +157,7 @@ export class FormGenerationService {
         const errorMsg = `Failed to create item ${item.item_name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         result.errors.push(errorMsg);
         result.itemsSkipped++;
+        console.error(errorMsg);
       }
     }
 
@@ -253,7 +167,7 @@ export class FormGenerationService {
   /**
    * Create a single checklist item
    */
-  private static async createChecklistItem(
+  private static async createSingleChecklistItem(
     projectId: string,
     itemId: string,
     participantDesignation?: ParticipantDesignation
@@ -272,7 +186,7 @@ export class FormGenerationService {
     if (error) {
       // Handle unique constraint violations gracefully
       if (error.code === '23505') {
-        console.log(`Checklist item already exists for ${itemId}/${participantDesignation}`);
+        console.log(`Checklist item already exists for ${itemId}/${participantDesignation || 'PROJECT'}`);
         return null;
       }
       throw error;
@@ -291,73 +205,28 @@ export class FormGenerationService {
       case 'two_applicants':
         return ['applicant_one', 'applicant_two'];
       case 'three_or_more_applicants':
-        return ['applicant_one', 'applicant_two']; // Can be extended later
+        // For now, treating this the same as two_applicants
+        return ['applicant_one', 'applicant_two'];
       default:
         return ['solo_applicant'];
     }
   }
 
   /**
-   * Evaluate a condition against the project context
-   */
-  private static evaluateCondition(conditionLogic: any, context: GenerationContext): boolean {
-    try {
-      // Simple condition evaluation - can be extended
-      if (conditionLogic.project_type && context.projectType) {
-        return conditionLogic.project_type === context.projectType;
-      }
-      
-      if (conditionLogic.applicant_count) {
-        return conditionLogic.applicant_count === context.applicantCount;
-      }
-      
-      if (conditionLogic.has_guarantor !== undefined) {
-        return conditionLogic.has_guarantor === context.hasGuarantor;
-      }
-
-      return true; // Default to true if no specific conditions
-    } catch (error) {
-      console.warn('Condition evaluation failed:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get additional items based on criteria
-   */
-  private static async getAdditionalItems(targetCriteria: any): Promise<RequiredItem[]> {
-    // Implementation for fetching additional items based on criteria
-    // This would query the required_items table with specific filters
-    return [];
-  }
-
-  /**
-   * Check if an item matches the given criteria
-   */
-  private static itemMatchesCriteria(item: RequiredItem, criteria: any): boolean {
-    // Implementation for checking if an item matches removal criteria
-    if (criteria.item_categories && item.category_id) {
-      return criteria.item_categories.includes(item.category_id);
-    }
-    
-    if (criteria.item_types && item.item_type) {
-      return criteria.item_types.includes(item.item_type);
-    }
-
-    return false;
-  }
-
-  /**
-   * Manually trigger form generation for a project
+   * Manually trigger form generation for a project (regenerate)
    */
   static async regenerateChecklistForProject(projectId: string): Promise<GenerationResult> {
     console.log('🔄 Regenerating checklist for project:', projectId);
     
     // Clear existing checklist items
-    await supabase
+    const { error: deleteError } = await supabase
       .from('project_checklist_items')
       .delete()
       .eq('project_id', projectId);
+
+    if (deleteError) {
+      throw new Error(`Failed to clear existing items: ${deleteError.message}`);
+    }
 
     // Reset generation timestamp
     await supabase
@@ -367,5 +236,39 @@ export class FormGenerationService {
 
     // Generate new checklist
     return this.generateChecklistForProject(projectId, true);
+  }
+
+  /**
+   * Get generation status for a project
+   */
+  static async getGenerationStatus(projectId: string): Promise<{
+    isGenerated: boolean;
+    generatedAt: string | null;
+    itemCount: number;
+  }> {
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('checklist_generated_at')
+      .eq('id', projectId)
+      .single();
+
+    if (projectError) {
+      throw new Error(`Failed to get project: ${projectError.message}`);
+    }
+
+    const { count, error: countError } = await supabase
+      .from('project_checklist_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId);
+
+    if (countError) {
+      throw new Error(`Failed to count items: ${countError.message}`);
+    }
+
+    return {
+      isGenerated: !!project.checklist_generated_at,
+      generatedAt: project.checklist_generated_at,
+      itemCount: count || 0
+    };
   }
 }
