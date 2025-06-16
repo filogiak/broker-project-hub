@@ -8,8 +8,6 @@ type RequiredItemUpdate = Database['public']['Tables']['required_items']['Update
 type ItemOption = Database['public']['Tables']['item_options']['Row'];
 type ItemOptionInsert = Database['public']['Tables']['item_options']['Insert'];
 type ItemsCategory = Database['public']['Tables']['items_categories']['Row'];
-type LogicRule = Database['public']['Tables']['question_logic_rules']['Row'];
-type LogicRuleInsert = Database['public']['Tables']['question_logic_rules']['Insert'];
 
 export const questionService = {
   // Items Categories (renamed from Document Categories)
@@ -159,104 +157,5 @@ export const questionService = {
 
       if (error) throw error;
     }
-  },
-
-  // Logic Rules Management
-  async getLogicRules(triggerItemId?: string): Promise<LogicRule[]> {
-    let query = supabase
-      .from('question_logic_rules')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (triggerItemId) {
-      query = query.eq('trigger_item_id', triggerItemId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  async createLogicRule(rule: LogicRuleInsert): Promise<LogicRule> {
-    const { data, error } = await supabase
-      .from('question_logic_rules')
-      .insert(rule)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async updateLogicRule(id: string, updates: Partial<LogicRule>): Promise<LogicRule> {
-    const { data, error } = await supabase
-      .from('question_logic_rules')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteLogicRule(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('question_logic_rules')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-  },
-
-  async clearLogicRules(triggerItemId: string): Promise<void> {
-    const { error } = await supabase
-      .from('question_logic_rules')
-      .delete()
-      .eq('trigger_item_id', triggerItemId);
-
-    if (error) throw error;
-  },
-
-  // Multi-Flow Logic Support
-  async createMultiFlowLogicRules(triggerItemId: string, flows: Array<{
-    answerValue: string;
-    targetSubcategory: string;
-    targetCategoryId?: string;
-  }>): Promise<void> {
-    // Clear existing rules first
-    await this.clearLogicRules(triggerItemId);
-
-    // Create new rules for each flow
-    const rules: LogicRuleInsert[] = flows.map(flow => ({
-      trigger_item_id: triggerItemId,
-      trigger_value: flow.answerValue,
-      target_subcategory: flow.targetSubcategory,
-      target_category_id: flow.targetCategoryId,
-      is_active: true
-    }));
-
-    if (rules.length > 0) {
-      const { error } = await supabase
-        .from('question_logic_rules')
-        .insert(rules);
-
-      if (error) throw error;
-    }
-  },
-
-  async getMultiFlowLogicRules(triggerItemId: string): Promise<Array<{
-    id: string;
-    answerValue: string;
-    targetSubcategory: string;
-  }>> {
-    const rules = await this.getLogicRules(triggerItemId);
-    
-    return rules.map(rule => ({
-      id: rule.id,
-      answerValue: rule.trigger_value,
-      targetSubcategory: rule.target_subcategory
-    }));
   }
 };

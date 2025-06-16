@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Search, MoreHorizontal, Edit2, Trash2, Plus, Settings, Layers } from 'lucide-react';
+import { Search, MoreHorizontal, Edit2, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 
@@ -22,7 +22,6 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
-  const [logicRules, setLogicRules] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadQuestions();
@@ -33,14 +32,6 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       setLoading(true);
       const data = await questionService.getRequiredItems();
       setQuestions(data);
-      
-      // Load logic rules count for each question
-      const logicRulesData: Record<string, number> = {};
-      for (const question of data) {
-        const rules = await questionService.getLogicRules(question.id);
-        logicRulesData[question.id] = rules.length;
-      }
-      setLogicRules(logicRulesData);
     } catch (error) {
       console.error('Error loading questions:', error);
       toast.error('Failed to load questions');
@@ -66,7 +57,8 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
   const filteredQuestions = questions.filter(question =>
     question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.answer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getItemTypeLabel = (type: string) => {
@@ -84,41 +76,6 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
 
   const getScopeLabel = (scope: string) => {
     return scope === 'PROJECT' ? 'Project' : 'Participant';
-  };
-
-  const getQuestionTypeIndicators = (question: any) => {
-    const indicators = [];
-    
-    // Traditional subcategory initiators
-    if (question.subcategory_1_initiator) {
-      indicators.push(
-        <div key="sub1" className="flex items-center gap-1">
-          <Settings className="h-3 w-3 text-blue-500" />
-          <span className="text-xs text-blue-600">Sub1 Initiator</span>
-        </div>
-      );
-    }
-    
-    if (question.subcategory_2_initiator) {
-      indicators.push(
-        <div key="sub2" className="flex items-center gap-1">
-          <Settings className="h-3 w-3 text-green-500" />
-          <span className="text-xs text-green-600">Sub2 Initiator</span>
-        </div>
-      );
-    }
-    
-    // New multi-flow initiator
-    if (question.is_multi_flow_initiator) {
-      indicators.push(
-        <div key="multi" className="flex items-center gap-1">
-          <Layers className="h-3 w-3 text-purple-500" />
-          <span className="text-xs text-purple-600">Multi-Flow</span>
-        </div>
-      );
-    }
-    
-    return indicators;
   };
 
   if (loading) {
@@ -184,12 +141,10 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                     <TableHead>Question</TableHead>
                     <TableHead>Answer ID</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Subcategory</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Scope</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Options</TableHead>
-                    <TableHead>Logic Flows</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -199,9 +154,12 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                       <TableCell>
                         <div>
                           <div className="font-medium">{question.item_name}</div>
-                          <div className="flex flex-col gap-1 mt-1">
-                            {getQuestionTypeIndicators(question)}
-                          </div>
+                          {question.subcategory && (
+                            <div className="text-sm text-muted-foreground">
+                              {question.subcategory}
+                              {question.subcategory_2 && ` › ${question.subcategory_2}`}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -215,19 +173,6 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                       </TableCell>
                       <TableCell>
                         {question.items_categories?.name || 'No Category'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {question.subcategory && (
-                            <div>Main: {question.subcategory}</div>
-                          )}
-                          {question.subcategory_2 && (
-                            <div>Sub2: {question.subcategory_2}</div>
-                          )}
-                          {!question.subcategory && !question.subcategory_2 && (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
@@ -245,15 +190,6 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                           <Badge variant="default">
                             {question.item_options.length} options
                           </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {logicRules[question.id] > 0 ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {logicRules[question.id]} flow{logicRules[question.id] > 1 ? 's' : ''}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -293,7 +229,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Question</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this question? This action cannot be undone and will also remove all associated options and logic flows.
+              Are you sure you want to delete this question? This action cannot be undone and will also remove all associated options.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

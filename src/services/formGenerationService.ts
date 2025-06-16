@@ -120,7 +120,7 @@ export class FormGenerationService {
   }
 
   /**
-   * Apply filtering rules with comprehensive debugging - RESTORED VERSION
+   * Apply filtering rules with comprehensive debugging - FIXED VERSION
    */
   private static filterItemsByRulesWithDebug(items: RequiredItem[], project: Project): {
     applicableItems: RequiredItem[];
@@ -140,7 +140,7 @@ export class FormGenerationService {
       }>;
     };
   } {
-    console.log('\n🔍 === FILTERING DEBUG SESSION (RESTORED) ===');
+    console.log('\n🔍 === FILTERING DEBUG SESSION (FIXED) ===');
     
     let itemsAfterProjectTypeFilter = 0;
     let itemsAfterSubcategoryFilter = 0;
@@ -170,7 +170,7 @@ export class FormGenerationService {
       }
       itemsAfterProjectTypeFilter++;
 
-      // Rule 2: RESTORED subcategory logic - Only include main questions (NULL subcategory) and initiator questions
+      // Rule 2: FIXED subcategory logic - Only include main questions (NULL subcategory) and initiator questions
       const isMainQuestion = item.subcategory === null;
       const isInitiatorQuestion = item.subcategory_1_initiator === true || item.subcategory_2_initiator === true;
       
@@ -206,7 +206,7 @@ export class FormGenerationService {
       }))
     };
 
-    console.log('\n📊 === FILTERING SUMMARY (RESTORED) ===');
+    console.log('\n📊 === FILTERING SUMMARY (FIXED) ===');
     console.log(`Total items: ${items.length}`);
     console.log(`After project type filter: ${itemsAfterProjectTypeFilter}`);
     console.log(`After subcategory filter: ${itemsAfterSubcategoryFilter}`);
