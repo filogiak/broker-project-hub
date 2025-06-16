@@ -34,6 +34,7 @@ const LogicRulesManager = () => {
   const [rules, setRules] = useState<LogicRule[]>([]);
   const [requiredItems, setRequiredItems] = useState<RequiredItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const { toast } = useToast();
@@ -82,6 +83,22 @@ const LogicRulesManager = () => {
 
       if (categoriesError) throw categoriesError;
 
+      // Fetch unique subcategories
+      const { data: subcategoriesData, error: subcategoriesError } = await supabase
+        .from('required_items')
+        .select('subcategory')
+        .not('subcategory', 'is', null)
+        .neq('subcategory', '');
+
+      if (subcategoriesError) throw subcategoriesError;
+
+      // Extract unique subcategories and remove duplicates
+      const uniqueSubcategories = [...new Set(
+        subcategoriesData
+          ?.map(item => item.subcategory)
+          .filter(subcategory => subcategory && subcategory.trim() !== '') || []
+      )].sort();
+
       setRules(rulesData?.map(rule => ({
         ...rule,
         trigger_item_name: (rule.required_items as any)?.item_name,
@@ -90,6 +107,7 @@ const LogicRulesManager = () => {
       
       setRequiredItems(itemsData || []);
       setCategories(categoriesData || []);
+      setSubcategories(uniqueSubcategories);
     } catch (error) {
       console.error('Error fetching logic rules data:', error);
       toast({
@@ -263,12 +281,27 @@ const LogicRulesManager = () => {
 
             <div className="space-y-2">
               <Label htmlFor="target-subcategory">Target Subcategory</Label>
-              <Input
-                id="target-subcategory"
+              <Select
                 value={newRule.target_subcategory}
-                onChange={(e) => setNewRule(prev => ({ ...prev, target_subcategory: e.target.value }))}
-                placeholder="Subcategory to show"
-              />
+                onValueChange={(value) => setNewRule(prev => ({ ...prev, target_subcategory: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategories.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      No subcategories available
+                    </SelectItem>
+                  ) : (
+                    subcategories.map((subcategory) => (
+                      <SelectItem key={subcategory} value={subcategory}>
+                        {subcategory}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
