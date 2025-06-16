@@ -445,6 +445,50 @@ export class ChecklistItemService {
   }
 
   /**
+   * Transform a raw database item to TypedChecklistItem
+   */
+  static transformToTypedItem(item: any): TypedChecklistItem {
+    const requiredItem = item.required_items as any;
+    return {
+      id: item.id,
+      projectId: item.project_id,
+      itemId: item.item_id,
+      participantDesignation: item.participant_designation,
+      status: item.status,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      itemName: requiredItem?.item_name || '',
+      itemType: requiredItem?.item_type || 'text',
+      scope: requiredItem?.scope || 'PROJECT',
+      categoryId: requiredItem?.category_id,
+      priority: requiredItem?.priority || 0,
+      displayValue: this.getDisplayValue({
+        typedValue: {
+          textValue: item.text_value,
+          numericValue: item.numeric_value,
+          dateValue: item.date_value,
+          booleanValue: item.boolean_value,
+          jsonValue: item.json_value,
+          documentReferenceId: item.document_reference_id,
+        },
+        itemType: requiredItem?.item_type || 'text',
+      } as TypedChecklistItem),
+      typedValue: {
+        textValue: item.text_value,
+        numericValue: item.numeric_value,
+        dateValue: item.date_value,
+        booleanValue: item.boolean_value,
+        jsonValue: item.json_value,
+        documentReferenceId: item.document_reference_id,
+      },
+      // Enhanced subcategory fields
+      subcategory: requiredItem?.subcategory,
+      subcategory1Initiator: requiredItem?.subcategory_1_initiator,
+      subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+    };
+  }
+
+  /**
    * Enhanced method to get main questions with proper multi-flow support
    */
   static async getMainQuestionsWithLogicInfo(

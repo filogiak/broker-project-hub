@@ -509,7 +509,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <Checkbox
                   id="multi-flow-initiator"
                   checked={isMultiFlowInitiator}
-                  onCheckedChange={setIsMultiFlowInitiator}
+                  onCheckedChange={(checked) => setIsMultiFlowInitiator(checked === true)}
                 />
                 <div className="space-y-1 leading-none">
                   <Label htmlFor="multi-flow-initiator" className="font-medium">
