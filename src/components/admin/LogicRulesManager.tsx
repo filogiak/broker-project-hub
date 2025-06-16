@@ -382,11 +382,17 @@ const LogicRulesManager = () => {
                   <SelectValue placeholder="Select trigger question" />
                 </SelectTrigger>
                 <SelectContent>
-                  {requiredItems.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.item_name}
-                    </SelectItem>
-                  ))}
+                  {requiredItems.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No questions available
+                    </div>
+                  ) : (
+                    requiredItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.item_name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -440,9 +446,9 @@ const LogicRulesManager = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {subcategories.length === 0 ? (
-                    <SelectItem value="" disabled>
-                      No subcategories available
-                    </SelectItem>
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No subcategories available. Create questions with subcategories first.
+                    </div>
                   ) : (
                     subcategories.map((subcategory) => (
                       <SelectItem key={subcategory} value={subcategory}>
@@ -464,11 +470,17 @@ const LogicRulesManager = () => {
                   <SelectValue placeholder="Same category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
+                  {categories.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No categories available
+                    </div>
+                  ) : (
+                    categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
