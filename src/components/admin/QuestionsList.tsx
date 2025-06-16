@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Search, MoreHorizontal, Edit2, Trash2, Plus } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { questionService } from '@/services/questionService';
+import CategoryFilter from './CategoryFilter';
+import CategorySection from './CategorySection';
+import DraggableQuestionRow from './DraggableQuestionRow';
 
 interface QuestionsListProps {
   onCreateNew: () => void;
@@ -18,22 +21,49 @@ interface QuestionsListProps {
 
 const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListProps) => {
   const [questions, setQuestions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
+  const [activeQuestion, setActiveQuestion] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
-    loadQuestions();
+    loadData();
   }, [refreshTrigger]);
 
-  const loadQuestions = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await questionService.getRequiredItems();
-      setQuestions(data);
+      const [questionsData, categoriesData] = await Promise.all([
+        questionService.getRequiredItems(),
+        questionService.getItemsCategories()
+      ]);
+      
+      setQuestions(questionsData);
+      setCategories(categoriesData);
+      
+      // Auto-expand categories with questions when switching to 'all' view
+      if (selectedCategory === 'all') {
+        const categoriesWithQuestions = categoriesData.reduce((acc: Record<string, boolean>, category: any) => {
+          const hasQuestions = questionsData.some((q: any) => q.category_id === category.id);
+          acc[category.id] = hasQuestions;
+          return acc;
+        }, {});
+        setExpandedCategories(categoriesWithQuestions);
+      }
     } catch (error) {
-      console.error('Error loading questions:', error);
-      toast.error('Failed to load questions');
+      console.error('Error loading data:', error);
+      toast.error('Failed to load questions and categories');
     } finally {
       setLoading(false);
     }
@@ -46,54 +76,147 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       await questionService.deleteRequiredItem(deleteQuestionId);
       toast.success('Question deleted successfully');
       setDeleteQuestionId(null);
-      loadQuestions();
+      loadData();
     } catch (error) {
       console.error('Error deleting question:', error);
       toast.error('Failed to delete question');
     }
   };
 
-  const filteredQuestions = questions.filter(question =>
-    question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.answer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory_2?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory_3?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory_4?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory_5?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Helper function to get initiator count and subcategories
-  const getInitiatorInfo = (question: any) => {
-    const initiators = [];
-    if (question.subcategory_1_initiator && question.subcategory) {
-      initiators.push(question.subcategory);
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'question') {
+      setActiveQuestion(active.data.current.question);
     }
-    if (question.subcategory_2_initiator && question.subcategory_2) {
-      initiators.push(question.subcategory_2);
-    }
-    if (question.subcategory_3_initiator && question.subcategory_3) {
-      initiators.push(question.subcategory_3);
-    }
-    if (question.subcategory_4_initiator && question.subcategory_4) {
-      initiators.push(question.subcategory_4);
-    }
-    if (question.subcategory_5_initiator && question.subcategory_5) {
-      initiators.push(question.subcategory_5);
-    }
-    return initiators;
   };
 
-  const getSubcategoriesDisplay = (question: any) => {
-    const subcategories = [];
-    if (question.subcategory) subcategories.push(question.subcategory);
-    if (question.subcategory_2) subcategories.push(question.subcategory_2);
-    if (question.subcategory_3) subcategories.push(question.subcategory_3);
-    if (question.subcategory_4) subcategories.push(question.subcategory_4);
-    if (question.subcategory_5) subcategories.push(question.subcategory_5);
-    return subcategories;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveQuestion(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (activeData?.type !== 'question') return;
+
+    const activeQuestion = activeData.question;
+
+    // Handle dropping on a category
+    if (overData?.type === 'category') {
+      const newCategoryId = overData.categoryId;
+      
+      if (activeQuestion.category_id !== newCategoryId) {
+        try {
+          // Move question to new category with priority 1 (top of the list)
+          await questionService.updateRequiredItem(activeId, {
+            category_id: newCategoryId,
+            priority: 1
+          });
+          
+          toast.success('Question moved to new category');
+          loadData();
+        } catch (error) {
+          console.error('Error moving question:', error);
+          toast.error('Failed to move question');
+        }
+      }
+      return;
+    }
+
+    // Handle reordering within the same category
+    if (overData?.type === 'question') {
+      const overId = over.id as string;
+      const overQuestion = overData.question;
+      
+      if (activeQuestion.category_id === overQuestion.category_id && activeId !== overId) {
+        try {
+          const categoryQuestions = questions
+            .filter(q => q.category_id === activeQuestion.category_id)
+            .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+          
+          const oldIndex = categoryQuestions.findIndex(q => q.id === activeId);
+          const newIndex = categoryQuestions.findIndex(q => q.id === overId);
+          
+          const reorderedQuestions = arrayMove(categoryQuestions, oldIndex, newIndex);
+          
+          // Update priorities for all questions in the category
+          const updatePromises = reorderedQuestions.map((question, index) =>
+            questionService.updateRequiredItem(question.id, { priority: index + 1 })
+          );
+          
+          await Promise.all(updatePromises);
+          toast.success('Questions reordered');
+          loadData();
+        } catch (error) {
+          console.error('Error reordering questions:', error);
+          toast.error('Failed to reorder questions');
+        }
+      }
+    }
   };
+
+  // Filter and group questions
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(question =>
+      question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.answer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subcategory_2?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subcategory_3?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subcategory_4?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subcategory_5?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [questions, searchTerm]);
+
+  const categorizedQuestions = useMemo(() => {
+    const grouped = categories.reduce((acc: Record<string, any[]>, category) => {
+      acc[category.id] = filteredQuestions.filter(q => q.category_id === category.id);
+      return acc;
+    }, {});
+    
+    // Add uncategorized questions
+    grouped['uncategorized'] = filteredQuestions.filter(q => !q.category_id);
+    
+    return grouped;
+  }, [categories, filteredQuestions]);
+
+  const questionCounts = useMemo(() => {
+    return categories.reduce((acc: Record<string, number>, category) => {
+      acc[category.id] = categorizedQuestions[category.id]?.length || 0;
+      return acc;
+    }, {});
+  }, [categories, categorizedQuestions]);
+
+  const handleToggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    
+    if (categoryId === 'all') {
+      // Expand all categories with questions
+      const newExpanded = categories.reduce((acc: Record<string, boolean>, category) => {
+        acc[category.id] = categorizedQuestions[category.id]?.length > 0;
+        return acc;
+      }, {});
+      setExpandedCategories(newExpanded);
+    } else {
+      // Expand only the selected category
+      setExpandedCategories({ [categoryId]: true });
+    }
+  };
+
+  const displayedCategories = selectedCategory === 'all' 
+    ? categories.filter(cat => categorizedQuestions[cat.id]?.length > 0)
+    : categories.filter(cat => cat.id === selectedCategory);
 
   if (loading) {
     return (
@@ -112,7 +235,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
           <div>
             <CardTitle>Questions Management</CardTitle>
             <CardDescription>
-              Manage all questions in the required items database
+              Manage and organize questions by category. Drag questions to reorder or move between categories.
             </CardDescription>
           </div>
           <Button onClick={onCreateNew}>
@@ -122,7 +245,16 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Category Filter */}
+          <CategoryFilter
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+            questionCounts={questionCounts}
+          />
+
+          {/* Search */}
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -134,135 +266,64 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              {filteredQuestions.length} question(s)
+              {filteredQuestions.length} question(s) found
             </div>
           </div>
 
-          {filteredQuestions.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-muted-foreground">
-                {searchTerm ? 'No questions match your search.' : 'No questions created yet.'}
+          {/* Questions by Category */}
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            {filteredQuestions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">
+                  {searchTerm ? 'No questions match your search.' : 'No questions created yet.'}
+                </div>
+                {!searchTerm && (
+                  <Button onClick={onCreateNew} className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Question
+                  </Button>
+                )}
               </div>
-              {!searchTerm && (
-                <Button onClick={onCreateNew} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Question
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Question</TableHead>
-                    <TableHead>Answer ID</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Scope</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Subcategories</TableHead>
-                    <TableHead>Initiators</TableHead>
-                    <TableHead>Options</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuestions.map((question) => {
-                    const initiators = getInitiatorInfo(question);
-                    const subcategories = getSubcategoriesDisplay(question);
+            ) : (
+              <div className="space-y-4">
+                {displayedCategories.map((category) => (
+                  <CategorySection
+                    key={category.id}
+                    category={category}
+                    questions={categorizedQuestions[category.id] || []}
+                    isExpanded={expandedCategories[category.id] || false}
+                    onToggleExpand={handleToggleCategory}
+                    onEdit={onEdit}
+                    onDelete={setDeleteQuestionId}
+                  />
+                ))}
+                
+                {/* Uncategorized Questions */}
+                {categorizedQuestions['uncategorized']?.length > 0 && (
+                  <CategorySection
+                    category={{ id: 'uncategorized', name: 'Uncategorized' }}
+                    questions={categorizedQuestions['uncategorized']}
+                    isExpanded={expandedCategories['uncategorized'] || false}
+                    onToggleExpand={handleToggleCategory}
+                    onEdit={onEdit}
+                    onDelete={setDeleteQuestionId}
+                  />
+                )}
+              </div>
+            )}
 
-                    return (
-                      <TableRow key={question.id}>
-                        <TableCell>
-                          <div className="font-medium">{question.item_name}</div>
-                        </TableCell>
-                        <TableCell>
-                          {question.answer_id ? (
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {question.answer_id}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {question.items_categories?.name || 'No Category'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {question.item_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {question.scope}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{question.priority}</TableCell>
-                        <TableCell>
-                          {subcategories.length > 0 ? (
-                            <div className="space-y-1">
-                              {subcategories.slice(0, 2).map((sub, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {sub}
-                                </Badge>
-                              ))}
-                              {subcategories.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{subcategories.length - 2} more
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {initiators.length > 0 ? (
-                            <Badge variant="default" className="text-xs">
-                              {initiators.length} initiator{initiators.length > 1 ? 's' : ''}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {question.item_options?.length > 0 && (
-                            <Badge variant="default">
-                              {question.item_options.length} options
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onEdit(question)}>
-                                <Edit2 className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => setDeleteQuestionId(question.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+            <DragOverlay>
+              {activeQuestion ? (
+                <div className="bg-card border rounded-lg p-4 shadow-lg opacity-90">
+                  <div className="font-medium">{activeQuestion.item_name}</div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
       </CardContent>
 
