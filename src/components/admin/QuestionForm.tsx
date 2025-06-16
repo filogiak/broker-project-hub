@@ -71,12 +71,16 @@ const PROJECT_TYPE_OPTIONS = [
   { value: 'reverse_mortgage', label: 'Reverse Mortgage' }
 ] as const;
 
+// All project types as default array
+const ALL_PROJECT_TYPES: ProjectType[] = PROJECT_TYPE_OPTIONS.map(option => option.value as ProjectType);
+
 const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<QuestionOption[]>([]);
   const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
-  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>([]);
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>(ALL_PROJECT_TYPES);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const form = useForm<QuestionFormData>({
     defaultValues: {
@@ -90,14 +94,19 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       priority: 0,
       scope: 'PROJECT',
       item_type: 'text',
-      project_types_applicable: [],
+      project_types_applicable: ALL_PROJECT_TYPES,
       validation_rules: {}
     }
   });
 
   useEffect(() => {
     loadCategories();
+    
+    // Set edit mode and initialize form data
     if (editingQuestion) {
+      setIsEditMode(true);
+      const editProjectTypes = editingQuestion.project_types_applicable || [];
+      
       form.reset({
         item_name: editingQuestion.item_name,
         answer_id: editingQuestion.answer_id || '',
@@ -109,14 +118,21 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         priority: editingQuestion.priority || 0,
         scope: editingQuestion.scope,
         item_type: editingQuestion.item_type,
-        project_types_applicable: editingQuestion.project_types_applicable || [],
+        project_types_applicable: editProjectTypes,
         validation_rules: editingQuestion.validation_rules || {}
       });
+      
       setSelectedItemType(editingQuestion.item_type);
-      setSelectedProjectTypes(editingQuestion.project_types_applicable || []);
+      setSelectedProjectTypes(editProjectTypes);
+      
       if (editingQuestion.item_options) {
         setOptions(editingQuestion.item_options);
       }
+    } else {
+      // New question mode - use all project types as default
+      setIsEditMode(false);
+      setSelectedProjectTypes(ALL_PROJECT_TYPES);
+      form.setValue('project_types_applicable', ALL_PROJECT_TYPES);
     }
   }, [editingQuestion, form]);
 
@@ -261,7 +277,11 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                  <Select 
+                    key={`category-${editingQuestion?.id || 'new'}`}
+                    onValueChange={field.onChange} 
+                    value={field.value || undefined}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
