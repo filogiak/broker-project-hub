@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +28,10 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Track which fields have been touched by user to preserve their input
+  const touchedFields = useRef<Set<string>>(new Set());
   
   const participantDesignation = useMemo(() => {
     return applicant === 'applicant_1' 
@@ -84,16 +88,44 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }
   }, [projectId, categoryId, loadExistingAdditionalQuestions]);
 
-  // Initialize form data with existing values
+  // FIXED: Initialize form data only once and preserve user input
   useEffect(() => {
-    const initialFormData: Record<string, any> = {};
-    categoryItems.forEach(item => {
-      if (item.displayValue && item.displayValue !== '') {
-        initialFormData[item.id] = item.displayValue;
-      }
-    });
-    setFormData(initialFormData);
-  }, [categoryItems]);
+    if (categoryItems.length > 0 && !isInitialized) {
+      console.log('🔧 INIT: Initializing form data for first time');
+      const initialFormData: Record<string, any> = {};
+      categoryItems.forEach(item => {
+        if (item.displayValue && item.displayValue !== '') {
+          initialFormData[item.id] = item.displayValue;
+          console.log(`🔧 INIT: Setting initial value for ${item.itemName}:`, item.displayValue);
+        }
+      });
+      setFormData(initialFormData);
+      setIsInitialized(true);
+    } else if (categoryItems.length > 0 && isInitialized) {
+      // Smart merge: only update fields that haven't been touched by user
+      console.log('🔧 MERGE: Smart merging new category items with existing form data');
+      setFormData(prevFormData => {
+        const mergedData = { ...prevFormData };
+        let hasChanges = false;
+        
+        categoryItems.forEach(item => {
+          const fieldId = item.id;
+          const isFieldTouched = touchedFields.current.has(fieldId);
+          const hasDisplayValue = item.displayValue && item.displayValue !== '';
+          const fieldExists = fieldId in mergedData;
+          
+          // Only update if field hasn't been touched by user AND has a display value AND doesn't exist yet
+          if (!isFieldTouched && hasDisplayValue && !fieldExists) {
+            mergedData[fieldId] = item.displayValue;
+            hasChanges = true;
+            console.log(`🔧 MERGE: Adding new field ${item.itemName}:`, item.displayValue);
+          }
+        });
+        
+        return hasChanges ? mergedData : prevFormData;
+      });
+    }
+  }, [categoryItems, isInitialized]);
 
   // Initialize additional form data with existing values
   useEffect(() => {
@@ -106,8 +138,12 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     setAdditionalFormData(initialAdditionalFormData);
   }, [additionalQuestions]);
 
-  // Stable input change handlers with useCallback
+  // FIXED: Enhanced input change handlers that track touched fields
   const handleInputChange = useCallback((itemId: string, value: any) => {
+    console.log('🔧 INPUT: User input change for', itemId, ':', value);
+    // Mark field as touched by user
+    touchedFields.current.add(itemId);
+    
     setFormData(prev => ({
       ...prev,
       [itemId]: value,
