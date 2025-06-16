@@ -41,8 +41,8 @@ export interface SaveTriggeredEvaluationParams {
 
 export class ConditionalLogicService {
   /**
-   * Evaluate conditional logic based on form answers and return triggered subcategories
-   * UPDATED: Now checks all 5 subcategory fields
+   * Enhanced conditional logic evaluation with multi-subcategory support
+   * Now supports one answer triggering multiple subcategories simultaneously
    */
   static async evaluateConditionalLogic(
     projectId: string,
@@ -51,12 +51,12 @@ export class ConditionalLogicService {
     formAnswers: Record<string, any>,
     itemIdToFormIdMap: Record<string, string>
   ): Promise<LogicEvaluationResult> {
-    console.log('🔍 Evaluating conditional logic with 5-subcategory support...');
+    console.log('🔍 Evaluating enhanced multi-subcategory conditional logic...');
     console.log('Form answers:', formAnswers);
     console.log('Item mapping:', itemIdToFormIdMap);
 
     try {
-      // Get all logic rules
+      // Get all active logic rules
       const { data: logicRules, error: rulesError } = await supabase
         .from('question_logic_rules')
         .select('*')
@@ -70,9 +70,8 @@ export class ConditionalLogicService {
 
       const triggeredSubcategories = new Set<string>();
 
-      // Evaluate each logic rule
+      // Enhanced evaluation: allow multiple subcategories per trigger
       for (const rule of logicRules || []) {
-        // Find the form field that corresponds to this trigger item
         const formFieldId = itemIdToFormIdMap[rule.trigger_item_id];
         if (!formFieldId) {
           console.log(`⚠️ No form field found for trigger item ${rule.trigger_item_id}`);
@@ -81,19 +80,18 @@ export class ConditionalLogicService {
 
         const userAnswer = formAnswers[formFieldId];
         if (userAnswer === undefined || userAnswer === null || userAnswer === '') {
-          console.log(`⚠️ No answer provided for field ${formFieldId}`);
           continue;
         }
 
-        console.log(`🔍 Checking rule: ${rule.trigger_value} vs ${userAnswer}`);
+        console.log(`🔍 Checking rule: ${rule.trigger_value} vs ${userAnswer} → ${rule.target_subcategory}`);
 
-        // Check if the answer matches the trigger value
+        // Enhanced matching for multi-choice and single choice
         let isMatch = false;
         if (Array.isArray(userAnswer)) {
-          // For multiple choice answers
+          // For multiple choice answers - check if any selected option matches
           isMatch = userAnswer.includes(rule.trigger_value);
         } else {
-          // For single answers
+          // For single answers - exact match
           isMatch = String(userAnswer) === String(rule.trigger_value);
         }
 
@@ -114,8 +112,7 @@ export class ConditionalLogicService {
         };
       }
 
-      // Fetch conditional questions for triggered subcategories
-      // UPDATED: Check all 5 subcategory fields
+      // Fetch conditional questions for all triggered subcategories
       const { data: conditionalItems, error: itemsError } = await supabase
         .from('required_items')
         .select(`
@@ -280,7 +277,7 @@ export class ConditionalLogicService {
       // Sort questions by priority
       newQuestions.sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
-      console.log('✅ Conditional logic evaluation complete');
+      console.log('✅ Enhanced conditional logic evaluation complete');
       console.log(`📝 Created ${newQuestions.length} questions for ${subcategoriesArray.length} subcategories`);
       console.log(`💾 Preserved ${Object.keys(preservedAnswers).length} existing answers`);
 
@@ -524,7 +521,6 @@ export class ConditionalLogicService {
 
   /**
    * Load existing additional questions for a category and participant
-   * UPDATED: Checks all 5 subcategory fields
    */
   static async loadExistingAdditionalQuestions(
     projectId: string,
@@ -532,7 +528,7 @@ export class ConditionalLogicService {
     participantDesignation: ParticipantDesignation
   ): Promise<ConditionalQuestion[]> {
     try {
-      console.log('🔍 Loading existing additional questions with 5-subcategory support...');
+      console.log('🔍 Loading existing additional questions with enhanced 5-subcategory support...');
 
       // Get existing checklist items that are conditional (have subcategories but are not initiators)
       const { data: existingItems, error } = await supabase

@@ -331,13 +331,13 @@ const QuestionForm = () => {
         <TabsContent value="subcategories">
           <Card>
             <CardHeader>
-              <CardTitle>5-Slot Subcategory System</CardTitle>
+              <CardTitle>Enhanced 5-Slot Subcategory System</CardTitle>
               <CardDescription>
-                Configure up to 5 subcategories and their initiator settings. Each question can belong to multiple subcategories and can initiate conditional logic for any of them.
+                Configure up to 5 subcategories and their initiator settings. Each question can belong to multiple subcategories and can initiate conditional logic for any combination of them. Use this for complex multi-flow conditional logic.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Subcategory Grid */}
+              {/* Enhanced Subcategory Grid with Initiator Logic */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5].map((num) => {
                   const subcategoryKey = num === 1 ? 'subcategory' : `subcategory_${num}` as keyof typeof formData;
@@ -346,7 +346,7 @@ const QuestionForm = () => {
                   return (
                     <div key={num} className="p-4 border rounded-lg space-y-3">
                       <h4 className="font-medium text-sm text-muted-foreground">
-                        Subcategory {num}
+                        Subcategory Slot {num}
                       </h4>
                       
                       <div>
@@ -375,7 +375,7 @@ const QuestionForm = () => {
                           }))}
                         />
                         <Label htmlFor={`initiator-${num}`} className="text-sm">
-                          Is Initiator
+                          Is Logic Initiator
                         </Label>
                       </div>
                       
@@ -389,10 +389,10 @@ const QuestionForm = () => {
                 })}
               </div>
 
-              {/* Summary */}
+              {/* Enhanced Logic Summary */}
               <div className="mt-6 p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Current Configuration Summary:</h4>
-                <div className="text-sm space-y-1">
+                <h4 className="font-medium mb-2">Multi-Subcategory Logic Configuration:</h4>
+                <div className="text-sm space-y-2">
                   {(() => {
                     const subcategories = [
                       formData.subcategory,
@@ -403,22 +403,55 @@ const QuestionForm = () => {
                     ].filter(Boolean);
                     
                     const initiators = [];
-                    if (formData.subcategory_1_initiator && formData.subcategory) initiators.push(`1:"${formData.subcategory}"`);
-                    if (formData.subcategory_2_initiator && formData.subcategory_2) initiators.push(`2:"${formData.subcategory_2}"`);
-                    if (formData.subcategory_3_initiator && formData.subcategory_3) initiators.push(`3:"${formData.subcategory_3}"`);
-                    if (formData.subcategory_4_initiator && formData.subcategory_4) initiators.push(`4:"${formData.subcategory_4}"`);
-                    if (formData.subcategory_5_initiator && formData.subcategory_5) initiators.push(`5:"${formData.subcategory_5}"`);
+                    if (formData.subcategory_1_initiator && formData.subcategory) initiators.push(`"${formData.subcategory}"`);
+                    if (formData.subcategory_2_initiator && formData.subcategory_2) initiators.push(`"${formData.subcategory_2}"`);
+                    if (formData.subcategory_3_initiator && formData.subcategory_3) initiators.push(`"${formData.subcategory_3}"`);
+                    if (formData.subcategory_4_initiator && formData.subcategory_4) initiators.push(`"${formData.subcategory_4}"`);
+                    if (formData.subcategory_5_initiator && formData.subcategory_5) initiators.push(`"${formData.subcategory_5}"`);
                     
                     return (
                       <>
-                        <div>• <strong>Subcategories:</strong> {subcategories.length ? subcategories.join(', ') : 'None (Main question)'}</div>
-                        <div>• <strong>Initiates logic for:</strong> {initiators.length ? initiators.join(', ') : 'None'}</div>
-                        <div>• <strong>Question type:</strong> {subcategories.length === 0 ? 'Main question' : initiators.length > 0 ? 'Initiator question' : 'Conditional question'}</div>
+                        <div>• <strong>Belongs to subcategories:</strong> {subcategories.length ? subcategories.join(', ') : 'None (Main question only)'}</div>
+                        <div>• <strong>Can trigger logic for:</strong> {initiators.length ? initiators.join(', ') : 'None'}</div>
+                        <div>• <strong>Question type:</strong> {
+                          subcategories.length === 0 ? 'Main question' : 
+                          initiators.length > 0 ? `Multi-flow initiator (triggers ${initiators.length} subcategories)` : 
+                          'Conditional question'
+                        }</div>
+                        {initiators.length > 1 && (
+                          <div className="text-blue-600 font-medium">• This question can trigger multiple subcategories simultaneously based on answer values</div>
+                        )}
                       </>
                     );
                   })()}
                 </div>
               </div>
+
+              {/* Multi-Flow Logic Explanation */}
+              {(() => {
+                const initiatorCount = [
+                  formData.subcategory_1_initiator,
+                  formData.subcategory_2_initiator,
+                  formData.subcategory_3_initiator,
+                  formData.subcategory_4_initiator,
+                  formData.subcategory_5_initiator
+                ].filter(Boolean).length;
+
+                if (initiatorCount > 1) {
+                  return (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h5 className="font-medium text-blue-800 mb-2">Multi-Flow Logic Enabled</h5>
+                      <div className="text-sm text-blue-700 space-y-1">
+                        <p>• This question can trigger {initiatorCount} different subcategories</p>
+                        <p>• Create logic rules to map specific answer values to different subcategories</p>
+                        <p>• Multiple subcategories can be triggered simultaneously by one answer</p>
+                        <p>• For multi-choice questions, each option can trigger different subcategories</p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               <div className="flex justify-end pt-4">
                 <Button 
