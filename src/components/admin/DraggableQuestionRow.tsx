@@ -63,49 +63,53 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
       }`}
     >
       <div className="flex items-center gap-6">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        {/* New div with answer ID and button group - aligned to the left */}
+        <div className="flex items-center justify-between w-48 flex-shrink-0">
+          {/* Answer ID on the left */}
+          <div className="flex-shrink-0">
+            {question.answer_id ? (
+              <Badge variant="outline" className="font-mono text-xs">
+                {question.answer_id}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground text-sm">—</span>
+            )}
+          </div>
+          
+          {/* Button subgroup on the right */}
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(question)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(question.id)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Question Name */}
-        <div className="flex-1 min-w-0 max-w-md">
-          <div className="font-medium truncate">{question.item_name}</div>
-        </div>
-
-        {/* Answer ID - moved to the right of question name */}
-        <div className="flex-shrink-0 w-24 flex justify-center">
-          {question.answer_id ? (
-            <Badge variant="outline" className="font-mono text-xs">
-              {question.answer_id}
-            </Badge>
-          ) : (
-            <span className="text-muted-foreground text-sm">—</span>
-          )}
-        </div>
-
-        {/* Actions - Edit and Delete buttons */}
-        <div className="flex-shrink-0 flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(question)}
-            className="h-8 w-8 p-0"
+        {/* Drag Handle and Question Name - kept grouped together */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
           >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(question.id)}
-            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{question.item_name}</div>
+          </div>
         </div>
       </div>
     </div>
