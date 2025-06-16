@@ -73,7 +73,7 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         </div>
 
         {/* Question Name */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-md">
           <div className="font-medium truncate">{question.item_name}</div>
         </div>
 
