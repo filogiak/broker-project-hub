@@ -130,20 +130,8 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           </Badge>
         </div>
 
-        {/* Scope */}
-        <div className="flex-shrink-0">
-          <Badge variant="outline">
-            {question.scope}
-          </Badge>
-        </div>
-
-        {/* Priority */}
-        <div className="flex-shrink-0 text-sm text-muted-foreground w-8">
-          {question.priority || 0}
-        </div>
-
         {/* Subcategories */}
-        <div className="flex-shrink-0 min-w-0 max-w-32">
+        <div className="flex-shrink-0 min-w-0 max-w-40">
           {subcategories.length > 0 ? (
             <div className="space-y-1">
               {subcategories.slice(0, 2).map((sub, index) => (
@@ -167,17 +155,6 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           {initiators.length > 0 ? (
             <Badge variant="default" className="text-xs">
               {initiators.length} initiator{initiators.length > 1 ? 's' : ''}
-            </Badge>
-          ) : (
-            <span className="text-muted-foreground text-sm">—</span>
-          )}
-        </div>
-
-        {/* Options */}
-        <div className="flex-shrink-0">
-          {question.item_options?.length > 0 ? (
-            <Badge variant="default">
-              {question.item_options.length} options
             </Badge>
           ) : (
             <span className="text-muted-foreground text-sm">—</span>
