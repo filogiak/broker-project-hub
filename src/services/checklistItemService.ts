@@ -305,11 +305,11 @@ export class ChecklistItemService {
       case 'date':
         result.dateValue = inputValue ? String(inputValue) : null;
         break;
-      case 'boolean':
-        result.booleanValue = inputValue ? Boolean(inputValue) : null;
-        break;
       case 'multiple_choice_checkbox':
         result.jsonValue = Array.isArray(inputValue) ? inputValue : [];
+        break;
+      case 'document':
+        result.documentReferenceId = inputValue ? String(inputValue) : null;
         break;
       default:
         result.textValue = inputValue ? String(inputValue) : null;

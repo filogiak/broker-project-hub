@@ -13,6 +13,22 @@ export interface GenerationResult {
   itemsSkipped: number;
   errors: string[];
   generatedItems: ChecklistItem[];
+  debugInfo?: {
+    totalItemsInDatabase: number;
+    itemsAfterProjectTypeFilter: number;
+    itemsAfterSubcategoryFilter: number;
+    itemsPassedAllFilters: number;
+    filteredItems: Array<{
+      id: string;
+      item_name: string;
+      subcategory: string | null;
+      subcategory_1_initiator: boolean | null;
+      subcategory_2_initiator: boolean | null;
+      project_types_applicable: string[] | null;
+      scope: string;
+      category_id: string | null;
+    }>;
+  };
 }
 
 export class FormGenerationService {
@@ -37,6 +53,14 @@ export class FormGenerationService {
         throw new Error(`Project not found: ${projectError?.message}`);
       }
 
+      console.log('📋 Project details:', {
+        id: project.id,
+        name: project.name,
+        project_type: project.project_type,
+        applicant_count: project.applicant_count,
+        checklist_generated_at: project.checklist_generated_at
+      });
+
       // Check if already generated (unless forcing regeneration)
       if (project.checklist_generated_at && !forceRegenerate) {
         console.log('📋 Checklist already generated for project');
@@ -48,7 +72,7 @@ export class FormGenerationService {
         };
       }
 
-      // Get all required items with enhanced subcategory information
+      // Get all required items with enhanced debugging information
       const { data: allItems, error: itemsError } = await supabase
         .from('required_items')
         .select('*')
@@ -59,13 +83,22 @@ export class FormGenerationService {
         throw new Error(`Failed to fetch required items: ${itemsError.message}`);
       }
 
-      // Apply enhanced filtering rules including subcategory logic
-      const applicableItems = this.filterItemsByRules(allItems || [], project);
-      console.log(`📝 Filtered to ${applicableItems.length} applicable items (main + initiator questions only)`);
+      console.log(`📝 Total items in database: ${allItems?.length || 0}`);
+
+      // Apply enhanced filtering rules with detailed debugging
+      const { applicableItems, debugInfo } = this.filterItemsByRulesWithDebug(allItems || [], project);
+      console.log(`📝 Filtered to ${applicableItems.length} applicable items`);
+      console.log('🔍 Debug info:', debugInfo);
 
       // Generate checklist items
       const result = await this.createChecklistItems(applicableItems, project);
       console.log(`✅ Generated ${result.itemsCreated} checklist items`);
+
+      // Add debug info to result
+      result.debugInfo = {
+        totalItemsInDatabase: allItems?.length || 0,
+        ...debugInfo
+      };
 
       // Update project to mark as generated
       await supabase
@@ -86,33 +119,108 @@ export class FormGenerationService {
   }
 
   /**
-   * Apply the three core filtering rules including subcategory logic
+   * Apply filtering rules with comprehensive debugging
    */
-  private static filterItemsByRules(items: RequiredItem[], project: Project): RequiredItem[] {
-    return items.filter(item => {
+  private static filterItemsByRulesWithDebug(items: RequiredItem[], project: Project): {
+    applicableItems: RequiredItem[];
+    debugInfo: {
+      itemsAfterProjectTypeFilter: number;
+      itemsAfterSubcategoryFilter: number;
+      itemsPassedAllFilters: number;
+      filteredItems: Array<{
+        id: string;
+        item_name: string;
+        subcategory: string | null;
+        subcategory_1_initiator: boolean | null;
+        subcategory_2_initiator: boolean | null;
+        project_types_applicable: string[] | null;
+        scope: string;
+        category_id: string | null;
+      }>;
+    };
+  } {
+    console.log('\n🔍 === FILTERING DEBUG SESSION ===');
+    
+    let itemsAfterProjectTypeFilter = 0;
+    let itemsAfterSubcategoryFilter = 0;
+    
+    const applicableItems = items.filter(item => {
+      console.log(`\n📋 Evaluating item: "${item.item_name}"`);
+      console.log(`   - ID: ${item.id}`);
+      console.log(`   - Category: ${item.category_id}`);
+      console.log(`   - Scope: ${item.scope}`);
+      console.log(`   - Subcategory: ${item.subcategory || 'NONE (main question)'}`);
+      console.log(`   - Subcategory 1 Initiator: ${item.subcategory_1_initiator}`);
+      console.log(`   - Subcategory 2 Initiator: ${item.subcategory_2_initiator}`);
+      console.log(`   - Project Types Applicable: ${JSON.stringify(item.project_types_applicable)}`);
+
       // Rule 1: Check project_types_applicable
       if (item.project_types_applicable && 
           item.project_types_applicable.length > 0 && 
           project.project_type) {
         const isApplicable = item.project_types_applicable.includes(project.project_type);
         if (!isApplicable) {
-          console.log(`Skipping item ${item.item_name}: project type ${project.project_type} not in applicable types`);
+          console.log(`   ❌ FILTERED OUT: project type ${project.project_type} not in applicable types`);
           return false;
         }
+        console.log(`   ✅ PASSED: project type filter`);
+      } else {
+        console.log(`   ✅ PASSED: no project type restriction or project type is null`);
       }
+      itemsAfterProjectTypeFilter++;
 
-      // Rule 3: Only include main questions and initiator questions
+      // Rule 2: Enhanced subcategory logic - Only include main questions and initiator questions
       const isMainQuestion = !item.subcategory;
       const isInitiatorQuestion = item.subcategory_1_initiator === true || item.subcategory_2_initiator === true;
       
       if (!isMainQuestion && !isInitiatorQuestion) {
-        console.log(`Skipping conditional item ${item.item_name}: has subcategory '${item.subcategory}' but is not an initiator`);
+        console.log(`   ❌ FILTERED OUT: conditional question (has subcategory '${item.subcategory}' but is not an initiator)`);
         return false;
       }
+      
+      if (isMainQuestion) {
+        console.log(`   ✅ PASSED: main question (no subcategory)`);
+      } else {
+        console.log(`   ✅ PASSED: initiator question for subcategory '${item.subcategory}'`);
+      }
+      itemsAfterSubcategoryFilter++;
 
-      console.log(`Including item ${item.item_name}: ${isMainQuestion ? 'main question' : 'initiator question'}`);
+      console.log(`   🎯 FINAL RESULT: INCLUDED`);
       return true;
     });
+
+    const debugInfo = {
+      itemsAfterProjectTypeFilter,
+      itemsAfterSubcategoryFilter,
+      itemsPassedAllFilters: applicableItems.length,
+      filteredItems: applicableItems.map(item => ({
+        id: item.id,
+        item_name: item.item_name,
+        subcategory: item.subcategory,
+        subcategory_1_initiator: item.subcategory_1_initiator,
+        subcategory_2_initiator: item.subcategory_2_initiator,
+        project_types_applicable: item.project_types_applicable,
+        scope: item.scope,
+        category_id: item.category_id
+      }))
+    };
+
+    console.log('\n📊 === FILTERING SUMMARY ===');
+    console.log(`Total items: ${items.length}`);
+    console.log(`After project type filter: ${itemsAfterProjectTypeFilter}`);
+    console.log(`After subcategory filter: ${itemsAfterSubcategoryFilter}`);
+    console.log(`Final applicable items: ${applicableItems.length}`);
+    console.log('=== END DEBUG SESSION ===\n');
+
+    return { applicableItems, debugInfo };
+  }
+
+  /**
+   * Apply the core filtering rules (simplified version for legacy compatibility)
+   */
+  private static filterItemsByRules(items: RequiredItem[], project: Project): RequiredItem[] {
+    const { applicableItems } = this.filterItemsByRulesWithDebug(items, project);
+    return applicableItems;
   }
 
   /**

@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { FormGenerationService, GenerationResult } from '@/services/formGenerationService';
+import { FormGenerationDebugService } from '@/services/formGenerationDebugService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useFormGeneration = () => {
@@ -14,6 +15,10 @@ export const useFormGeneration = () => {
       setResult(null);
 
       console.log('🔧 Hook: Starting generation for project:', projectId);
+      
+      // Log debug info before generation
+      await FormGenerationDebugService.logDebugInfo(projectId);
+      
       const generationResult = await FormGenerationService.generateChecklistForProject(
         projectId,
         forceRegenerate
@@ -33,6 +38,9 @@ export const useFormGeneration = () => {
           description: `Generated ${generationResult.itemsCreated} checklist items`,
         });
       }
+
+      // Log debug info after generation
+      await FormGenerationDebugService.logDebugInfo(projectId);
 
       return generationResult;
     } catch (error) {
@@ -55,12 +63,17 @@ export const useFormGeneration = () => {
       setResult(null);
 
       console.log('🔄 Hook: Starting regeneration for project:', projectId);
+      
+      // Clean up conditional questions first
+      const cleanupResult = await FormGenerationDebugService.cleanupConditionalQuestions(projectId);
+      console.log('🧹 Cleanup result:', cleanupResult);
+      
       const generationResult = await FormGenerationService.regenerateChecklistForProject(projectId);
       setResult(generationResult);
 
       toast({
         title: "Checklist regenerated",
-        description: `Generated ${generationResult.itemsCreated} new checklist items`,
+        description: `Cleaned up ${cleanupResult.deletedCount} problematic items and generated ${generationResult.itemsCreated} new checklist items`,
       });
 
       return generationResult;
@@ -78,10 +91,34 @@ export const useFormGeneration = () => {
     }
   };
 
+  const debugProject = async (projectId: string) => {
+    try {
+      await FormGenerationDebugService.logDebugInfo(projectId);
+      const debugInfo = await FormGenerationDebugService.getProjectDebugInfo(projectId);
+      
+      toast({
+        title: "Debug information logged",
+        description: `Found ${debugInfo.checklistItemsStats.problemItems.length} problem items. Check console for details.`,
+      });
+      
+      return debugInfo;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Hook: Debug failed:', error);
+      toast({
+        title: "Debug failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
     loading,
     result,
     generateChecklist,
     regenerateChecklist,
+    debugProject,
   };
 };
