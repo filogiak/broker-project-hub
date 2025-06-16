@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTriggerItemDetails } from '@/hooks/useTriggerItemDetails';
@@ -19,6 +21,8 @@ interface LogicRule {
   is_active: boolean;
   trigger_item_name?: string;
   target_category_name?: string;
+  trigger_item_exists?: boolean;
+  target_category_exists?: boolean;
 }
 
 interface RequiredItem {
@@ -39,6 +43,7 @@ const LogicRulesManager = () => {
   const [subcategories, setSubcategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Form state for new rule
@@ -81,18 +86,26 @@ const LogicRulesManager = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
 
-      // Fetch logic rules with related data
+      // Fetch logic rules with safer LEFT JOIN syntax
       const { data: rulesData, error: rulesError } = await supabase
         .from('question_logic_rules')
         .select(`
           *,
-          required_items!trigger_item_id (item_name),
-          items_categories!target_category_id (name)
+          trigger_item:required_items!fk_question_logic_rules_trigger_item (
+            item_name
+          ),
+          target_category:items_categories!fk_question_logic_rules_target_category (
+            name
+          )
         `)
         .order('created_at', { ascending: false });
 
-      if (rulesError) throw rulesError;
+      if (rulesError) {
+        console.error('Error fetching rules:', rulesError);
+        throw rulesError;
+      }
 
       // Fetch required items for dropdown
       const { data: itemsData, error: itemsError } = await supabase
@@ -100,7 +113,10 @@ const LogicRulesManager = () => {
         .select('id, item_name, category_id')
         .order('item_name');
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Error fetching items:', itemsError);
+        throw itemsError;
+      }
 
       // Fetch categories for dropdown
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -108,7 +124,10 @@ const LogicRulesManager = () => {
         .select('id, name')
         .order('name');
 
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error('Error fetching categories:', categoriesError);
+        throw categoriesError;
+      }
 
       // Fetch unique subcategories
       const { data: subcategoriesData, error: subcategoriesError } = await supabase
@@ -117,7 +136,10 @@ const LogicRulesManager = () => {
         .not('subcategory', 'is', null)
         .neq('subcategory', '');
 
-      if (subcategoriesError) throw subcategoriesError;
+      if (subcategoriesError) {
+        console.error('Error fetching subcategories:', subcategoriesError);
+        throw subcategoriesError;
+      }
 
       // Extract unique subcategories and remove duplicates
       const uniqueSubcategories = [...new Set(
@@ -126,17 +148,27 @@ const LogicRulesManager = () => {
           .filter(subcategory => subcategory && subcategory.trim() !== '') || []
       )].sort();
 
-      setRules(rulesData?.map(rule => ({
-        ...rule,
-        trigger_item_name: (rule.required_items as any)?.item_name,
-        target_category_name: (rule.items_categories as any)?.name,
-      })) || []);
+      // Process rules data with defensive programming
+      const processedRules = rulesData?.map(rule => {
+        const triggerItem = rule.trigger_item as any;
+        const targetCategory = rule.target_category as any;
+        
+        return {
+          ...rule,
+          trigger_item_name: triggerItem?.item_name || 'Unknown Question',
+          target_category_name: targetCategory?.name || null,
+          trigger_item_exists: !!triggerItem?.item_name,
+          target_category_exists: rule.target_category_id ? !!targetCategory?.name : true,
+        };
+      }) || [];
       
+      setRules(processedRules);
       setRequiredItems(itemsData || []);
       setCategories(categoriesData || []);
       setSubcategories(uniqueSubcategories);
     } catch (error) {
       console.error('Error fetching logic rules data:', error);
+      setFetchError('Failed to load logic rules data. Please try again.');
       toast({
         title: "Error",
         description: "Failed to load logic rules data",
@@ -275,6 +307,27 @@ const LogicRulesManager = () => {
       <div className="text-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
         <p className="text-muted-foreground">Loading logic rules...</p>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="p-8">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {fetchError}
+            <Button 
+              onClick={fetchData} 
+              variant="outline" 
+              size="sm" 
+              className="ml-4"
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -427,19 +480,41 @@ const LogicRulesManager = () => {
               {rules.map((rule) => (
                 <div
                   key={rule.id}
-                  className={`p-4 border rounded-lg ${rule.is_active ? 'bg-background' : 'bg-muted/50'}`}
+                  className={`p-4 border rounded-lg ${
+                    rule.is_active ? 'bg-background' : 'bg-muted/50'
+                  } ${
+                    !rule.trigger_item_exists || !rule.target_category_exists 
+                      ? 'border-destructive/50 bg-destructive/5' 
+                      : ''
+                  }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
                       <div className="font-medium">
-                        {rule.trigger_item_name || 'Unknown Question'}
+                        {rule.trigger_item_name}
+                        {!rule.trigger_item_exists && (
+                          <span className="ml-2 text-sm text-destructive font-normal">
+                            (Question Deleted)
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         When answer = "{formatTriggerValue(rule.trigger_value)}" → Show subcategory "{rule.target_subcategory}"
-                        {rule.target_category_name && (
+                        {rule.target_category_name && rule.target_category_exists && (
                           <span> in category "{rule.target_category_name}"</span>
                         )}
+                        {rule.target_category_id && !rule.target_category_exists && (
+                          <span className="text-destructive"> in category (Category Deleted)</span>
+                        )}
                       </div>
+                      {(!rule.trigger_item_exists || !rule.target_category_exists) && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription className="text-sm">
+                            This rule references deleted items and may not work correctly. Consider deleting this rule.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           rule.is_active 

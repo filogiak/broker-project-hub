@@ -819,6 +819,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_question_logic_rules_target_category"
+            columns: ["target_category_id"]
+            isOneToOne: false
+            referencedRelation: "items_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_question_logic_rules_trigger_item"
+            columns: ["trigger_item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "question_logic_rules_target_category_id_fkey"
             columns: ["target_category_id"]
             isOneToOne: false

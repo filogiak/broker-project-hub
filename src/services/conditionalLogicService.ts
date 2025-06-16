@@ -35,30 +35,45 @@ export class ConditionalLogicService {
    * Get all active logic rules for a specific category
    */
   static async getLogicRules(categoryId?: string): Promise<LogicRule[]> {
-    let query = supabase
-      .from('question_logic_rules')
-      .select('*')
-      .eq('is_active', true);
+    try {
+      let query = supabase
+        .from('question_logic_rules')
+        .select(`
+          *,
+          trigger_item:required_items!fk_question_logic_rules_trigger_item (
+            id,
+            item_name
+          )
+        `)
+        .eq('is_active', true);
 
-    if (categoryId) {
-      query = query.or(`target_category_id.eq.${categoryId},target_category_id.is.null`);
-    }
+      if (categoryId) {
+        query = query.or(`target_category_id.eq.${categoryId},target_category_id.is.null`);
+      }
 
-    const { data, error } = await query;
+      const { data, error } = await query;
 
-    if (error) {
-      console.error('Error fetching logic rules:', error);
+      if (error) {
+        console.error('Error fetching logic rules:', error);
+        return [];
+      }
+
+      // Filter out rules where the trigger item no longer exists
+      return data?.filter(rule => {
+        const triggerItem = rule.trigger_item as any;
+        return triggerItem && triggerItem.id;
+      }).map(rule => ({
+        id: rule.id,
+        triggerItemId: rule.trigger_item_id,
+        triggerValue: rule.trigger_value,
+        targetSubcategory: rule.target_subcategory,
+        targetCategoryId: rule.target_category_id || undefined,
+        isActive: rule.is_active,
+      })) || [];
+    } catch (error) {
+      console.error('Error in getLogicRules:', error);
       return [];
     }
-
-    return data?.map(rule => ({
-      id: rule.id,
-      triggerItemId: rule.trigger_item_id,
-      triggerValue: rule.trigger_value,
-      targetSubcategory: rule.target_subcategory,
-      targetCategoryId: rule.target_category_id || undefined,
-      isActive: rule.is_active,
-    })) || [];
   }
 
   /**
