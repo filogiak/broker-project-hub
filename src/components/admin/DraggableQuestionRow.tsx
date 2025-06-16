@@ -63,7 +63,22 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
       }`}
     >
       <div className="flex items-center gap-6">
-        {/* New div with answer ID and button group - aligned to the left */}
+        {/* Drag Handle and Question Name - kept grouped together */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{question.item_name}</div>
+          </div>
+        </div>
+
+        {/* Answer ID and button group - aligned to the right */}
         <div className="flex items-center justify-between w-48 flex-shrink-0">
           {/* Answer ID on the left */}
           <div className="flex-shrink-0">
@@ -94,21 +109,6 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-          </div>
-        </div>
-
-        {/* Drag Handle and Question Name - kept grouped together */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="font-medium truncate">{question.item_name}</div>
           </div>
         </div>
       </div>
