@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -53,13 +52,12 @@ const QuestionForm = () => {
   });
 
   const projectTypes: ProjectType[] = [
-    'purchase',
+    'first_home_purchase',
     'refinance',
-    'heloc',
-    'reverse_mortgage',
-    'construction',
-    'commercial',
-    'investment'
+    'investment_property',
+    'construction_loan',
+    'home_equity_loan',
+    'reverse_mortgage'
   ];
 
   useEffect(() => {
@@ -306,7 +304,7 @@ const QuestionForm = () => {
                           onCheckedChange={(checked) => handleProjectTypeToggle(projectType, !!checked)}
                         />
                         <Label htmlFor={`project-type-${projectType}`} className="capitalize">
-                          {projectType.replace('_', ' ')}
+                          {projectType.replace(/_/g, ' ')}
                         </Label>
                       </div>
                     ))}
@@ -431,7 +429,7 @@ const QuestionForm = () => {
 
         <TabsContent value="options">
           {isEditing && id ? (
-            <QuestionOptionManager itemId={id} />
+            <QuestionOptionManager requiredItemId={id} />
           ) : (
             <Card>
               <CardContent className="text-center py-8">
@@ -445,7 +443,7 @@ const QuestionForm = () => {
 
         <TabsContent value="logic">
           {isEditing && id ? (
-            <LogicRulesManager triggerItemId={id} />
+            <LogicRulesManager itemId={id} />
           ) : (
             <Card>
               <CardContent className="text-center py-8">

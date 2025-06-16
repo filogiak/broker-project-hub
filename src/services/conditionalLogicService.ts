@@ -25,6 +25,20 @@ export interface LogicEvaluationResult {
   preservedAnswers: Record<string, any>;
 }
 
+export interface ConditionalLogicResult {
+  subcategories: string[];
+  preservedAnswers: Record<string, any>;
+  targetCategoryId?: string;
+}
+
+export interface SaveTriggeredEvaluationParams {
+  formData: Record<string, any>;
+  categoryId: string;
+  projectId: string;
+  participantDesignation?: ParticipantDesignation;
+  itemIdToFormIdMap: Record<string, string>;
+}
+
 export class ConditionalLogicService {
   /**
    * Evaluate conditional logic based on form answers and return triggered subcategories
@@ -279,6 +293,232 @@ export class ConditionalLogicService {
     } catch (error) {
       console.error('❌ Error evaluating conditional logic:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Enhanced save-triggered evaluation method
+   */
+  static async evaluateLogicOnSave(params: SaveTriggeredEvaluationParams): Promise<ConditionalLogicResult> {
+    if (!params.participantDesignation) {
+      return { subcategories: [], preservedAnswers: {} };
+    }
+
+    const result = await this.evaluateConditionalLogic(
+      params.projectId,
+      params.categoryId,
+      params.participantDesignation,
+      params.formData,
+      params.itemIdToFormIdMap
+    );
+
+    return {
+      subcategories: result.subcategories,
+      preservedAnswers: result.preservedAnswers,
+      targetCategoryId: params.categoryId
+    };
+  }
+
+  /**
+   * Smart clear additional questions
+   */
+  static async smartClearAdditionalQuestions(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: ParticipantDesignation,
+    keepSubcategories: string[] = []
+  ): Promise<void> {
+    if (!participantDesignation) return;
+
+    try {
+      // Get conditional questions that should be removed
+      const { data: itemsToRemove } = await supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items (
+            subcategory,
+            subcategory_2,
+            subcategory_3,
+            subcategory_4,
+            subcategory_5,
+            subcategory_1_initiator,
+            subcategory_2_initiator,
+            subcategory_3_initiator,
+            subcategory_4_initiator,
+            subcategory_5_initiator,
+            category_id
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('participant_designation', participantDesignation);
+
+      const itemsToDelete = (itemsToRemove || []).filter(item => {
+        const requiredItem = item.required_items;
+        if (!requiredItem || requiredItem.category_id !== categoryId) return false;
+
+        // Check if this is a conditional question
+        const hasAnySubcategory = !!(requiredItem.subcategory || 
+                                   requiredItem.subcategory_2 || 
+                                   requiredItem.subcategory_3 || 
+                                   requiredItem.subcategory_4 || 
+                                   requiredItem.subcategory_5);
+
+        const isAnyInitiator = !!(requiredItem.subcategory_1_initiator || 
+                                requiredItem.subcategory_2_initiator || 
+                                requiredItem.subcategory_3_initiator || 
+                                requiredItem.subcategory_4_initiator || 
+                                requiredItem.subcategory_5_initiator);
+
+        if (!hasAnySubcategory || isAnyInitiator) return false;
+
+        // Check if any of its subcategories should be kept
+        const itemSubcategories = [
+          requiredItem.subcategory,
+          requiredItem.subcategory_2,
+          requiredItem.subcategory_3,
+          requiredItem.subcategory_4,
+          requiredItem.subcategory_5
+        ].filter(Boolean);
+
+        return !itemSubcategories.some(sub => keepSubcategories.includes(sub));
+      });
+
+      if (itemsToDelete.length > 0) {
+        await supabase
+          .from('project_checklist_items')
+          .delete()
+          .in('id', itemsToDelete.map(item => item.id));
+      }
+    } catch (error) {
+      console.error('Error clearing additional questions:', error);
+    }
+  }
+
+  /**
+   * Get additional questions by subcategories with preservation
+   */
+  static async getAdditionalQuestionsBySubcategoriesWithPreservation(
+    subcategories: string[],
+    categoryId: string,
+    projectId: string,
+    participantDesignation?: ParticipantDesignation,
+    preservedAnswers: Record<string, any> = {}
+  ): Promise<{ data?: any[]; error?: any }> {
+    if (!participantDesignation) {
+      return { data: [] };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items (
+            item_name,
+            item_type,
+            subcategory,
+            subcategory_2,
+            subcategory_3,
+            subcategory_4,
+            subcategory_5,
+            subcategory_1_initiator,
+            subcategory_2_initiator,
+            subcategory_3_initiator,
+            subcategory_4_initiator,
+            subcategory_5_initiator,
+            priority,
+            category_id
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('participant_designation', participantDesignation);
+
+      if (error) return { error };
+
+      const filteredData = (data || []).filter(item => {
+        const requiredItem = item.required_items;
+        if (!requiredItem || requiredItem.category_id !== categoryId) return false;
+
+        // Check if this is a conditional question (has subcategory but is not initiator)
+        const hasAnySubcategory = !!(requiredItem.subcategory || 
+                                   requiredItem.subcategory_2 || 
+                                   requiredItem.subcategory_3 || 
+                                   requiredItem.subcategory_4 || 
+                                   requiredItem.subcategory_5);
+
+        const isAnyInitiator = !!(requiredItem.subcategory_1_initiator || 
+                                requiredItem.subcategory_2_initiator || 
+                                requiredItem.subcategory_3_initiator || 
+                                requiredItem.subcategory_4_initiator || 
+                                requiredItem.subcategory_5_initiator);
+
+        if (!hasAnySubcategory || isAnyInitiator) return false;
+
+        // Check if any of its subcategories match the target subcategories
+        const itemSubcategories = [
+          requiredItem.subcategory,
+          requiredItem.subcategory_2,
+          requiredItem.subcategory_3,
+          requiredItem.subcategory_4,
+          requiredItem.subcategory_5
+        ].filter(Boolean);
+
+        return itemSubcategories.some(sub => subcategories.includes(sub));
+      });
+
+      return { data: filteredData };
+    } catch (error) {
+      return { error };
+    }
+  }
+
+  /**
+   * Get current active subcategories
+   */
+  static async getCurrentActiveSubcategories(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: ParticipantDesignation
+  ): Promise<string[]> {
+    if (!participantDesignation) return [];
+
+    try {
+      const { data } = await supabase
+        .from('project_checklist_items')
+        .select(`
+          required_items (
+            subcategory,
+            subcategory_2,
+            subcategory_3,
+            subcategory_4,
+            subcategory_5,
+            category_id
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('participant_designation', participantDesignation);
+
+      const subcategories = new Set<string>();
+      (data || []).forEach(item => {
+        const requiredItem = item.required_items;
+        if (requiredItem && requiredItem.category_id === categoryId) {
+          [
+            requiredItem.subcategory,
+            requiredItem.subcategory_2,
+            requiredItem.subcategory_3,
+            requiredItem.subcategory_4,
+            requiredItem.subcategory_5
+          ].forEach(sub => {
+            if (sub) subcategories.add(sub);
+          });
+        }
+      });
+
+      return Array.from(subcategories);
+    } catch (error) {
+      console.error('Error getting current active subcategories:', error);
+      return [];
     }
   }
 
