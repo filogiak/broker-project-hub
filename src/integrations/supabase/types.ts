@@ -836,6 +836,7 @@ export type Database = {
       }
       required_items: {
         Row: {
+          answer_id: string | null
           category_id: string | null
           created_at: string
           id: string
@@ -854,6 +855,7 @@ export type Database = {
           validation_rules: Json | null
         }
         Insert: {
+          answer_id?: string | null
           category_id?: string | null
           created_at?: string
           id?: string
@@ -872,6 +874,7 @@ export type Database = {
           validation_rules?: Json | null
         }
         Update: {
+          answer_id?: string | null
           category_id?: string | null
           created_at?: string
           id?: string

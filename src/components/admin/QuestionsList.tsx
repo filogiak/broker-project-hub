@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
 
   const filteredQuestions = questions.filter(question =>
     question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.answer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -137,6 +139,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                 <TableHeader>
                   <TableRow>
                     <TableHead>Question</TableHead>
+                    <TableHead>Answer ID</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Scope</TableHead>
@@ -158,6 +161,15 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                             </div>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {question.answer_id ? (
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {question.answer_id}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {question.items_categories?.name || 'No Category'}

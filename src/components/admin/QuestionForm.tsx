@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -17,9 +18,10 @@ type ProjectType = Database['public']['Enums']['project_type'];
 type ItemType = Database['public']['Enums']['item_type'];
 type ItemScope = Database['public']['Enums']['item_scope'];
 
-// Simplified interfaces to avoid TypeScript deep instantiation issues
+// Updated interface to include answer_id
 interface QuestionFormData {
   item_name: string;
+  answer_id?: string;
   category_id?: string;
   subcategory?: string;
   subcategory_2?: string;
@@ -79,6 +81,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   const form = useForm<QuestionFormData>({
     defaultValues: {
       item_name: '',
+      answer_id: '',
       category_id: undefined,
       subcategory: '',
       subcategory_2: '',
@@ -97,6 +100,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     if (editingQuestion) {
       form.reset({
         item_name: editingQuestion.item_name,
+        answer_id: editingQuestion.answer_id || '',
         category_id: editingQuestion.category_id,
         subcategory: editingQuestion.subcategory || '',
         subcategory_2: editingQuestion.subcategory_2 || '',
@@ -222,10 +226,30 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
               name="item_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Question Name</FormLabel>
+                  <FormLabel>Question Label</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter the question text" />
+                    <Input {...field} placeholder="Enter the question text shown to users" />
                   </FormControl>
+                  <FormDescription>
+                    This is the label that users will see when answering this question
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="answer_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Answer ID (Optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter a unique identifier for this question" />
+                  </FormControl>
+                  <FormDescription>
+                    A unique identifier to help recognize and select this question internally
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
