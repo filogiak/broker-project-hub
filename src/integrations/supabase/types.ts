@@ -854,6 +854,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           id: string
+          is_multi_flow_initiator: boolean | null
           item_name: string
           item_type: Database["public"]["Enums"]["item_type"]
           priority: number | null
@@ -861,10 +862,6 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope: Database["public"]["Enums"]["item_scope"]
-          subcategory: string | null
-          subcategory_1_initiator: boolean | null
-          subcategory_2: string | null
-          subcategory_2_initiator: boolean | null
           updated_at: string
           validation_rules: Json | null
         }
@@ -873,6 +870,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_multi_flow_initiator?: boolean | null
           item_name: string
           item_type?: Database["public"]["Enums"]["item_type"]
           priority?: number | null
@@ -880,10 +878,6 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope?: Database["public"]["Enums"]["item_scope"]
-          subcategory?: string | null
-          subcategory_1_initiator?: boolean | null
-          subcategory_2?: string | null
-          subcategory_2_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }
@@ -892,6 +886,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_multi_flow_initiator?: boolean | null
           item_name?: string
           item_type?: Database["public"]["Enums"]["item_type"]
           priority?: number | null
@@ -899,10 +894,6 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope?: Database["public"]["Enums"]["item_scope"]
-          subcategory?: string | null
-          subcategory_1_initiator?: boolean | null
-          subcategory_2?: string | null
-          subcategory_2_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }

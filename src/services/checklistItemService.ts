@@ -31,15 +31,13 @@ export interface TypedChecklistItem {
   displayValue?: any;
   typedValue: TypedChecklistItemValue;
   
-  // New fields for subcategory logic
-  subcategory?: string | null;
-  subcategory1Initiator?: boolean | null;
-  subcategory2Initiator?: boolean | null;
+  // Updated fields for new multi-flow logic
+  isMultiFlowInitiator?: boolean | null;
 }
 
 export class ChecklistItemService {
   /**
-   * Get checklist items for a project category with enhanced subcategory information
+   * Get checklist items for a project category with enhanced multi-flow information
    */
   static async getChecklistItemsByCategory(
     projectId: string,
@@ -57,9 +55,7 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
-            subcategory,
-            subcategory_1_initiator,
-            subcategory_2_initiator
+            is_multi_flow_initiator
           )
         `)
         .eq('project_id', projectId)
@@ -110,10 +106,8 @@ export class ChecklistItemService {
             jsonValue: item.json_value,
             documentReferenceId: item.document_reference_id,
           },
-          // Enhanced subcategory fields
-          subcategory: requiredItem?.subcategory,
-          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
-          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+          // Updated field for multi-flow logic
+          isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
         };
       });
 
@@ -125,7 +119,7 @@ export class ChecklistItemService {
   }
 
   /**
-   * Get all checklist items for a project with enhanced subcategory information
+   * Get all checklist items for a project with enhanced multi-flow information
    */
   static async getProjectChecklistItems(
     projectId: string,
@@ -142,9 +136,7 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
-            subcategory,
-            subcategory_1_initiator,
-            subcategory_2_initiator
+            is_multi_flow_initiator
           )
         `)
         .eq('project_id', projectId);
@@ -194,10 +186,8 @@ export class ChecklistItemService {
             jsonValue: item.json_value,
             documentReferenceId: item.document_reference_id,
           },
-          // Enhanced subcategory fields
-          subcategory: requiredItem?.subcategory,
-          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
-          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+          // Updated field for multi-flow logic
+          isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
         };
       });
 
@@ -377,32 +367,22 @@ export class ChecklistItemService {
   }
 
   /**
-   * Question classification helper functions
+   * Updated question classification helper functions using new schema
    */
-  static isMainQuestion(item: TypedChecklistItem): boolean {
-    // Get the required item data
-    const requiredItem = item as any;
-    
-    // Case 1: No subcategory - definitely a main question
-    if (!requiredItem.subcategory && !requiredItem.subcategory_2) {
+  static async isMainQuestion(item: TypedChecklistItem): Promise<boolean> {
+    // Case 1: Multi-flow initiator questions (directly marked in database)
+    if (item.isMultiFlowInitiator) {
       return true;
     }
     
-    // Case 2: Traditional initiator questions
-    if (requiredItem.subcategory_1_initiator || requiredItem.subcategory_2_initiator) {
-      return true;
-    }
-    
-    // Case 3: Multi-flow initiator questions
-    // These are questions that have logic rules but don't belong to any subcategory themselves
-    // We need to check if this question is a trigger for any logic rules
-    return this.isMultiFlowInitiator(item.itemId);
+    // Case 2: Check if this question triggers any logic rules (dynamic check)
+    return await this.hasLogicRules(item.itemId);
   }
 
   /**
-   * Check if a question is a multi-flow initiator by looking for logic rules
+   * Check if a question has logic rules (making it a main question)
    */
-  static async isMultiFlowInitiator(itemId: string): Promise<boolean> {
+  static async hasLogicRules(itemId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
         .from('question_logic_rules')
@@ -412,35 +392,27 @@ export class ChecklistItemService {
         .limit(1);
 
       if (error) {
-        console.error('Error checking multi-flow initiator status:', error);
+        console.error('Error checking logic rules:', error);
         return false;
       }
 
       return (data?.length || 0) > 0;
     } catch (error) {
-      console.error('Error in isMultiFlowInitiator:', error);
+      console.error('Error in hasLogicRules:', error);
       return false;
     }
   }
 
   /**
-   * Synchronous version that assumes multi-flow status is already determined
-   * This should be used when we have pre-fetched the logic rules information
+   * Synchronous version for when logic rules status is pre-determined
    */
   static isMainQuestionSync(item: TypedChecklistItem, hasLogicRules: boolean = false): boolean {
-    const requiredItem = item as any;
-    
-    // Case 1: No subcategory - definitely a main question
-    if (!requiredItem.subcategory && !requiredItem.subcategory_2) {
+    // Case 1: Multi-flow initiator questions
+    if (item.isMultiFlowInitiator) {
       return true;
     }
     
-    // Case 2: Traditional initiator questions
-    if (requiredItem.subcategory_1_initiator || requiredItem.subcategory_2_initiator) {
-      return true;
-    }
-    
-    // Case 3: Multi-flow initiator questions (pre-determined)
+    // Case 2: Questions with logic rules (pre-determined)
     return hasLogicRules;
   }
 
@@ -481,10 +453,8 @@ export class ChecklistItemService {
         jsonValue: item.json_value,
         documentReferenceId: item.document_reference_id,
       },
-      // Enhanced subcategory fields
-      subcategory: requiredItem?.subcategory,
-      subcategory1Initiator: requiredItem?.subcategory_1_initiator,
-      subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+      // Updated field for new multi-flow logic
+      isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
     };
   }
 
@@ -509,10 +479,7 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
-            subcategory,
-            subcategory_2,
-            subcategory_1_initiator,
-            subcategory_2_initiator
+            is_multi_flow_initiator
           )
         `)
         .eq('project_id', projectId)
@@ -531,7 +498,7 @@ export class ChecklistItemService {
 
       if (!items) return [];
 
-      // Get logic rules for all items to determine multi-flow initiators
+      // Get logic rules for all items to determine additional multi-flow initiators
       const itemIds = items.map(item => (item.required_items as any).id);
       const { data: logicRules } = await supabase
         .from('question_logic_rules')
@@ -539,13 +506,13 @@ export class ChecklistItemService {
         .in('trigger_item_id', itemIds)
         .eq('is_active', true);
 
-      const multiFlowInitiatorIds = new Set(logicRules?.map(rule => rule.trigger_item_id) || []);
+      const hasLogicRulesIds = new Set(logicRules?.map(rule => rule.trigger_item_id) || []);
 
       // Transform and filter main questions
       const typedItems = items.map(item => this.transformToTypedItem(item));
       
       return typedItems.filter(item => {
-        const hasLogicRules = multiFlowInitiatorIds.has(item.itemId);
+        const hasLogicRules = hasLogicRulesIds.has(item.itemId);
         return this.isMainQuestionSync(item, hasLogicRules);
       });
 
