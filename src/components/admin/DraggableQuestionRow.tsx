@@ -62,8 +62,8 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         isDragging ? 'opacity-50 shadow-lg scale-105 z-50' : 'hover:shadow-md'
       }`}
     >
-      <div className="flex items-center gap-6">
-        {/* Drag Handle and Question Name - kept grouped together */}
+      <div className="flex items-center justify-between w-full">
+        {/* Drag Handle and Question Name - grouped together on the left */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div
             {...attributes}
@@ -79,8 +79,8 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         </div>
 
         {/* Answer ID and button group - aligned to the right */}
-        <div className="flex items-center justify-between w-48 flex-shrink-0">
-          {/* Answer ID on the left */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          {/* Answer ID */}
           <div className="flex-shrink-0">
             {question.answer_id ? (
               <Badge variant="outline" className="font-mono text-xs">
@@ -91,7 +91,7 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
             )}
           </div>
           
-          {/* Button subgroup on the right */}
+          {/* Button group */}
           <div className="flex gap-2">
             <Button
               variant="ghost"
