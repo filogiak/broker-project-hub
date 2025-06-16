@@ -55,40 +55,6 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
     transition,
   };
 
-  // Helper functions
-  const getInitiatorInfo = (question: Question) => {
-    const initiators = [];
-    if (question.subcategory_1_initiator && question.subcategory) {
-      initiators.push(question.subcategory);
-    }
-    if (question.subcategory_2_initiator && question.subcategory_2) {
-      initiators.push(question.subcategory_2);
-    }
-    if (question.subcategory_3_initiator && question.subcategory_3) {
-      initiators.push(question.subcategory_3);
-    }
-    if (question.subcategory_4_initiator && question.subcategory_4) {
-      initiators.push(question.subcategory_4);
-    }
-    if (question.subcategory_5_initiator && question.subcategory_5) {
-      initiators.push(question.subcategory_5);
-    }
-    return initiators;
-  };
-
-  const getSubcategoriesDisplay = (question: Question) => {
-    const subcategories = [];
-    if (question.subcategory) subcategories.push(question.subcategory);
-    if (question.subcategory_2) subcategories.push(question.subcategory_2);
-    if (question.subcategory_3) subcategories.push(question.subcategory_3);
-    if (question.subcategory_4) subcategories.push(question.subcategory_4);
-    if (question.subcategory_5) subcategories.push(question.subcategory_5);
-    return subcategories;
-  };
-
-  const initiators = getInitiatorInfo(question);
-  const subcategories = getSubcategoriesDisplay(question);
-
   return (
     <div
       ref={setNodeRef}
@@ -97,7 +63,7 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         isDragging ? 'opacity-50 shadow-lg scale-105 z-50' : 'hover:shadow-md'
       }`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         {/* Drag Handle */}
         <div
           {...attributes}
@@ -113,7 +79,7 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         </div>
 
         {/* Answer ID */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 w-32 flex justify-center">
           {question.answer_id ? (
             <Badge variant="outline" className="font-mono text-xs">
               {question.answer_id}
@@ -124,41 +90,10 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         </div>
 
         {/* Type */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 w-32 flex justify-center">
           <Badge variant="secondary">
             {question.item_type}
           </Badge>
-        </div>
-
-        {/* Subcategories */}
-        <div className="flex-shrink-0 min-w-0 max-w-40">
-          {subcategories.length > 0 ? (
-            <div className="space-y-1">
-              {subcategories.slice(0, 2).map((sub, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {sub}
-                </Badge>
-              ))}
-              {subcategories.length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{subcategories.length - 2} more
-                </Badge>
-              )}
-            </div>
-          ) : (
-            <span className="text-muted-foreground text-sm">—</span>
-          )}
-        </div>
-
-        {/* Initiators */}
-        <div className="flex-shrink-0">
-          {initiators.length > 0 ? (
-            <Badge variant="default" className="text-xs">
-              {initiators.length} initiator{initiators.length > 1 ? 's' : ''}
-            </Badge>
-          ) : (
-            <span className="text-muted-foreground text-sm">—</span>
-          )}
         </div>
 
         {/* Actions */}
