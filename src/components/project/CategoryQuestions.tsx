@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
 import { useConditionalLogic } from '@/hooks/useConditionalLogic';
+import { ChecklistItemService } from '@/services/checklistItemService';
 import ConditionalLogicLoader from './ConditionalLogicLoader';
 import MainQuestionsRenderer from './questions/MainQuestionsRenderer';
 import AdditionalQuestionsRenderer from './questions/AdditionalQuestionsRenderer';
@@ -46,10 +47,16 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     validateAndConvertValue,
   } = useTypedChecklistItems(projectId!, categoryId, participantDesignation);
 
-  // Stable memoized category items
+  // Enhanced category items filtering using proper database fields
   const categoryItems = useMemo(() => {
     return items
-      .filter(item => item.categoryId === categoryId && !item.typedValue.textValue?.includes('subcategory'))
+      .filter(item => {
+        // Only include items from the current category
+        if (item.categoryId !== categoryId) return false;
+        
+        // Use proper question classification logic
+        return ChecklistItemService.isMainQuestion(item);
+      })
       .sort((a, b) => (a.priority || 0) - (b.priority || 0));
   }, [items, categoryId]);
 

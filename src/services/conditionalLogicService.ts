@@ -62,7 +62,7 @@ export class ConditionalLogicService {
   }
 
   /**
-   * Enhanced save-triggered evaluation with better preservation logic
+   * Enhanced save-triggered evaluation with better preservation logic and conditional question creation
    */
   static async evaluateLogicOnSave(params: SaveTriggeredEvaluationParams): Promise<ConditionalLogicResult> {
     try {
@@ -116,6 +116,16 @@ export class ConditionalLogicService {
         subcategoriesChanged
       );
 
+      // Create conditional questions for newly activated subcategories
+      if (uniqueNewSubcategories.length > 0) {
+        await this.createConditionalQuestions(
+          projectId,
+          categoryId,
+          participantDesignation,
+          uniqueNewSubcategories
+        );
+      }
+
       return {
         subcategories: uniqueNewSubcategories,
         targetCategoryId: categoryId,
@@ -124,6 +134,74 @@ export class ConditionalLogicService {
     } catch (error) {
       console.error('Error in enhanced conditional logic evaluation:', error);
       return { subcategories: [], preservedAnswers: {} };
+    }
+  }
+
+  /**
+   * Create conditional questions for activated subcategories
+   */
+  static async createConditionalQuestions(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: Database['public']['Enums']['participant_designation'],
+    activeSubcategories: string[] = []
+  ) {
+    try {
+      console.log('Creating conditional questions for subcategories:', activeSubcategories);
+      
+      // Get all required items that match the active subcategories and are NOT initiators
+      const { data: conditionalItems, error } = await supabase
+        .from('required_items')
+        .select('*')
+        .eq('category_id', categoryId)
+        .in('subcategory', activeSubcategories)
+        .eq('subcategory_1_initiator', false)
+        .eq('subcategory_2_initiator', false);
+
+      if (error) {
+        console.error('Error fetching conditional items:', error);
+        return;
+      }
+
+      if (!conditionalItems || conditionalItems.length === 0) {
+        console.log('No conditional items found for subcategories');
+        return;
+      }
+
+      // Create checklist items for each conditional question
+      const createPromises = conditionalItems.map(async (item) => {
+        const insertData: any = {
+          project_id: projectId,
+          item_id: item.id,
+          status: 'pending'
+        };
+
+        // Handle participant designation based on item scope
+        if (item.scope === 'PARTICIPANT' && participantDesignation) {
+          insertData.participant_designation = participantDesignation;
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from('project_checklist_items')
+            .insert(insertData)
+            .select()
+            .single();
+
+          if (error && error.code !== '23505') { // Ignore duplicate key errors
+            console.error(`Error creating conditional question ${item.item_name}:`, error);
+          } else if (data) {
+            console.log(`Created conditional question: ${item.item_name}`);
+          }
+        } catch (err) {
+          console.error(`Exception creating conditional question ${item.item_name}:`, err);
+        }
+      });
+
+      await Promise.all(createPromises);
+      console.log('Finished creating conditional questions');
+    } catch (error) {
+      console.error('Error in createConditionalQuestions:', error);
     }
   }
 

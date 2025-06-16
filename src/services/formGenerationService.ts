@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -49,7 +48,7 @@ export class FormGenerationService {
         };
       }
 
-      // Get all required items
+      // Get all required items with enhanced subcategory information
       const { data: allItems, error: itemsError } = await supabase
         .from('required_items')
         .select('*')
@@ -60,9 +59,9 @@ export class FormGenerationService {
         throw new Error(`Failed to fetch required items: ${itemsError.message}`);
       }
 
-      // Apply filtering rules
+      // Apply enhanced filtering rules including subcategory logic
       const applicableItems = this.filterItemsByRules(allItems || [], project);
-      console.log(`📝 Filtered to ${applicableItems.length} applicable items`);
+      console.log(`📝 Filtered to ${applicableItems.length} applicable items (main + initiator questions only)`);
 
       // Generate checklist items
       const result = await this.createChecklistItems(applicableItems, project);
@@ -87,7 +86,7 @@ export class FormGenerationService {
   }
 
   /**
-   * Apply the two core filtering rules
+   * Apply the three core filtering rules including subcategory logic
    */
   private static filterItemsByRules(items: RequiredItem[], project: Project): RequiredItem[] {
     return items.filter(item => {
@@ -102,6 +101,16 @@ export class FormGenerationService {
         }
       }
 
+      // Rule 3: Only include main questions and initiator questions
+      const isMainQuestion = !item.subcategory;
+      const isInitiatorQuestion = item.subcategory_1_initiator === true || item.subcategory_2_initiator === true;
+      
+      if (!isMainQuestion && !isInitiatorQuestion) {
+        console.log(`Skipping conditional item ${item.item_name}: has subcategory '${item.subcategory}' but is not an initiator`);
+        return false;
+      }
+
+      console.log(`Including item ${item.item_name}: ${isMainQuestion ? 'main question' : 'initiator question'}`);
       return true;
     });
   }

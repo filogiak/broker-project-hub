@@ -1,40 +1,213 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-type ChecklistItem = Database['public']['Tables']['project_checklist_items']['Row'];
-type ChecklistItemInsert = Database['public']['Tables']['project_checklist_items']['Insert'];
-type ChecklistItemUpdate = Database['public']['Tables']['project_checklist_items']['Update'];
-type RequiredItem = Database['public']['Tables']['required_items']['Row'];
+type ProjectChecklistItem = Database['public']['Tables']['project_checklist_items']['Row'];
+type ChecklistStatus = Database['public']['Enums']['checklist_status'];
 type ItemType = Database['public']['Enums']['item_type'];
 type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
 export interface TypedChecklistItemValue {
-  textValue?: string;
-  numericValue?: number;
-  dateValue?: string;
-  booleanValue?: boolean;
-  jsonValue?: any;
-  documentReferenceId?: string;
+  textValue?: string | null;
+  numericValue?: number | null;
+  dateValue?: string | null;
+  booleanValue?: boolean | null;
+  jsonValue?: any | null;
+  documentReferenceId?: string | null;
 }
 
 export interface TypedChecklistItem {
   id: string;
   projectId: string;
   itemId: string;
-  participantDesignation?: ParticipantDesignation;
-  status: Database['public']['Enums']['checklist_status'];
+  participantDesignation?: ParticipantDesignation | null;
+  status: ChecklistStatus;
   createdAt: string;
   updatedAt: string;
   itemName: string;
   itemType: ItemType;
   scope: Database['public']['Enums']['item_scope'];
-  categoryId?: string;
-  priority?: number;
-  displayValue?: string;
+  categoryId?: string | null;
+  priority?: number | null;
+  displayValue?: any;
   typedValue: TypedChecklistItemValue;
+  
+  // New fields for subcategory logic
+  subcategory?: string | null;
+  subcategory1Initiator?: boolean | null;
+  subcategory2Initiator?: boolean | null;
 }
 
 export class ChecklistItemService {
+  /**
+   * Get checklist items for a project category with enhanced subcategory information
+   */
+  static async getChecklistItemsByCategory(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: ParticipantDesignation
+  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
+    try {
+      let query = supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items!inner (
+            item_name,
+            item_type,
+            scope,
+            category_id,
+            priority,
+            subcategory,
+            subcategory_1_initiator,
+            subcategory_2_initiator
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('required_items.category_id', categoryId);
+
+      if (participantDesignation) {
+        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching checklist items:', error);
+        return { data: null, error };
+      }
+
+      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
+        const requiredItem = item.required_items as any;
+        return {
+          id: item.id,
+          projectId: item.project_id,
+          itemId: item.item_id,
+          participantDesignation: item.participant_designation,
+          status: item.status,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          itemName: requiredItem?.item_name || '',
+          itemType: requiredItem?.item_type || 'text',
+          scope: requiredItem?.scope || 'PROJECT',
+          categoryId: requiredItem?.category_id,
+          priority: requiredItem?.priority || 0,
+          displayValue: this.getDisplayValue({
+            typedValue: {
+              textValue: item.text_value,
+              numericValue: item.numeric_value,
+              dateValue: item.date_value,
+              booleanValue: item.boolean_value,
+              jsonValue: item.json_value,
+              documentReferenceId: item.document_reference_id,
+            },
+            itemType: requiredItem?.item_type || 'text',
+          } as TypedChecklistItem),
+          typedValue: {
+            textValue: item.text_value,
+            numericValue: item.numeric_value,
+            dateValue: item.date_value,
+            booleanValue: item.boolean_value,
+            jsonValue: item.json_value,
+            documentReferenceId: item.document_reference_id,
+          },
+          // Enhanced subcategory fields
+          subcategory: requiredItem?.subcategory,
+          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
+          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+        };
+      });
+
+      return { data: typedItems, error: null };
+    } catch (err) {
+      console.error('Exception in getChecklistItemsByCategory:', err);
+      return { data: null, error: err };
+    }
+  }
+
+  /**
+   * Get all checklist items for a project with enhanced subcategory information
+   */
+  static async getProjectChecklistItems(
+    projectId: string,
+    participantDesignation?: ParticipantDesignation
+  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
+    try {
+      let query = supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items!inner (
+            item_name,
+            item_type,
+            scope,
+            category_id,
+            priority,
+            subcategory,
+            subcategory_1_initiator,
+            subcategory_2_initiator
+          )
+        `)
+        .eq('project_id', projectId);
+
+      if (participantDesignation) {
+        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching project checklist items:', error);
+        return { data: null, error };
+      }
+
+      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
+        const requiredItem = item.required_items as any;
+        return {
+          id: item.id,
+          projectId: item.project_id,
+          itemId: item.item_id,
+          participantDesignation: item.participant_designation,
+          status: item.status,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          itemName: requiredItem?.item_name || '',
+          itemType: requiredItem?.item_type || 'text',
+          scope: requiredItem?.scope || 'PROJECT',
+          categoryId: requiredItem?.category_id,
+          priority: requiredItem?.priority || 0,
+          displayValue: this.getDisplayValue({
+            typedValue: {
+              textValue: item.text_value,
+              numericValue: item.numeric_value,
+              dateValue: item.date_value,
+              booleanValue: item.boolean_value,
+              jsonValue: item.json_value,
+              documentReferenceId: item.document_reference_id,
+            },
+            itemType: requiredItem?.item_type || 'text',
+          } as TypedChecklistItem),
+          typedValue: {
+            textValue: item.text_value,
+            numericValue: item.numeric_value,
+            dateValue: item.date_value,
+            booleanValue: item.boolean_value,
+            jsonValue: item.json_value,
+            documentReferenceId: item.document_reference_id,
+          },
+          // Enhanced subcategory fields
+          subcategory: requiredItem?.subcategory,
+          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
+          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+        };
+      });
+
+      return { data: typedItems, error: null };
+    } catch (err) {
+      console.error('Exception in getProjectChecklistItems:', err);
+      return { data: null, error: err };
+    }
+  }
+
   /**
    * Creates a new checklist item with proper type validation
    */
@@ -43,24 +216,37 @@ export class ChecklistItemService {
     itemId: string,
     value: TypedChecklistItemValue,
     participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const insertData: ChecklistItemInsert = {
-      project_id: projectId,
-      item_id: itemId,
-      participant_designation: participantDesignation,
-      text_value: value.textValue,
-      numeric_value: value.numericValue,
-      date_value: value.dateValue,
-      boolean_value: value.booleanValue,
-      json_value: value.jsonValue,
-      document_reference_id: value.documentReferenceId,
-    };
+  ): Promise<{ data: any; error: any }> {
+    try {
+      const insertData: any = {
+        project_id: projectId,
+        item_id: itemId,
+        status: 'pending',
+      };
 
-    return await supabase
-      .from('project_checklist_items')
-      .insert(insertData)
-      .select()
-      .single();
+      if (participantDesignation) {
+        insertData.participant_designation = participantDesignation;
+      }
+
+      // Set the appropriate value field based on the value type
+      if (value.textValue !== undefined) insertData.text_value = value.textValue;
+      if (value.numericValue !== undefined) insertData.numeric_value = value.numericValue;
+      if (value.dateValue !== undefined) insertData.date_value = value.dateValue;
+      if (value.booleanValue !== undefined) insertData.boolean_value = value.booleanValue;
+      if (value.jsonValue !== undefined) insertData.json_value = value.jsonValue;
+      if (value.documentReferenceId !== undefined) insertData.document_reference_id = value.documentReferenceId;
+
+      const { data, error } = await supabase
+        .from('project_checklist_items')
+        .insert(insertData)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (err) {
+      console.error('Exception in createChecklistItem:', err);
+      return { data: null, error: err };
+    }
   }
 
   /**
@@ -69,196 +255,67 @@ export class ChecklistItemService {
   static async updateChecklistItem(
     itemId: string,
     value: TypedChecklistItemValue,
-    status?: Database['public']['Enums']['checklist_status']
-  ): Promise<{ data: ChecklistItem | null; error: any }> {
-    const updateData: ChecklistItemUpdate = {
-      text_value: value.textValue,
-      numeric_value: value.numericValue,
-      date_value: value.dateValue,
-      boolean_value: value.booleanValue,
-      json_value: value.jsonValue,
-      document_reference_id: value.documentReferenceId,
-      status: status,
-      updated_at: new Date().toISOString(),
-    };
-
-    return await supabase
-      .from('project_checklist_items')
-      .update(updateData)
-      .eq('id', itemId)
-      .select()
-      .single();
-  }
-
-  /**
-   * Retrieves typed checklist items for a project with proper typing and priority ordering
-   */
-  static async getProjectChecklistItems(
-    projectId: string,
-    participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
-    // Query the project_checklist_items table and join with required_items for metadata
-    let query = supabase
-      .from('project_checklist_items')
-      .select(`
-        *,
-        required_items (
-          item_name,
-          item_type,
-          scope,
-          category_id,
-          priority
-        )
-      `)
-      .eq('project_id', projectId);
-
-    if (participantDesignation) {
-      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    // Transform the data to include properly typed values
-    const typedData: TypedChecklistItem[] = data?.map(item => {
-      const requiredItem = item.required_items as any;
-      return {
-        id: item.id,
-        projectId: item.project_id,
-        itemId: item.item_id,
-        participantDesignation: item.participant_designation,
-        status: item.status,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        itemName: requiredItem?.item_name || '',
-        itemType: requiredItem?.item_type || 'text',
-        scope: requiredItem?.scope || 'PROJECT',
-        categoryId: requiredItem?.category_id,
-        priority: requiredItem?.priority || 0,
-        displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
-        typedValue: {
-          textValue: item.text_value,
-          numericValue: item.numeric_value,
-          dateValue: item.date_value,
-          booleanValue: item.boolean_value,
-          jsonValue: item.json_value,
-          documentReferenceId: item.document_reference_id,
-        },
+    status?: ChecklistStatus
+  ): Promise<{ data: any; error: any }> {
+    try {
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
       };
-    }) || [];
 
-    // Sort by priority
-    typedData.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+      if (status) {
+        updateData.status = status;
+      }
 
-    return { data: typedData, error: null };
-  }
+      // Set the appropriate value field based on the value type
+      if (value.textValue !== undefined) updateData.text_value = value.textValue;
+      if (value.numericValue !== undefined) updateData.numeric_value = value.numericValue;
+      if (value.dateValue !== undefined) updateData.date_value = value.dateValue;
+      if (value.booleanValue !== undefined) updateData.boolean_value = value.booleanValue;
+      if (value.jsonValue !== undefined) updateData.json_value = value.jsonValue;
+      if (value.documentReferenceId !== undefined) updateData.document_reference_id = value.documentReferenceId;
 
-  /**
-   * Gets checklist items by category for a project
-   */
-  static async getChecklistItemsByCategory(
-    projectId: string,
-    categoryId: string,
-    participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
-    // Query with category filter directly in the database query for better performance
-    let query = supabase
-      .from('project_checklist_items')
-      .select(`
-        *,
-        required_items!inner (
-          item_name,
-          item_type,
-          scope,
-          category_id,
-          priority
-        )
-      `)
-      .eq('project_id', projectId)
-      .eq('required_items.category_id', categoryId);
+      const { data, error } = await supabase
+        .from('project_checklist_items')
+        .update(updateData)
+        .eq('id', itemId)
+        .select()
+        .single();
 
-    if (participantDesignation) {
-      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+      return { data, error };
+    } catch (err) {
+      console.error('Exception in updateChecklistItem:', err);
+      return { data: null, error: err };
     }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    // Transform the data to include properly typed values
-    const typedData: TypedChecklistItem[] = data?.map(item => {
-      const requiredItem = item.required_items as any;
-      return {
-        id: item.id,
-        projectId: item.project_id,
-        itemId: item.item_id,
-        participantDesignation: item.participant_designation,
-        status: item.status,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        itemName: requiredItem?.item_name || '',
-        itemType: requiredItem?.item_type || 'text',
-        scope: requiredItem?.scope || 'PROJECT',
-        categoryId: requiredItem?.category_id,
-        priority: requiredItem?.priority || 0,
-        displayValue: this.getDisplayValueFromItem(item, requiredItem?.item_type),
-        typedValue: {
-          textValue: item.text_value,
-          numericValue: item.numeric_value,
-          dateValue: item.date_value,
-          booleanValue: item.boolean_value,
-          jsonValue: item.json_value,
-          documentReferenceId: item.document_reference_id,
-        },
-      };
-    }) || [];
-
-    // Sort by priority
-    typedData.sort((a, b) => (a.priority || 0) - (b.priority || 0));
-
-    return { data: typedData, error: null };
   }
 
   /**
    * Validates and converts input value based on item type
    */
   static validateAndConvertValue(itemType: ItemType, inputValue: any): TypedChecklistItemValue {
+    const result: TypedChecklistItemValue = {};
+
     switch (itemType) {
       case 'text':
       case 'single_choice_dropdown':
-        return { textValue: String(inputValue) };
-      
+        result.textValue = inputValue ? String(inputValue) : null;
+        break;
       case 'number':
-        const numericValue = Number(inputValue);
-        if (isNaN(numericValue)) {
-          throw new Error(`Invalid numeric value: ${inputValue}`);
-        }
-        return { numericValue };
-      
+        result.numericValue = inputValue ? Number(inputValue) : null;
+        break;
       case 'date':
-        const dateValue = new Date(inputValue).toISOString().split('T')[0];
-        if (!dateValue || dateValue === 'Invalid Date') {
-          throw new Error(`Invalid date value: ${inputValue}`);
-        }
-        return { dateValue };
-      
+        result.dateValue = inputValue ? String(inputValue) : null;
+        break;
+      case 'boolean':
+        result.booleanValue = inputValue ? Boolean(inputValue) : null;
+        break;
       case 'multiple_choice_checkbox':
-        if (!Array.isArray(inputValue)) {
-          throw new Error(`Multiple choice value must be an array: ${inputValue}`);
-        }
-        return { jsonValue: inputValue };
-      
-      case 'document':
-        return { documentReferenceId: String(inputValue) };
-      
+        result.jsonValue = Array.isArray(inputValue) ? inputValue : [];
+        break;
       default:
-        throw new Error(`Unsupported item type: ${itemType}`);
+        result.textValue = inputValue ? String(inputValue) : null;
     }
+
+    return result;
   }
 
   /**
@@ -292,7 +349,7 @@ export class ChecklistItemService {
   /**
    * Gets the display value from a typed checklist item
    */
-  static getDisplayValue(item: TypedChecklistItem): string {
+  static getDisplayValue(item: TypedChecklistItem): any {
     const { typedValue, itemType } = item;
     
     switch (itemType) {
@@ -301,7 +358,7 @@ export class ChecklistItemService {
         return typedValue.textValue || '';
       
       case 'number':
-        return typedValue.numericValue?.toString() || '';
+        return typedValue.numericValue || '';
       
       case 'date':
         return typedValue.dateValue || '';
@@ -317,5 +374,24 @@ export class ChecklistItemService {
       default:
         return '';
     }
+  }
+
+  /**
+   * Question classification helper functions
+   */
+  static isMainQuestion(item: TypedChecklistItem): boolean {
+    return (
+      !item.subcategory || 
+      item.subcategory1Initiator === true || 
+      item.subcategory2Initiator === true
+    );
+  }
+
+  static isConditionalQuestion(item: TypedChecklistItem): boolean {
+    return (
+      !!item.subcategory && 
+      item.subcategory1Initiator !== true && 
+      item.subcategory2Initiator !== true
+    );
   }
 }
