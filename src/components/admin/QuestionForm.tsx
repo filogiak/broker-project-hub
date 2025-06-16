@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -76,6 +75,7 @@ const ALL_PROJECT_TYPES: ProjectType[] = PROJECT_TYPE_OPTIONS.map(option => opti
 
 const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProps) => {
   const [categories, setCategories] = useState<any[]>([]);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<QuestionOption[]>([]);
   const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
@@ -99,18 +99,27 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     }
   });
 
+  // Effect 1: Load categories on component mount
   useEffect(() => {
     loadCategories();
-    
-    // Set edit mode and initialize form data
+  }, []);
+
+  // Effect 2: Initialize form data after categories are loaded
+  useEffect(() => {
+    // Only proceed if categories are loaded
+    if (!categoriesLoaded) return;
+
     if (editingQuestion) {
       setIsEditMode(true);
       const editProjectTypes = editingQuestion.project_types_applicable || [];
       
+      // Validate that the category still exists
+      const categoryExists = categories.some(cat => cat.id === editingQuestion.category_id);
+      
       form.reset({
         item_name: editingQuestion.item_name,
         answer_id: editingQuestion.answer_id || '',
-        category_id: editingQuestion.category_id,
+        category_id: categoryExists ? editingQuestion.category_id : undefined,
         subcategory: editingQuestion.subcategory || '',
         subcategory_2: editingQuestion.subcategory_2 || '',
         subcategory_1_initiator: editingQuestion.subcategory_1_initiator || false,
@@ -128,21 +137,48 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       if (editingQuestion.item_options) {
         setOptions(editingQuestion.item_options);
       }
+      
+      // Log for debugging
+      console.log('Edit mode initialized:', {
+        categoryId: editingQuestion.category_id,
+        categoryExists,
+        categories: categories.length
+      });
     } else {
       // New question mode - use all project types as default
       setIsEditMode(false);
       setSelectedProjectTypes(ALL_PROJECT_TYPES);
       form.setValue('project_types_applicable', ALL_PROJECT_TYPES);
+      
+      // Reset form to defaults for new question
+      form.reset({
+        item_name: '',
+        answer_id: '',
+        category_id: undefined,
+        subcategory: '',
+        subcategory_2: '',
+        subcategory_1_initiator: false,
+        subcategory_2_initiator: false,
+        priority: 0,
+        scope: 'PROJECT',
+        item_type: 'text',
+        project_types_applicable: ALL_PROJECT_TYPES,
+        validation_rules: {}
+      });
+      setOptions([]);
     }
-  }, [editingQuestion, form]);
+  }, [editingQuestion, categoriesLoaded, categories, form]);
 
   const loadCategories = async () => {
     try {
       const data = await questionService.getItemsCategories();
       setCategories(data);
+      setCategoriesLoaded(true);
+      console.log('Categories loaded:', data.length);
     } catch (error) {
       console.error('Error loading categories:', error);
       toast.error('Failed to load categories');
+      setCategoriesLoaded(true); // Set to true even on error to prevent infinite loading
     }
   };
 
@@ -229,6 +265,22 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
 
   const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
 
+  // Don't render the form until categories are loaded
+  if (!categoriesLoaded) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-sm text-muted-foreground">Loading categories...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -278,9 +330,8 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select 
-                    key={`category-${editingQuestion?.id || 'new'}`}
                     onValueChange={field.onChange} 
-                    value={field.value || undefined}
+                    value={field.value || ''}
                   >
                     <FormControl>
                       <SelectTrigger>
