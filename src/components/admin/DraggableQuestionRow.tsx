@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,13 +86,6 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           ) : (
             <span className="text-muted-foreground text-sm">—</span>
           )}
-        </div>
-
-        {/* Type */}
-        <div className="flex-shrink-0 w-32 flex justify-center">
-          <Badge variant="secondary">
-            {question.item_type}
-          </Badge>
         </div>
 
         {/* Actions */}
