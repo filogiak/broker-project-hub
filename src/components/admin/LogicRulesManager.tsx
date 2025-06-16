@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,24 +128,43 @@ const LogicRulesManager = () => {
         throw categoriesError;
       }
 
-      // Fetch unique subcategories
+      // Fetch ALL subcategories from ALL 5 subcategory fields
       const { data: subcategoriesData, error: subcategoriesError } = await supabase
         .from('required_items')
-        .select('subcategory')
-        .not('subcategory', 'is', null)
-        .neq('subcategory', '');
+        .select('subcategory, subcategory_2, subcategory_3, subcategory_4, subcategory_5');
 
       if (subcategoriesError) {
         console.error('Error fetching subcategories:', subcategoriesError);
         throw subcategoriesError;
       }
 
-      // Extract unique subcategories and remove duplicates
-      const uniqueSubcategories = [...new Set(
-        subcategoriesData
-          ?.map(item => item.subcategory)
-          .filter(subcategory => subcategory && subcategory.trim() !== '') || []
-      )].sort();
+      // Extract unique subcategories from all 5 fields and remove duplicates
+      const allSubcategories = new Set<string>();
+      
+      subcategoriesData?.forEach(item => {
+        // Add subcategory (subcategory_1)
+        if (item.subcategory && item.subcategory.trim() !== '') {
+          allSubcategories.add(item.subcategory);
+        }
+        // Add subcategory_2
+        if (item.subcategory_2 && item.subcategory_2.trim() !== '') {
+          allSubcategories.add(item.subcategory_2);
+        }
+        // Add subcategory_3
+        if (item.subcategory_3 && item.subcategory_3.trim() !== '') {
+          allSubcategories.add(item.subcategory_3);
+        }
+        // Add subcategory_4
+        if (item.subcategory_4 && item.subcategory_4.trim() !== '') {
+          allSubcategories.add(item.subcategory_4);
+        }
+        // Add subcategory_5
+        if (item.subcategory_5 && item.subcategory_5.trim() !== '') {
+          allSubcategories.add(item.subcategory_5);
+        }
+      });
+
+      const uniqueSubcategories = Array.from(allSubcategories).sort();
 
       // Process rules data with defensive programming
       const processedRules = rulesData?.map(rule => {
