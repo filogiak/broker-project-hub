@@ -129,24 +129,29 @@ const LogicRulesManager = () => {
         throw categoriesError;
       }
 
-      // Fetch unique subcategories
+      // Fetch unique subcategories from both subcategory fields
       const { data: subcategoriesData, error: subcategoriesError } = await supabase
         .from('required_items')
-        .select('subcategory')
-        .not('subcategory', 'is', null)
-        .neq('subcategory', '');
+        .select('subcategory, subcategory_2')
+        .or('subcategory.not.is.null,subcategory_2.not.is.null');
 
       if (subcategoriesError) {
         console.error('Error fetching subcategories:', subcategoriesError);
         throw subcategoriesError;
       }
 
-      // Extract unique subcategories and remove duplicates
-      const uniqueSubcategories = [...new Set(
-        subcategoriesData
-          ?.map(item => item.subcategory)
-          .filter(subcategory => subcategory && subcategory.trim() !== '') || []
-      )].sort();
+      // Extract unique subcategories from both fields
+      const allSubcategories = new Set<string>();
+      subcategoriesData?.forEach(item => {
+        if (item.subcategory && item.subcategory.trim() !== '') {
+          allSubcategories.add(item.subcategory);
+        }
+        if (item.subcategory_2 && item.subcategory_2.trim() !== '') {
+          allSubcategories.add(item.subcategory_2);
+        }
+      });
+      
+      const uniqueSubcategories = Array.from(allSubcategories).sort();
 
       // Process rules data with defensive programming
       const processedRules = rulesData?.map(rule => {

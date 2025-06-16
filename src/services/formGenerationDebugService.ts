@@ -105,7 +105,7 @@ export class FormGenerationDebugService {
   }
 
   /**
-   * Analyze required items statistics
+   * Analyze required items statistics - RESTORED
    */
   private static analyzeRequiredItems(items: any[]) {
     const stats = {
@@ -160,7 +160,7 @@ export class FormGenerationDebugService {
   }
 
   /**
-   * Analyze checklist items and identify problems
+   * Analyze checklist items and identify problems - RESTORED
    */
   private static analyzeChecklistItems(checklistItems: any[], requiredItems: any[]) {
     const stats = {

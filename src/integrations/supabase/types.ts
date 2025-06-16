@@ -862,6 +862,10 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope: Database["public"]["Enums"]["item_scope"]
+          subcategory: string | null
+          subcategory_1_initiator: boolean | null
+          subcategory_2: string | null
+          subcategory_2_initiator: boolean | null
           updated_at: string
           validation_rules: Json | null
         }
@@ -878,6 +882,10 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope?: Database["public"]["Enums"]["item_scope"]
+          subcategory?: string | null
+          subcategory_1_initiator?: boolean | null
+          subcategory_2?: string | null
+          subcategory_2_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }
@@ -894,6 +902,10 @@ export type Database = {
             | Database["public"]["Enums"]["project_type"][]
             | null
           scope?: Database["public"]["Enums"]["item_scope"]
+          subcategory?: string | null
+          subcategory_1_initiator?: boolean | null
+          subcategory_2?: string | null
+          subcategory_2_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }

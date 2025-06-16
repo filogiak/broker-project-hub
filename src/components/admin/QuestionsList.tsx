@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Search, MoreHorizontal, Edit2, Trash2, Plus, Settings } from 'lucide-react';
+import { Search, MoreHorizontal, Edit2, Trash2, Plus, Settings, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 
@@ -86,6 +86,41 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
     return scope === 'PROJECT' ? 'Project' : 'Participant';
   };
 
+  const getQuestionTypeIndicators = (question: any) => {
+    const indicators = [];
+    
+    // Traditional subcategory initiators
+    if (question.subcategory_1_initiator) {
+      indicators.push(
+        <div key="sub1" className="flex items-center gap-1">
+          <Settings className="h-3 w-3 text-blue-500" />
+          <span className="text-xs text-blue-600">Sub1 Initiator</span>
+        </div>
+      );
+    }
+    
+    if (question.subcategory_2_initiator) {
+      indicators.push(
+        <div key="sub2" className="flex items-center gap-1">
+          <Settings className="h-3 w-3 text-green-500" />
+          <span className="text-xs text-green-600">Sub2 Initiator</span>
+        </div>
+      );
+    }
+    
+    // New multi-flow initiator
+    if (question.is_multi_flow_initiator) {
+      indicators.push(
+        <div key="multi" className="flex items-center gap-1">
+          <Layers className="h-3 w-3 text-purple-500" />
+          <span className="text-xs text-purple-600">Multi-Flow</span>
+        </div>
+      );
+    }
+    
+    return indicators;
+  };
+
   if (loading) {
     return (
       <Card>
@@ -149,6 +184,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                     <TableHead>Question</TableHead>
                     <TableHead>Answer ID</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Subcategory</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Scope</TableHead>
                     <TableHead>Priority</TableHead>
@@ -163,12 +199,9 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                       <TableCell>
                         <div>
                           <div className="font-medium">{question.item_name}</div>
-                          {question.is_multi_flow_initiator && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Settings className="h-3 w-3 text-blue-500" />
-                              <span className="text-xs text-blue-600">Multi-Flow Initiator</span>
-                            </div>
-                          )}
+                          <div className="flex flex-col gap-1 mt-1">
+                            {getQuestionTypeIndicators(question)}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -182,6 +215,19 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                       </TableCell>
                       <TableCell>
                         {question.items_categories?.name || 'No Category'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {question.subcategory && (
+                            <div>Main: {question.subcategory}</div>
+                          )}
+                          {question.subcategory_2 && (
+                            <div>Sub2: {question.subcategory_2}</div>
+                          )}
+                          {!question.subcategory && !question.subcategory_2 && (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">

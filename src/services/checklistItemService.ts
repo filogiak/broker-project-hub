@@ -31,13 +31,16 @@ export interface TypedChecklistItem {
   displayValue?: any;
   typedValue: TypedChecklistItemValue;
   
-  // Updated fields for new multi-flow logic
+  // Enhanced fields for both traditional and new multi-flow logic
+  subcategory?: string | null;
+  subcategory1Initiator?: boolean | null;
+  subcategory2Initiator?: boolean | null;
   isMultiFlowInitiator?: boolean | null;
 }
 
 export class ChecklistItemService {
   /**
-   * Get checklist items for a project category with enhanced multi-flow information
+   * Get checklist items for a project category with enhanced information
    */
   static async getChecklistItemsByCategory(
     projectId: string,
@@ -55,6 +58,9 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
+            subcategory,
+            subcategory_1_initiator,
+            subcategory_2_initiator,
             is_multi_flow_initiator
           )
         `)
@@ -72,44 +78,7 @@ export class ChecklistItemService {
         return { data: null, error };
       }
 
-      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
-        const requiredItem = item.required_items as any;
-        return {
-          id: item.id,
-          projectId: item.project_id,
-          itemId: item.item_id,
-          participantDesignation: item.participant_designation,
-          status: item.status,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          itemName: requiredItem?.item_name || '',
-          itemType: requiredItem?.item_type || 'text',
-          scope: requiredItem?.scope || 'PROJECT',
-          categoryId: requiredItem?.category_id,
-          priority: requiredItem?.priority || 0,
-          displayValue: this.getDisplayValue({
-            typedValue: {
-              textValue: item.text_value,
-              numericValue: item.numeric_value,
-              dateValue: item.date_value,
-              booleanValue: item.boolean_value,
-              jsonValue: item.json_value,
-              documentReferenceId: item.document_reference_id,
-            },
-            itemType: requiredItem?.item_type || 'text',
-          } as TypedChecklistItem),
-          typedValue: {
-            textValue: item.text_value,
-            numericValue: item.numeric_value,
-            dateValue: item.date_value,
-            booleanValue: item.boolean_value,
-            jsonValue: item.json_value,
-            documentReferenceId: item.document_reference_id,
-          },
-          // Updated field for multi-flow logic
-          isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
-        };
-      });
+      const typedItems: TypedChecklistItem[] = (data || []).map(item => this.transformToTypedItem(item));
 
       return { data: typedItems, error: null };
     } catch (err) {
@@ -119,7 +88,7 @@ export class ChecklistItemService {
   }
 
   /**
-   * Get all checklist items for a project with enhanced multi-flow information
+   * Get all checklist items for a project with enhanced information
    */
   static async getProjectChecklistItems(
     projectId: string,
@@ -136,6 +105,9 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
+            subcategory,
+            subcategory_1_initiator,
+            subcategory_2_initiator,
             is_multi_flow_initiator
           )
         `)
@@ -152,44 +124,7 @@ export class ChecklistItemService {
         return { data: null, error };
       }
 
-      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
-        const requiredItem = item.required_items as any;
-        return {
-          id: item.id,
-          projectId: item.project_id,
-          itemId: item.item_id,
-          participantDesignation: item.participant_designation,
-          status: item.status,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          itemName: requiredItem?.item_name || '',
-          itemType: requiredItem?.item_type || 'text',
-          scope: requiredItem?.scope || 'PROJECT',
-          categoryId: requiredItem?.category_id,
-          priority: requiredItem?.priority || 0,
-          displayValue: this.getDisplayValue({
-            typedValue: {
-              textValue: item.text_value,
-              numericValue: item.numeric_value,
-              dateValue: item.date_value,
-              booleanValue: item.boolean_value,
-              jsonValue: item.json_value,
-              documentReferenceId: item.document_reference_id,
-            },
-            itemType: requiredItem?.item_type || 'text',
-          } as TypedChecklistItem),
-          typedValue: {
-            textValue: item.text_value,
-            numericValue: item.numeric_value,
-            dateValue: item.date_value,
-            booleanValue: item.boolean_value,
-            jsonValue: item.json_value,
-            documentReferenceId: item.document_reference_id,
-          },
-          // Updated field for multi-flow logic
-          isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
-        };
-      });
+      const typedItems: TypedChecklistItem[] = (data || []).map(item => this.transformToTypedItem(item));
 
       return { data: typedItems, error: null };
     } catch (err) {
@@ -367,15 +302,25 @@ export class ChecklistItemService {
   }
 
   /**
-   * Updated question classification helper functions using new schema
+   * Enhanced question classification supporting both traditional and new multi-flow logic
    */
   static async isMainQuestion(item: TypedChecklistItem): Promise<boolean> {
-    // Case 1: Multi-flow initiator questions (directly marked in database)
+    // Case 1: Traditional subcategory initiators
+    if (item.subcategory1Initiator || item.subcategory2Initiator) {
+      return true;
+    }
+    
+    // Case 2: New multi-flow initiator questions
     if (item.isMultiFlowInitiator) {
       return true;
     }
     
-    // Case 2: Check if this question triggers any logic rules (dynamic check)
+    // Case 3: Questions without subcategory (main questions)
+    if (!item.subcategory) {
+      return true;
+    }
+    
+    // Case 4: Check if this question triggers any logic rules (dynamic check)
     return await this.hasLogicRules(item.itemId);
   }
 
@@ -407,17 +352,27 @@ export class ChecklistItemService {
    * Synchronous version for when logic rules status is pre-determined
    */
   static isMainQuestionSync(item: TypedChecklistItem, hasLogicRules: boolean = false): boolean {
-    // Case 1: Multi-flow initiator questions
+    // Case 1: Traditional subcategory initiators
+    if (item.subcategory1Initiator || item.subcategory2Initiator) {
+      return true;
+    }
+    
+    // Case 2: New multi-flow initiator questions
     if (item.isMultiFlowInitiator) {
       return true;
     }
     
-    // Case 2: Questions with logic rules (pre-determined)
+    // Case 3: Questions without subcategory (main questions)
+    if (!item.subcategory) {
+      return true;
+    }
+    
+    // Case 4: Questions with logic rules (pre-determined)
     return hasLogicRules;
   }
 
   /**
-   * Transform a raw database item to TypedChecklistItem
+   * Transform a raw database item to TypedChecklistItem - ENHANCED
    */
   static transformToTypedItem(item: any): TypedChecklistItem {
     const requiredItem = item.required_items as any;
@@ -453,7 +408,10 @@ export class ChecklistItemService {
         jsonValue: item.json_value,
         documentReferenceId: item.document_reference_id,
       },
-      // Updated field for new multi-flow logic
+      // Enhanced fields for both traditional and new multi-flow logic
+      subcategory: requiredItem?.subcategory,
+      subcategory1Initiator: requiredItem?.subcategory_1_initiator,
+      subcategory2Initiator: requiredItem?.subcategory_2_initiator,
       isMultiFlowInitiator: requiredItem?.is_multi_flow_initiator,
     };
   }
@@ -479,6 +437,9 @@ export class ChecklistItemService {
             scope,
             category_id,
             priority,
+            subcategory,
+            subcategory_1_initiator,
+            subcategory_2_initiator,
             is_multi_flow_initiator
           )
         `)
