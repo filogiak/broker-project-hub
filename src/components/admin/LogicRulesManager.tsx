@@ -4,9 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTriggerItemDetails } from '@/hooks/useTriggerItemDetails';
 
 interface LogicRule {
   id: string;
@@ -47,9 +49,34 @@ const LogicRulesManager = () => {
     target_category_id: '',
   });
 
+  // State for multiple trigger values (for single choice dropdowns)
+  const [selectedTriggerValues, setSelectedTriggerValues] = useState<string[]>([]);
+
+  // Get trigger item details and options
+  const { itemDetails, options } = useTriggerItemDetails(newRule.trigger_item_id);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Update trigger_value when selectedTriggerValues changes
+  useEffect(() => {
+    if (itemDetails?.hasOptions && selectedTriggerValues.length > 0) {
+      const triggerValue = selectedTriggerValues.length === 1 
+        ? selectedTriggerValues[0] 
+        : JSON.stringify(selectedTriggerValues);
+      
+      setNewRule(prev => ({ ...prev, trigger_value: triggerValue }));
+    }
+  }, [selectedTriggerValues, itemDetails?.hasOptions]);
+
+  // Reset selected trigger values when trigger item changes
+  useEffect(() => {
+    setSelectedTriggerValues([]);
+    if (!itemDetails?.hasOptions) {
+      setNewRule(prev => ({ ...prev, trigger_value: '' }));
+    }
+  }, [newRule.trigger_item_id, itemDetails?.hasOptions]);
 
   const fetchData = async () => {
     try {
@@ -155,6 +182,7 @@ const LogicRulesManager = () => {
         target_subcategory: '',
         target_category_id: '',
       });
+      setSelectedTriggerValues([]);
 
       await fetchData();
     } catch (error) {
@@ -167,6 +195,16 @@ const LogicRulesManager = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleTriggerValueChange = (optionValue: string, checked: boolean) => {
+    setSelectedTriggerValues(prev => {
+      if (checked) {
+        return [...prev, optionValue];
+      } else {
+        return prev.filter(val => val !== optionValue);
+      }
+    });
   };
 
   const handleDeleteRule = async (ruleId: string) => {
@@ -217,6 +255,19 @@ const LogicRulesManager = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // Helper function to display trigger values in rules list
+  const formatTriggerValue = (triggerValue: string) => {
+    try {
+      const parsed = JSON.parse(triggerValue);
+      if (Array.isArray(parsed)) {
+        return parsed.join(', ');
+      }
+    } catch {
+      // Not JSON, return as is
+    }
+    return triggerValue;
   };
 
   if (loading) {
@@ -271,12 +322,40 @@ const LogicRulesManager = () => {
 
             <div className="space-y-2">
               <Label htmlFor="trigger-value">Trigger Value</Label>
-              <Input
-                id="trigger-value"
-                value={newRule.trigger_value}
-                onChange={(e) => setNewRule(prev => ({ ...prev, trigger_value: e.target.value }))}
-                placeholder="Answer that triggers logic"
-              />
+              {itemDetails?.hasOptions ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Select one or more options that should trigger this rule:
+                  </p>
+                  <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
+                    {options.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No options available</p>
+                    ) : (
+                      options.map((option) => (
+                        <div key={option.id} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={`trigger-${option.id}`}
+                            checked={selectedTriggerValues.includes(option.value)}
+                            onCheckedChange={(checked) => 
+                              handleTriggerValueChange(option.value, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={`trigger-${option.id}`} className="text-sm">
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Input
+                  id="trigger-value"
+                  value={newRule.trigger_value}
+                  onChange={(e) => setNewRule(prev => ({ ...prev, trigger_value: e.target.value }))}
+                  placeholder="Answer that triggers logic"
+                />
+              )}
             </div>
 
             <div className="space-y-2">
@@ -356,7 +435,7 @@ const LogicRulesManager = () => {
                         {rule.trigger_item_name || 'Unknown Question'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        When answer = "{rule.trigger_value}" → Show subcategory "{rule.target_subcategory}"
+                        When answer = "{formatTriggerValue(rule.trigger_value)}" → Show subcategory "{rule.target_subcategory}"
                         {rule.target_category_name && (
                           <span> in category "{rule.target_category_name}"</span>
                         )}

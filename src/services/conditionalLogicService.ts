@@ -558,20 +558,39 @@ export class ConditionalLogicService {
   }
 
   /**
-   * Check if two values match for trigger evaluation
+   * Enhanced check if two values match for trigger evaluation
+   * Now supports multiple trigger values stored as JSON arrays for single-choice dropdowns
    */
   private static valuesMatch(currentValue: any, triggerValue: string): boolean {
     if (currentValue === undefined || currentValue === null || currentValue === '') {
       return false;
     }
 
-    // Handle array values (for multiple choice questions)
-    if (Array.isArray(currentValue)) {
-      return currentValue.includes(triggerValue);
+    // Try to parse triggerValue as JSON array (for multiple trigger values)
+    let triggerValues: string[];
+    try {
+      const parsed = JSON.parse(triggerValue);
+      if (Array.isArray(parsed)) {
+        triggerValues = parsed;
+      } else {
+        // Not an array, treat as single value
+        triggerValues = [triggerValue];
+      }
+    } catch {
+      // Not valid JSON, treat as single value
+      triggerValues = [triggerValue];
     }
 
-    // Handle string comparison (case-insensitive)
-    return String(currentValue).toLowerCase() === triggerValue.toLowerCase();
+    // Handle array values (for multiple choice questions)
+    if (Array.isArray(currentValue)) {
+      return triggerValues.some(triggerVal => currentValue.includes(triggerVal));
+    }
+
+    // Handle single values - check if current value matches any of the trigger values
+    const currentValueStr = String(currentValue).toLowerCase();
+    return triggerValues.some(triggerVal => 
+      currentValueStr === String(triggerVal).toLowerCase()
+    );
   }
 
   /**
