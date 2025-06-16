@@ -1,16 +1,14 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
 import { useConditionalLogic } from '@/hooks/useConditionalLogic';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import ConditionalLogicErrorBoundary from './ConditionalLogicErrorBoundary';
 import ConditionalLogicLoader from './ConditionalLogicLoader';
-import QuestionRenderer from './questions/QuestionRenderer';
+import MainQuestionsRenderer from './questions/MainQuestionsRenderer';
+import AdditionalQuestionsRenderer from './questions/AdditionalQuestionsRenderer';
 import { toast } from 'sonner';
 
 interface CategoryQuestionsProps {
@@ -243,177 +241,6 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }
   }, [projectId, additionalQuestions, additionalFormData, validateAndConvertValue, updateItem]);
 
-  // Enhanced MainQuestionsContent with better status indicators
-  const MainQuestionsContent = useCallback(() => {
-    if (categoryItems.length > 0) {
-      return (
-        <div className="space-y-6">
-          {/* Save status indicator */}
-          {(hasUnsavedChanges || saveError || lastSaveTime) && (
-            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
-              <div className="flex items-center space-x-2">
-                {hasUnsavedChanges && (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-orange-700">You have unsaved changes</span>
-                  </>
-                )}
-                {!hasUnsavedChanges && lastSaveTime && (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-700">
-                      Last saved at {lastSaveTime.toLocaleTimeString()}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Error alert */}
-          {saveError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {saveError}. Please try saving again.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="bg-card p-6 rounded-lg border">
-            <div className="space-y-8">
-              {categoryItems.map((item, index) => {
-                const currentValue = formData[item.id] ?? item.displayValue ?? '';
-                
-                return (
-                  <div key={`main-${item.id}`} className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <Label className="text-base font-medium leading-relaxed">
-                        {index + 1}. {item.itemName}
-                        <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                        Priority: {item.priority || 0}
-                      </span>
-                    </div>
-                    <div className="ml-0">
-                      <QuestionRenderer
-                        item={item}
-                        currentValue={currentValue}
-                        onChange={handleInputChange}
-                        isAdditional={false}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSave} 
-              disabled={saving || !hasUnsavedChanges}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Answers'}
-            </Button>
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="bg-muted/50 p-8 rounded-lg text-center">
-          <p className="text-lg text-muted-foreground">
-            No questions available for this category yet.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Questions will be automatically generated based on the project configuration.
-          </p>
-        </div>
-      );
-    }
-  }, [categoryItems, handleSave, saving, hasUnsavedChanges, saveError, lastSaveTime, formData, handleInputChange]);
-
-  // Enhanced AdditionalQuestionsContent with error boundary
-  const AdditionalQuestionsContent = useCallback(() => {
-    if (logicLoading) {
-      return <ConditionalLogicLoader isEvaluating={true} />;
-    }
-
-    if (additionalQuestions.length > 0) {
-      return (
-        <ConditionalLogicErrorBoundary onReset={handleConditionalLogicReset}>
-          <div className="space-y-6">
-            {activeSubcategories.length > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-700">
-                  <strong>Active Subcategories:</strong> {activeSubcategories.join(', ')}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  These additional questions appeared based on your answers to the main questions.
-                </p>
-              </div>
-            )}
-
-            <div className="bg-card p-6 rounded-lg border">
-              <div className="space-y-8">
-                {additionalQuestions.map((item, index) => {
-                  const currentValue = additionalFormData[item.id] ?? item.displayValue ?? '';
-                  
-                  return (
-                    <div key={`additional-${item.id}`} className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <Label className="text-base font-medium leading-relaxed">
-                          {index + 1}. {item.itemName}
-                          <span className="text-red-500 ml-1">*</span>
-                        </Label>
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                          Priority: {item.priority || 0}
-                        </span>
-                      </div>
-                      <div className="ml-0">
-                        <QuestionRenderer
-                          item={item}
-                          currentValue={currentValue}
-                          onChange={handleAdditionalInputChange}
-                          isAdditional={true}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveAdditional} 
-                disabled={saving}
-                className="flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? 'Saving...' : 'Save Additional Answers'}
-              </Button>
-            </div>
-          </div>
-        </ConditionalLogicErrorBoundary>
-      );
-    } else {
-      return (
-        <div className="bg-muted/50 p-8 rounded-lg text-center">
-          <p className="text-lg text-muted-foreground">
-            No additional questions at this time.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Additional questions will appear here after you save answers to the main questions that trigger conditional logic.
-          </p>
-        </div>
-      );
-    }
-  }, [logicLoading, additionalQuestions, activeSubcategories, handleSaveAdditional, saving, handleConditionalLogicReset, additionalFormData, handleAdditionalInputChange]);
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -476,11 +303,29 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </TabsList>
         
         <TabsContent value="main-questions" className="mt-6">
-          <MainQuestionsContent />
+          <MainQuestionsRenderer
+            categoryItems={categoryItems}
+            formData={formData}
+            hasUnsavedChanges={hasUnsavedChanges}
+            saveError={saveError}
+            lastSaveTime={lastSaveTime}
+            saving={saving}
+            onInputChange={handleInputChange}
+            onSave={handleSave}
+          />
         </TabsContent>
         
         <TabsContent value="additional-questions" className="mt-6">
-          <AdditionalQuestionsContent />
+          <AdditionalQuestionsRenderer
+            additionalQuestions={additionalQuestions}
+            additionalFormData={additionalFormData}
+            activeSubcategories={activeSubcategories}
+            logicLoading={logicLoading}
+            saving={saving}
+            onAdditionalInputChange={handleAdditionalInputChange}
+            onSaveAdditional={handleSaveAdditional}
+            onConditionalLogicReset={handleConditionalLogicReset}
+          />
         </TabsContent>
         
         <TabsContent value="documents" className="mt-6">
