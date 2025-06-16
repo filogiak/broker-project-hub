@@ -61,7 +61,22 @@ const CategorySection = ({
   });
 
   const sortedQuestions = [...questions].sort((a, b) => (a.priority || 0) - (b.priority || 0));
-  const questionIds = sortedQuestions.map(q => q.id);
+  
+  // Helper function to check if a question is an initiator
+  const isInitiatorQuestion = (question: Question) => {
+    return question.subcategory_1_initiator || 
+           question.subcategory_2_initiator || 
+           question.subcategory_3_initiator || 
+           question.subcategory_4_initiator || 
+           question.subcategory_5_initiator;
+  };
+
+  // Separate questions into initiator and non-initiator
+  const initiatorQuestions = sortedQuestions.filter(isInitiatorQuestion);
+  const nonInitiatorQuestions = sortedQuestions.filter(q => !isInitiatorQuestion(q));
+  
+  const initiatorQuestionIds = initiatorQuestions.map(q => q.id);
+  const nonInitiatorQuestionIds = nonInitiatorQuestions.map(q => q.id);
 
   return (
     <Card 
@@ -101,18 +116,49 @@ const CategorySection = ({
               <div className="text-xs mt-1">Drag questions here to organize them</div>
             </div>
           ) : (
-            <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {sortedQuestions.map((question) => (
-                  <DraggableQuestionRow
-                    key={question.id}
-                    question={question}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                  />
-                ))}
-              </div>
-            </SortableContext>
+            <div className="space-y-6">
+              {/* Initiator Questions Section */}
+              {initiatorQuestions.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-3 px-2">
+                    Main Questions ({initiatorQuestions.length})
+                  </div>
+                  <SortableContext items={initiatorQuestionIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2">
+                      {initiatorQuestions.map((question) => (
+                        <DraggableQuestionRow
+                          key={question.id}
+                          question={question}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              )}
+
+              {/* Non-Initiator Questions Section */}
+              {nonInitiatorQuestions.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-3 px-2">
+                    Follow-up Questions ({nonInitiatorQuestions.length})
+                  </div>
+                  <SortableContext items={nonInitiatorQuestionIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2">
+                      {nonInitiatorQuestions.map((question) => (
+                        <DraggableQuestionRow
+                          key={question.id}
+                          question={question}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              )}
+            </div>
           )}
         </CardContent>
       )}
