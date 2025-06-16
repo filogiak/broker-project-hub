@@ -854,6 +854,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           id: string
+          is_multi_flow_initiator: boolean | null
           item_name: string
           item_type: Database["public"]["Enums"]["item_type"]
           priority: number | null
@@ -865,6 +866,12 @@ export type Database = {
           subcategory_1_initiator: boolean | null
           subcategory_2: string | null
           subcategory_2_initiator: boolean | null
+          subcategory_3: string | null
+          subcategory_3_initiator: boolean | null
+          subcategory_4: string | null
+          subcategory_4_initiator: boolean | null
+          subcategory_5: string | null
+          subcategory_5_initiator: boolean | null
           updated_at: string
           validation_rules: Json | null
         }
@@ -873,6 +880,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_multi_flow_initiator?: boolean | null
           item_name: string
           item_type?: Database["public"]["Enums"]["item_type"]
           priority?: number | null
@@ -884,6 +892,12 @@ export type Database = {
           subcategory_1_initiator?: boolean | null
           subcategory_2?: string | null
           subcategory_2_initiator?: boolean | null
+          subcategory_3?: string | null
+          subcategory_3_initiator?: boolean | null
+          subcategory_4?: string | null
+          subcategory_4_initiator?: boolean | null
+          subcategory_5?: string | null
+          subcategory_5_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }
@@ -892,6 +906,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_multi_flow_initiator?: boolean | null
           item_name?: string
           item_type?: Database["public"]["Enums"]["item_type"]
           priority?: number | null
@@ -903,6 +918,12 @@ export type Database = {
           subcategory_1_initiator?: boolean | null
           subcategory_2?: string | null
           subcategory_2_initiator?: boolean | null
+          subcategory_3?: string | null
+          subcategory_3_initiator?: boolean | null
+          subcategory_4?: string | null
+          subcategory_4_initiator?: boolean | null
+          subcategory_5?: string | null
+          subcategory_5_initiator?: boolean | null
           updated_at?: string
           validation_rules?: Json | null
         }

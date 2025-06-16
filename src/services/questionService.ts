@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -55,9 +54,20 @@ export const questionService = {
   },
 
   async createRequiredItem(item: RequiredItemInsert): Promise<RequiredItem> {
+    // Ensure all subcategory fields are included
+    const completeItem = {
+      ...item,
+      subcategory_3: item.subcategory_3 || null,
+      subcategory_4: item.subcategory_4 || null,
+      subcategory_5: item.subcategory_5 || null,
+      subcategory_3_initiator: item.subcategory_3_initiator || false,
+      subcategory_4_initiator: item.subcategory_4_initiator || false,
+      subcategory_5_initiator: item.subcategory_5_initiator || false,
+    };
+
     const { data, error } = await supabase
       .from('required_items')
-      .insert(item)
+      .insert(completeItem)
       .select()
       .single();
 
@@ -66,9 +76,20 @@ export const questionService = {
   },
 
   async updateRequiredItem(id: string, updates: RequiredItemUpdate): Promise<RequiredItem> {
+    // Ensure all subcategory fields are included in updates
+    const completeUpdates = {
+      ...updates,
+      subcategory_3: updates.subcategory_3 !== undefined ? updates.subcategory_3 : null,
+      subcategory_4: updates.subcategory_4 !== undefined ? updates.subcategory_4 : null,
+      subcategory_5: updates.subcategory_5 !== undefined ? updates.subcategory_5 : null,
+      subcategory_3_initiator: updates.subcategory_3_initiator !== undefined ? updates.subcategory_3_initiator : false,
+      subcategory_4_initiator: updates.subcategory_4_initiator !== undefined ? updates.subcategory_4_initiator : false,
+      subcategory_5_initiator: updates.subcategory_5_initiator !== undefined ? updates.subcategory_5_initiator : false,
+    };
+
     const { data, error } = await supabase
       .from('required_items')
-      .update(updates)
+      .update(completeUpdates)
       .eq('id', id)
       .select()
       .single();
@@ -141,10 +162,8 @@ export const questionService = {
 
   // Batch operations for options
   async replaceItemOptions(itemId: string, options: Omit<ItemOptionInsert, 'item_id'>[]): Promise<void> {
-    // Delete existing options
     await this.deleteAllItemOptions(itemId);
 
-    // Insert new options if any
     if (options.length > 0) {
       const optionsWithItemId = options.map(option => ({
         ...option,

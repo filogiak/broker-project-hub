@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
@@ -17,15 +18,21 @@ type ProjectType = Database['public']['Enums']['project_type'];
 type ItemType = Database['public']['Enums']['item_type'];
 type ItemScope = Database['public']['Enums']['item_scope'];
 
-// Updated interface to include answer_id
+// Updated interface to include all subcategory fields and initiators
 interface QuestionFormData {
   item_name: string;
   answer_id?: string;
   category_id?: string;
   subcategory?: string;
   subcategory_2?: string;
+  subcategory_3?: string;
+  subcategory_4?: string;
+  subcategory_5?: string;
   subcategory_1_initiator: boolean;
   subcategory_2_initiator: boolean;
+  subcategory_3_initiator: boolean;
+  subcategory_4_initiator: boolean;
+  subcategory_5_initiator: boolean;
   priority: number;
   scope: ItemScope;
   item_type: ItemType;
@@ -89,8 +96,14 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       category_id: undefined,
       subcategory: '',
       subcategory_2: '',
+      subcategory_3: '',
+      subcategory_4: '',
+      subcategory_5: '',
       subcategory_1_initiator: false,
       subcategory_2_initiator: false,
+      subcategory_3_initiator: false,
+      subcategory_4_initiator: false,
+      subcategory_5_initiator: false,
       priority: 0,
       scope: 'PROJECT',
       item_type: 'text',
@@ -122,8 +135,14 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         category_id: categoryExists ? editingQuestion.category_id : undefined,
         subcategory: editingQuestion.subcategory || '',
         subcategory_2: editingQuestion.subcategory_2 || '',
+        subcategory_3: editingQuestion.subcategory_3 || '',
+        subcategory_4: editingQuestion.subcategory_4 || '',
+        subcategory_5: editingQuestion.subcategory_5 || '',
         subcategory_1_initiator: editingQuestion.subcategory_1_initiator || false,
         subcategory_2_initiator: editingQuestion.subcategory_2_initiator || false,
+        subcategory_3_initiator: editingQuestion.subcategory_3_initiator || false,
+        subcategory_4_initiator: editingQuestion.subcategory_4_initiator || false,
+        subcategory_5_initiator: editingQuestion.subcategory_5_initiator || false,
         priority: editingQuestion.priority || 0,
         scope: editingQuestion.scope,
         item_type: editingQuestion.item_type,
@@ -157,8 +176,14 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         category_id: undefined,
         subcategory: '',
         subcategory_2: '',
+        subcategory_3: '',
+        subcategory_4: '',
+        subcategory_5: '',
         subcategory_1_initiator: false,
         subcategory_2_initiator: false,
+        subcategory_3_initiator: false,
+        subcategory_4_initiator: false,
+        subcategory_5_initiator: false,
         priority: 0,
         scope: 'PROJECT',
         item_type: 'text',
@@ -214,6 +239,29 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         }
       }
       
+      // Validate that subcategory initiators have corresponding subcategory values
+      const subcategoryValidationErrors = [];
+      if (data.subcategory_1_initiator && !data.subcategory?.trim()) {
+        subcategoryValidationErrors.push('Subcategory 1 must have a value when marked as initiator');
+      }
+      if (data.subcategory_2_initiator && !data.subcategory_2?.trim()) {
+        subcategoryValidationErrors.push('Subcategory 2 must have a value when marked as initiator');
+      }
+      if (data.subcategory_3_initiator && !data.subcategory_3?.trim()) {
+        subcategoryValidationErrors.push('Subcategory 3 must have a value when marked as initiator');
+      }
+      if (data.subcategory_4_initiator && !data.subcategory_4?.trim()) {
+        subcategoryValidationErrors.push('Subcategory 4 must have a value when marked as initiator');
+      }
+      if (data.subcategory_5_initiator && !data.subcategory_5?.trim()) {
+        subcategoryValidationErrors.push('Subcategory 5 must have a value when marked as initiator');
+      }
+
+      if (subcategoryValidationErrors.length > 0) {
+        toast.error(subcategoryValidationErrors.join('. '));
+        return;
+      }
+      
       let questionId: string;
       
       if (editingQuestion) {
@@ -264,6 +312,18 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   };
 
   const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
+
+  // Get active initiator count for display
+  const getActiveInitiatorCount = () => {
+    const formValues = form.getValues();
+    let count = 0;
+    if (formValues.subcategory_1_initiator) count++;
+    if (formValues.subcategory_2_initiator) count++;
+    if (formValues.subcategory_3_initiator) count++;
+    if (formValues.subcategory_4_initiator) count++;
+    if (formValues.subcategory_5_initiator) count++;
+    return count;
+  };
 
   // Don't render the form until categories are loaded
   if (!categoriesLoaded) {
@@ -351,83 +411,193 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="subcategory"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategory</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Optional subcategory" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Enhanced Subcategory Section */}
+            <Card className="border-muted">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  Conditional Logic Subcategories
+                  {getActiveInitiatorCount() > 0 && (
+                    <Badge variant="secondary">
+                      {getActiveInitiatorCount()} initiator{getActiveInitiatorCount() > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <FormDescription>
+                  Set up subcategories that can be triggered by different answer values. Use the Logic Rules Manager to define which answers trigger which subcategories.
+                </FormDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Subcategory 1 */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory 1</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Optional subcategory" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="subcategory_1_initiator"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Initiator</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <FormField
-                control={form.control}
-                name="subcategory_1_initiator"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Subcategory 1 Initiator
-                      </FormLabel>
-                      <FormDescription>
-                        Check if this item initiates subcategory 1 logic
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
+                {/* Subcategory 2 */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <FormField
+                    control={form.control}
+                    name="subcategory_2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory 2</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Optional second subcategory" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="subcategory_2_initiator"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Initiator</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="subcategory_2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategory 2</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Optional second subcategory" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Subcategory 3 */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <FormField
+                    control={form.control}
+                    name="subcategory_3"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory 3</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Optional third subcategory" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="subcategory_3_initiator"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Initiator</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <FormField
-                control={form.control}
-                name="subcategory_2_initiator"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Subcategory 2 Initiator
-                      </FormLabel>
-                      <FormDescription>
-                        Check if this item initiates subcategory 2 logic
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
+                {/* Subcategory 4 */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <FormField
+                    control={form.control}
+                    name="subcategory_4"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory 4</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Optional fourth subcategory" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="subcategory_4_initiator"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Initiator</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Subcategory 5 */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <FormField
+                    control={form.control}
+                    name="subcategory_5"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory 5</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Optional fifth subcategory" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="subcategory_5_initiator"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Initiator</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

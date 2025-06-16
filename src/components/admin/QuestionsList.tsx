@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,24 +57,42 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
     question.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.answer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.items_categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
+    question.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.subcategory_2?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.subcategory_3?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.subcategory_4?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    question.subcategory_5?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getItemTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      text: 'Text',
-      number: 'Number',
-      date: 'Date',
-      document: 'Document',
-      repeatable_group: 'Repeatable Group',
-      single_choice_dropdown: 'Dropdown',
-      multiple_choice_checkbox: 'Checkbox'
-    };
-    return labels[type] || type;
+  // Helper function to get initiator count and subcategories
+  const getInitiatorInfo = (question: any) => {
+    const initiators = [];
+    if (question.subcategory_1_initiator && question.subcategory) {
+      initiators.push(question.subcategory);
+    }
+    if (question.subcategory_2_initiator && question.subcategory_2) {
+      initiators.push(question.subcategory_2);
+    }
+    if (question.subcategory_3_initiator && question.subcategory_3) {
+      initiators.push(question.subcategory_3);
+    }
+    if (question.subcategory_4_initiator && question.subcategory_4) {
+      initiators.push(question.subcategory_4);
+    }
+    if (question.subcategory_5_initiator && question.subcategory_5) {
+      initiators.push(question.subcategory_5);
+    }
+    return initiators;
   };
 
-  const getScopeLabel = (scope: string) => {
-    return scope === 'PROJECT' ? 'Project' : 'Participant';
+  const getSubcategoriesDisplay = (question: any) => {
+    const subcategories = [];
+    if (question.subcategory) subcategories.push(question.subcategory);
+    if (question.subcategory_2) subcategories.push(question.subcategory_2);
+    if (question.subcategory_3) subcategories.push(question.subcategory_3);
+    if (question.subcategory_4) subcategories.push(question.subcategory_4);
+    if (question.subcategory_5) subcategories.push(question.subcategory_5);
+    return subcategories;
   };
 
   if (loading) {
@@ -144,78 +161,104 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
                     <TableHead>Type</TableHead>
                     <TableHead>Scope</TableHead>
                     <TableHead>Priority</TableHead>
+                    <TableHead>Subcategories</TableHead>
+                    <TableHead>Initiators</TableHead>
                     <TableHead>Options</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredQuestions.map((question) => (
-                    <TableRow key={question.id}>
-                      <TableCell>
-                        <div>
+                  {filteredQuestions.map((question) => {
+                    const initiators = getInitiatorInfo(question);
+                    const subcategories = getSubcategoriesDisplay(question);
+
+                    return (
+                      <TableRow key={question.id}>
+                        <TableCell>
                           <div className="font-medium">{question.item_name}</div>
-                          {question.subcategory && (
-                            <div className="text-sm text-muted-foreground">
-                              {question.subcategory}
-                              {question.subcategory_2 && ` › ${question.subcategory_2}`}
-                            </div>
+                        </TableCell>
+                        <TableCell>
+                          {question.answer_id ? (
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {question.answer_id}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {question.answer_id ? (
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {question.answer_id}
+                        </TableCell>
+                        <TableCell>
+                          {question.items_categories?.name || 'No Category'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {question.item_type}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {question.items_categories?.name || 'No Category'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {question.item_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {question.scope}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{question.priority}</TableCell>
-                      <TableCell>
-                        {question.item_options?.length > 0 && (
-                          <Badge variant="default">
-                            {question.item_options.length} options
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {question.scope}
                           </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(question)}>
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setDeleteQuestionId(question.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>{question.priority}</TableCell>
+                        <TableCell>
+                          {subcategories.length > 0 ? (
+                            <div className="space-y-1">
+                              {subcategories.slice(0, 2).map((sub, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {sub}
+                                </Badge>
+                              ))}
+                              {subcategories.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{subcategories.length - 2} more
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {initiators.length > 0 ? (
+                            <Badge variant="default" className="text-xs">
+                              {initiators.length} initiator{initiators.length > 1 ? 's' : ''}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {question.item_options?.length > 0 && (
+                            <Badge variant="default">
+                              {question.item_options.length} options
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => onEdit(question)}>
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteQuestionId(question.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
