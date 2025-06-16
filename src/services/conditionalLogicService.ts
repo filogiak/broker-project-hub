@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -78,6 +79,7 @@ export class ConditionalLogicService {
 
   /**
    * Enhanced save-triggered evaluation with better preservation logic and conditional question creation
+   * Now supports multi-flow initiator questions
    */
   static async evaluateLogicOnSave(params: SaveTriggeredEvaluationParams): Promise<ConditionalLogicResult> {
     try {
@@ -95,15 +97,29 @@ export class ConditionalLogicService {
       const rules = await this.getLogicRules(categoryId);
       const newActiveSubcategories: string[] = [];
 
+      console.log('🔧 Evaluating logic rules:', rules.length);
+
       // Evaluate which subcategories should be active based on form data
+      // Now supports multiple rules per trigger item (multi-flow)
       for (const rule of rules) {
         const formFieldId = itemIdToFormIdMap[rule.triggerItemId];
-        if (!formFieldId) continue;
+        if (!formFieldId) {
+          console.log('🔧 No form field found for trigger item:', rule.triggerItemId);
+          continue;
+        }
 
         const currentValue = formData[formFieldId];
         
+        console.log('🔧 Evaluating rule:', {
+          triggerItemId: rule.triggerItemId,
+          triggerValue: rule.triggerValue,
+          currentValue,
+          targetSubcategory: rule.targetSubcategory
+        });
+        
         if (this.valuesMatch(currentValue, rule.triggerValue)) {
           newActiveSubcategories.push(rule.targetSubcategory);
+          console.log('🔧 Rule matched, adding subcategory:', rule.targetSubcategory);
         }
       }
 
@@ -154,6 +170,7 @@ export class ConditionalLogicService {
 
   /**
    * Enhanced conditional question creation with proper duplicate prevention
+   * Now properly handles multi-flow initiator questions
    */
   static async createConditionalQuestionsWithDuplicatePrevention(
     projectId: string,
@@ -164,12 +181,15 @@ export class ConditionalLogicService {
     try {
       console.log('🔧 Creating conditional questions with duplicate prevention for subcategories:', activeSubcategories);
       
-      // Get all required items that match the active subcategories and are NOT initiators
+      // Get all required items that match the active subcategories
+      // Updated query to handle both traditional initiators and multi-flow questions
       const { data: conditionalItems, error } = await supabase
         .from('required_items')
         .select('*')
         .eq('category_id', categoryId)
         .in('subcategory', activeSubcategories)
+        // Include items that are NOT initiators (traditional logic)
+        // Multi-flow initiators should not belong to any subcategory themselves
         .eq('subcategory_1_initiator', false)
         .eq('subcategory_2_initiator', false);
 

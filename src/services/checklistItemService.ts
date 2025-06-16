@@ -380,20 +380,134 @@ export class ChecklistItemService {
    * Question classification helper functions
    */
   static isMainQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Main questions have NULL subcategory OR are initiator questions
-    return (
-      item.subcategory === null || 
-      item.subcategory1Initiator === true || 
-      item.subcategory2Initiator === true
-    );
+    // Get the required item data
+    const requiredItem = item as any;
+    
+    // Case 1: No subcategory - definitely a main question
+    if (!requiredItem.subcategory && !requiredItem.subcategory_2) {
+      return true;
+    }
+    
+    // Case 2: Traditional initiator questions
+    if (requiredItem.subcategory_1_initiator || requiredItem.subcategory_2_initiator) {
+      return true;
+    }
+    
+    // Case 3: Multi-flow initiator questions
+    // These are questions that have logic rules but don't belong to any subcategory themselves
+    // We need to check if this question is a trigger for any logic rules
+    return this.isMultiFlowInitiator(item.itemId);
   }
 
-  static isConditionalQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Conditional questions have a non-null subcategory AND are not initiators
-    return (
-      item.subcategory !== null && 
-      item.subcategory1Initiator !== true && 
-      item.subcategory2Initiator !== true
-    );
+  /**
+   * Check if a question is a multi-flow initiator by looking for logic rules
+   */
+  static async isMultiFlowInitiator(itemId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('question_logic_rules')
+        .select('id')
+        .eq('trigger_item_id', itemId)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking multi-flow initiator status:', error);
+        return false;
+      }
+
+      return (data?.length || 0) > 0;
+    } catch (error) {
+      console.error('Error in isMultiFlowInitiator:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Synchronous version that assumes multi-flow status is already determined
+   * This should be used when we have pre-fetched the logic rules information
+   */
+  static isMainQuestionSync(item: TypedChecklistItem, hasLogicRules: boolean = false): boolean {
+    const requiredItem = item as any;
+    
+    // Case 1: No subcategory - definitely a main question
+    if (!requiredItem.subcategory && !requiredItem.subcategory_2) {
+      return true;
+    }
+    
+    // Case 2: Traditional initiator questions
+    if (requiredItem.subcategory_1_initiator || requiredItem.subcategory_2_initiator) {
+      return true;
+    }
+    
+    // Case 3: Multi-flow initiator questions (pre-determined)
+    return hasLogicRules;
+  }
+
+  /**
+   * Enhanced method to get main questions with proper multi-flow support
+   */
+  static async getMainQuestionsWithLogicInfo(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: Database['public']['Enums']['participant_designation']
+  ): Promise<TypedChecklistItem[]> {
+    try {
+      // Get all checklist items for the category
+      let query = supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items!inner (
+            id,
+            item_name,
+            item_type,
+            scope,
+            category_id,
+            priority,
+            subcategory,
+            subcategory_2,
+            subcategory_1_initiator,
+            subcategory_2_initiator
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('required_items.category_id', categoryId);
+
+      if (participantDesignation) {
+        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+      }
+
+      const { data: items, error } = await query;
+
+      if (error) {
+        console.error('Error fetching checklist items:', error);
+        return [];
+      }
+
+      if (!items) return [];
+
+      // Get logic rules for all items to determine multi-flow initiators
+      const itemIds = items.map(item => (item.required_items as any).id);
+      const { data: logicRules } = await supabase
+        .from('question_logic_rules')
+        .select('trigger_item_id')
+        .in('trigger_item_id', itemIds)
+        .eq('is_active', true);
+
+      const multiFlowInitiatorIds = new Set(logicRules?.map(rule => rule.trigger_item_id) || []);
+
+      // Transform and filter main questions
+      const typedItems = items.map(item => this.transformToTypedItem(item));
+      
+      return typedItems.filter(item => {
+        const hasLogicRules = multiFlowInitiatorIds.has(item.itemId);
+        return this.isMainQuestionSync(item, hasLogicRules);
+      });
+
+    } catch (error) {
+      console.error('Error in getMainQuestionsWithLogicInfo:', error);
+      return [];
+    }
   }
 }

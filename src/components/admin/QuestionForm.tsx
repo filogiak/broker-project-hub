@@ -10,6 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
+import MultiFlowLogicBuilder from './MultiFlowLogicBuilder';
 import type { Database } from '@/integrations/supabase/types';
 
 // Use the proper enum types from the database
@@ -38,6 +39,12 @@ interface QuestionOption {
   option_value: string;
   option_label: string;
   display_order: number;
+}
+
+interface LogicFlow {
+  id: string;
+  answerValue: string;
+  targetSubcategory: string;
 }
 
 interface QuestionFormProps {
@@ -81,8 +88,10 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
   const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>(ALL_PROJECT_TYPES);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [logicFlows, setLogicFlows] = useState<LogicFlow[]>([]);
+  const [isMultiFlowInitiator, setIsMultiFlowInitiator] = useState(false);
 
-  const form = useForm<QuestionFormData>({
+  const form = useForm<QuestionFormData & { is_multi_flow_initiator?: boolean }>({
     defaultValues: {
       item_name: '',
       answer_id: '',
@@ -95,7 +104,8 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       scope: 'PROJECT',
       item_type: 'text',
       project_types_applicable: ALL_PROJECT_TYPES,
-      validation_rules: {}
+      validation_rules: {},
+      is_multi_flow_initiator: false
     }
   });
 
@@ -213,6 +223,20 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
           return;
         }
       }
+
+      // Validate logic flows if multi-flow initiator
+      if (isMultiFlowInitiator && logicFlows.length === 0) {
+        toast.error('Multi-flow initiator questions must have at least one logic flow');
+        return;
+      }
+
+      // For multi-flow initiators, clear subcategory fields as they shouldn't belong to any specific subcategory
+      if (isMultiFlowInitiator) {
+        data.subcategory = null;
+        data.subcategory_2 = null;
+        data.subcategory_1_initiator = false;
+        data.subcategory_2_initiator = false;
+      }
       
       let questionId: string;
       
@@ -226,7 +250,6 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
 
       // Handle options for dropdown/checkbox types
       if (data.item_type === 'single_choice_dropdown' || data.item_type === 'multiple_choice_checkbox') {
-        // Filter out incomplete options and prepare for database
         const validOptions = options
           .filter(option => option.option_value?.trim() && option.option_label?.trim())
           .map(option => ({
@@ -240,6 +263,11 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         }
       }
 
+      // Handle multi-flow logic rules
+      if (isMultiFlowInitiator && logicFlows.length > 0) {
+        await createMultiFlowLogicRules(questionId, logicFlows);
+      }
+
       toast.success(editingQuestion ? 'Question updated successfully' : 'Question created successfully');
       onSuccess();
     } catch (error) {
@@ -247,6 +275,27 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       toast.error('Failed to save question');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createMultiFlowLogicRules = async (questionId: string, flows: LogicFlow[]) => {
+    try {
+      // First, clear any existing logic rules for this question
+      await questionService.clearLogicRules(questionId);
+
+      // Create new logic rules for each flow
+      for (const flow of flows) {
+        await questionService.createLogicRule({
+          trigger_item_id: questionId,
+          trigger_value: flow.answerValue,
+          target_subcategory: flow.targetSubcategory,
+          target_category_id: form.getValues('category_id'),
+          is_active: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating multi-flow logic rules:', error);
+      throw error;
     }
   };
 
@@ -263,7 +312,12 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
     setOptions(newOptions);
   };
 
+  const handleLogicFlowsChange = (flows: LogicFlow[]) => {
+    setLogicFlows(flows);
+  };
+
   const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
+  const showMultiFlowBuilder = isMultiFlowInitiator && ['single_choice_dropdown', 'multiple_choice_checkbox', 'text', 'number'].includes(selectedItemType);
 
   // Don't render the form until categories are loaded
   if (!categoriesLoaded) {
@@ -359,8 +413,17 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   <FormItem>
                     <FormLabel>Subcategory</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Optional subcategory" />
+                      <Input 
+                        {...field} 
+                        placeholder="Optional subcategory" 
+                        disabled={isMultiFlowInitiator}
+                      />
                     </FormControl>
+                    {isMultiFlowInitiator && (
+                      <FormDescription className="text-orange-600">
+                        Disabled for multi-flow initiator questions
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -373,8 +436,9 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
+                        checked={field.value && !isMultiFlowInitiator}
                         onCheckedChange={field.onChange}
+                        disabled={isMultiFlowInitiator}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -398,8 +462,17 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   <FormItem>
                     <FormLabel>Subcategory 2</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Optional second subcategory" />
+                      <Input 
+                        {...field} 
+                        placeholder="Optional second subcategory" 
+                        disabled={isMultiFlowInitiator}
+                      />
                     </FormControl>
+                    {isMultiFlowInitiator && (
+                      <FormDescription className="text-orange-600">
+                        Disabled for multi-flow initiator questions
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -412,8 +485,9 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
+                        checked={field.value && !isMultiFlowInitiator}
                         onCheckedChange={field.onChange}
+                        disabled={isMultiFlowInitiator}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -427,6 +501,25 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Multi-Flow Initiator Toggle */}
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="multi-flow-initiator"
+                  checked={isMultiFlowInitiator}
+                  onCheckedChange={setIsMultiFlowInitiator}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="multi-flow-initiator" className="font-medium">
+                    Multi-Flow Initiator
+                  </Label>
+                  <div className="text-sm text-muted-foreground">
+                    Enable this question to trigger multiple different subcategory flows based on user answers
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -531,6 +624,16 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
               <QuestionOptionManager
                 options={options}
                 onChange={handleOptionsChange}
+              />
+            )}
+
+            {showMultiFlowBuilder && (
+              <MultiFlowLogicBuilder
+                questionOptions={options}
+                itemType={selectedItemType}
+                onLogicFlowsChange={handleLogicFlowsChange}
+                initialFlows={logicFlows}
+                disabled={loading}
               />
             )}
 
