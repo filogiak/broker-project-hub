@@ -380,16 +380,18 @@ export class ChecklistItemService {
    * Question classification helper functions
    */
   static isMainQuestion(item: TypedChecklistItem): boolean {
+    // Fixed: Main questions have NULL subcategory OR are initiator questions
     return (
-      !item.subcategory || 
+      item.subcategory === null || 
       item.subcategory1Initiator === true || 
       item.subcategory2Initiator === true
     );
   }
 
   static isConditionalQuestion(item: TypedChecklistItem): boolean {
+    // Fixed: Conditional questions have a non-null subcategory AND are not initiators
     return (
-      !!item.subcategory && 
+      item.subcategory !== null && 
       item.subcategory1Initiator !== true && 
       item.subcategory2Initiator !== true
     );

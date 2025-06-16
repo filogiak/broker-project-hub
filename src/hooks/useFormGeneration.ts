@@ -62,19 +62,23 @@ export const useFormGeneration = () => {
       setLoading(true);
       setResult(null);
 
-      console.log('🔄 Hook: Starting regeneration for project:', projectId);
+      console.log('🔄 Hook: Starting COMPLETE regeneration for project:', projectId);
       
       // Clean up conditional questions first
       const cleanupResult = await FormGenerationDebugService.cleanupConditionalQuestions(projectId);
       console.log('🧹 Cleanup result:', cleanupResult);
       
+      // Force complete regeneration
       const generationResult = await FormGenerationService.regenerateChecklistForProject(projectId);
       setResult(generationResult);
 
       toast({
-        title: "Checklist regenerated",
+        title: "Checklist completely regenerated",
         description: `Cleaned up ${cleanupResult.deletedCount} problematic items and generated ${generationResult.itemsCreated} new checklist items`,
       });
+
+      // Log final debug info
+      await FormGenerationDebugService.logDebugInfo(projectId);
 
       return generationResult;
     } catch (error) {

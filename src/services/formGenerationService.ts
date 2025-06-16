@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -119,7 +120,7 @@ export class FormGenerationService {
   }
 
   /**
-   * Apply filtering rules with comprehensive debugging
+   * Apply filtering rules with comprehensive debugging - FIXED VERSION
    */
   private static filterItemsByRulesWithDebug(items: RequiredItem[], project: Project): {
     applicableItems: RequiredItem[];
@@ -139,7 +140,7 @@ export class FormGenerationService {
       }>;
     };
   } {
-    console.log('\n🔍 === FILTERING DEBUG SESSION ===');
+    console.log('\n🔍 === FILTERING DEBUG SESSION (FIXED) ===');
     
     let itemsAfterProjectTypeFilter = 0;
     let itemsAfterSubcategoryFilter = 0;
@@ -149,7 +150,7 @@ export class FormGenerationService {
       console.log(`   - ID: ${item.id}`);
       console.log(`   - Category: ${item.category_id}`);
       console.log(`   - Scope: ${item.scope}`);
-      console.log(`   - Subcategory: ${item.subcategory || 'NONE (main question)'}`);
+      console.log(`   - Subcategory: ${item.subcategory === null ? 'NULL (main question)' : `"${item.subcategory}"`}`);
       console.log(`   - Subcategory 1 Initiator: ${item.subcategory_1_initiator}`);
       console.log(`   - Subcategory 2 Initiator: ${item.subcategory_2_initiator}`);
       console.log(`   - Project Types Applicable: ${JSON.stringify(item.project_types_applicable)}`);
@@ -169,8 +170,8 @@ export class FormGenerationService {
       }
       itemsAfterProjectTypeFilter++;
 
-      // Rule 2: Enhanced subcategory logic - Only include main questions and initiator questions
-      const isMainQuestion = !item.subcategory;
+      // Rule 2: FIXED subcategory logic - Only include main questions (NULL subcategory) and initiator questions
+      const isMainQuestion = item.subcategory === null;
       const isInitiatorQuestion = item.subcategory_1_initiator === true || item.subcategory_2_initiator === true;
       
       if (!isMainQuestion && !isInitiatorQuestion) {
@@ -179,7 +180,7 @@ export class FormGenerationService {
       }
       
       if (isMainQuestion) {
-        console.log(`   ✅ PASSED: main question (no subcategory)`);
+        console.log(`   ✅ PASSED: main question (subcategory is NULL)`);
       } else {
         console.log(`   ✅ PASSED: initiator question for subcategory '${item.subcategory}'`);
       }
@@ -205,7 +206,7 @@ export class FormGenerationService {
       }))
     };
 
-    console.log('\n📊 === FILTERING SUMMARY ===');
+    console.log('\n📊 === FILTERING SUMMARY (FIXED) ===');
     console.log(`Total items: ${items.length}`);
     console.log(`After project type filter: ${itemsAfterProjectTypeFilter}`);
     console.log(`After subcategory filter: ${itemsAfterSubcategoryFilter}`);
