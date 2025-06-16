@@ -15,7 +15,7 @@ interface SingleChoiceQuestionProps {
   required?: boolean;
 }
 
-const SingleChoiceQuestion = ({ 
+const SingleChoiceQuestion = React.memo(({ 
   value, 
   onChange, 
   options,
@@ -31,15 +31,25 @@ const SingleChoiceQuestion = ({
       <SelectTrigger className="w-full">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="bg-white border shadow-lg z-50">
+      <SelectContent 
+        className="bg-white border shadow-lg z-[100] pointer-events-auto"
+        position="popper"
+        sideOffset={4}
+      >
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem 
+            key={option.value} 
+            value={option.value}
+            className="cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+          >
             {option.label}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
   );
-};
+});
+
+SingleChoiceQuestion.displayName = 'SingleChoiceQuestion';
 
 export default SingleChoiceQuestion;

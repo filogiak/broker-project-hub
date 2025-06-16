@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +13,7 @@ import NumberQuestion from './questions/NumberQuestion';
 import DateQuestion from './questions/DateQuestion';
 import SingleChoiceQuestion from './questions/SingleChoiceQuestion';
 import MultipleChoiceQuestion from './questions/MultipleChoiceQuestion';
+import { toast } from 'sonner';
 
 interface CategoryQuestionsProps {
   categoryId: string;
@@ -24,6 +26,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
   const { projectId } = useParams();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [additionalFormData, setAdditionalFormData] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
   
   const participantDesignation = applicant === 'applicant_1' 
     ? 'applicant_one' as const
@@ -38,45 +41,56 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
     validateAndConvertValue,
   } = useTypedChecklistItems(projectId!, categoryId, participantDesignation);
 
-  // Filter and sort items by category and priority
-  const categoryItems = items
-    .filter(item => item.categoryId === categoryId && !item.typedValue.textValue?.includes('subcategory'))
-    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  // Memoize category items to prevent re-renders
+  const categoryItems = useMemo(() => {
+    return items
+      .filter(item => item.categoryId === categoryId && !item.typedValue.textValue?.includes('subcategory'))
+      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  }, [items, categoryId]);
 
-  // Use conditional logic hook
+  // Memoize the item ID to form ID mapping to prevent re-renders
+  const itemIdToFormIdMap = useMemo(() => {
+    return categoryItems.reduce((map, item) => {
+      map[item.itemId] = item.id;
+      return map;
+    }, {} as Record<string, string>);
+  }, [categoryItems]);
+
+  // Use conditional logic hook with save-triggered evaluation
   const {
     additionalQuestions,
     loading: logicLoading,
     activeSubcategories,
+    evaluateOnSave,
   } = useConditionalLogic(
     projectId!,
     categoryId,
-    participantDesignation,
-    formData,
-    categoryItems
+    participantDesignation
   );
 
-  const handleInputChange = (itemId: string, value: any) => {
+  // Stable input change handlers to prevent component re-renders
+  const handleInputChange = useCallback((itemId: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [itemId]: value,
     }));
-  };
+  }, []);
 
-  const handleAdditionalInputChange = (itemId: string, value: any) => {
+  const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
     setAdditionalFormData(prev => ({
       ...prev,
       [itemId]: value,
     }));
-  };
+  }, []);
 
   const handleSave = async () => {
     if (!projectId) return;
 
     try {
+      setSaving(true);
       const savePromises = [];
       
-      // Save main questions
+      // Save main questions first
       for (const item of categoryItems) {
         const inputValue = formData[item.id];
         if (inputValue === undefined || inputValue === '') continue;
@@ -86,9 +100,25 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
       }
 
       await Promise.all(savePromises);
+      
+      // Now evaluate conditional logic based on saved data
+      console.log('Evaluating conditional logic after save...');
+      const logicResult = await evaluateOnSave(formData, itemIdToFormIdMap);
+      
+      // Clear main form data after successful save
       setFormData({});
+      
+      toast.success('Answers saved successfully!');
+      
+      if (logicResult.subcategories.length > 0) {
+        toast.info(`${logicResult.subcategories.length} additional question section(s) unlocked based on your answers.`);
+      }
+      
     } catch (error) {
       console.error('Error saving form data:', error);
+      toast.error('Failed to save answers. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -96,6 +126,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
     if (!projectId) return;
 
     try {
+      setSaving(true);
       const savePromises = [];
       
       // Save additional questions
@@ -109,12 +140,18 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
 
       await Promise.all(savePromises);
       setAdditionalFormData({});
+      toast.success('Additional answers saved successfully!');
+      
     } catch (error) {
       console.error('Error saving additional form data:', error);
+      toast.error('Failed to save additional answers. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const QuestionComponent = ({ item, isAdditional = false }: { item: typeof categoryItems[0]; isAdditional?: boolean }) => {
+  // Memoized question component to prevent unnecessary re-renders
+  const QuestionComponent = React.memo(({ item, isAdditional = false }: { item: typeof categoryItems[0]; isAdditional?: boolean }) => {
     const currentValue = isAdditional 
       ? (additionalFormData[item.id] ?? item.displayValue ?? '')
       : (formData[item.id] ?? item.displayValue ?? '');
@@ -173,7 +210,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
       default:
         return <div className="text-muted-foreground">Unsupported question type: {item.itemType}</div>;
     }
-  };
+  });
 
   const MainQuestionsContent = () => {
     if (categoryItems.length > 0) {
@@ -182,7 +219,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
           <div className="bg-card p-6 rounded-lg border">
             <div className="space-y-8">
               {categoryItems.map((item, index) => (
-                <div key={item.id} className="space-y-3">
+                <div key={`main-${item.id}`} className="space-y-3">
                   <div className="flex items-start justify-between">
                     <Label className="text-base font-medium leading-relaxed">
                       {index + 1}. {item.itemName}
@@ -201,9 +238,13 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
           </div>
           
           <div className="flex justify-end">
-            <Button onClick={handleSave} className="flex items-center gap-2">
+            <Button 
+              onClick={handleSave} 
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
               <Save className="h-4 w-4" />
-              Save Answers
+              {saving ? 'Saving...' : 'Save Answers'}
             </Button>
           </div>
         </div>
@@ -227,7 +268,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
       return (
         <div className="text-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Evaluating conditional logic...</p>
+          <p className="text-muted-foreground">Loading additional questions...</p>
         </div>
       );
     }
@@ -241,7 +282,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
                 <strong>Active Subcategories:</strong> {activeSubcategories.join(', ')}
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                These additional questions appeared based on your answers above.
+                These additional questions appeared based on your answers to the main questions.
               </p>
             </div>
           )}
@@ -249,7 +290,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
           <div className="bg-card p-6 rounded-lg border">
             <div className="space-y-8">
               {additionalQuestions.map((item, index) => (
-                <div key={item.id} className="space-y-3">
+                <div key={`additional-${item.id}`} className="space-y-3">
                   <div className="flex items-start justify-between">
                     <Label className="text-base font-medium leading-relaxed">
                       {index + 1}. {item.itemName}
@@ -268,9 +309,13 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
           </div>
           
           <div className="flex justify-end">
-            <Button onClick={handleSaveAdditional} className="flex items-center gap-2">
+            <Button 
+              onClick={handleSaveAdditional} 
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
               <Save className="h-4 w-4" />
-              Save Additional Answers
+              {saving ? 'Saving...' : 'Save Additional Answers'}
             </Button>
           </div>
         </div>
@@ -282,7 +327,7 @@ const CategoryQuestions = ({ categoryId, categoryName, applicant, onBack }: Cate
             No additional questions at this time.
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Additional questions will appear here based on your answers to the main questions.
+            Additional questions will appear here after you save answers to the main questions that trigger conditional logic.
           </p>
         </div>
       );
