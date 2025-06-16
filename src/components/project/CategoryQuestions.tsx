@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -5,16 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
-import { useItemOptions } from '@/hooks/useItemOptions';
 import { useConditionalLogic } from '@/hooks/useConditionalLogic';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import ConditionalLogicErrorBoundary from './ConditionalLogicErrorBoundary';
 import ConditionalLogicLoader from './ConditionalLogicLoader';
-import TextQuestion from './questions/TextQuestion';
-import NumberQuestion from './questions/NumberQuestion';
-import DateQuestion from './questions/DateQuestion';
-import SingleChoiceQuestion from './questions/SingleChoiceQuestion';
-import MultipleChoiceQuestion from './questions/MultipleChoiceQuestion';
+import QuestionRenderer from './questions/QuestionRenderer';
 import { toast } from 'sonner';
 
 interface CategoryQuestionsProps {
@@ -110,14 +106,14 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     setAdditionalFormData(initialAdditionalFormData);
   }, [additionalQuestions]);
 
-  // Stable input change handlers
+  // Stable input change handlers with useCallback
   const handleInputChange = useCallback((itemId: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [itemId]: value,
     }));
     setHasUnsavedChanges(true);
-    setSaveError(null); // Clear any previous errors
+    setSaveError(null);
   }, []);
 
   const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
@@ -211,77 +207,6 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }
   }, [projectId, additionalQuestions, additionalFormData, validateAndConvertValue, updateItem]);
 
-  // Memoized question component with stable references
-  const QuestionComponent = React.memo(({ item, isAdditional = false }: { 
-    item: typeof categoryItems[0]; 
-    isAdditional?: boolean 
-  }) => {
-    const currentValue = isAdditional 
-      ? (additionalFormData[item.id] ?? item.displayValue ?? '')
-      : (formData[item.id] ?? item.displayValue ?? '');
-    
-    const { options, loading: optionsLoading } = useItemOptions(item.itemId);
-    const onChange = isAdditional ? handleAdditionalInputChange : handleInputChange;
-
-    const handleChange = useCallback((value: any) => {
-      onChange(item.id, value);
-    }, [item.id, onChange]);
-
-    switch (item.itemType) {
-      case 'text':
-        return (
-          <TextQuestion
-            value={currentValue}
-            onChange={handleChange}
-            required
-          />
-        );
-
-      case 'number':
-        return (
-          <NumberQuestion
-            value={currentValue}
-            onChange={handleChange}
-            required
-          />
-        );
-
-      case 'date':
-        return (
-          <DateQuestion
-            value={currentValue}
-            onChange={handleChange}
-            required
-          />
-        );
-
-      case 'single_choice_dropdown':
-        return (
-          <SingleChoiceQuestion
-            value={currentValue}
-            onChange={handleChange}
-            options={options.map(opt => ({ value: opt.value, label: opt.label }))}
-            disabled={optionsLoading}
-            required
-          />
-        );
-
-      case 'multiple_choice_checkbox':
-        const selectedValues = Array.isArray(currentValue) ? currentValue : [];
-        return (
-          <MultipleChoiceQuestion
-            value={selectedValues}
-            onChange={handleChange}
-            options={options.map(opt => ({ value: opt.value, label: opt.label }))}
-            required
-          />
-        );
-
-      default:
-        return <div className="text-muted-foreground">Unsupported question type: {item.itemType}</div>;
-    }
-  });
-
   // Enhanced MainQuestionsContent with better status indicators
   const MainQuestionsContent = useCallback(() => {
     if (categoryItems.length > 0) {
@@ -321,22 +246,31 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
 
           <div className="bg-card p-6 rounded-lg border">
             <div className="space-y-8">
-              {categoryItems.map((item, index) => (
-                <div key={item.id} className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <Label className="text-base font-medium leading-relaxed">
-                      {index + 1}. {item.itemName}
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      Priority: {item.priority || 0}
-                    </span>
+              {categoryItems.map((item, index) => {
+                const currentValue = formData[item.id] ?? item.displayValue ?? '';
+                
+                return (
+                  <div key={`main-${item.id}`} className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Label className="text-base font-medium leading-relaxed">
+                        {index + 1}. {item.itemName}
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        Priority: {item.priority || 0}
+                      </span>
+                    </div>
+                    <div className="ml-0">
+                      <QuestionRenderer
+                        item={item}
+                        currentValue={currentValue}
+                        onChange={handleInputChange}
+                        isAdditional={false}
+                      />
+                    </div>
                   </div>
-                  <div className="ml-0">
-                    <QuestionComponent item={item} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           
@@ -364,7 +298,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </div>
       );
     }
-  }, [categoryItems, handleSave, saving, hasUnsavedChanges, saveError, lastSaveTime]);
+  }, [categoryItems, handleSave, saving, hasUnsavedChanges, saveError, lastSaveTime, formData, handleInputChange]);
 
   // Enhanced AdditionalQuestionsContent with error boundary
   const AdditionalQuestionsContent = useCallback(() => {
@@ -389,22 +323,31 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
 
             <div className="bg-card p-6 rounded-lg border">
               <div className="space-y-8">
-                {additionalQuestions.map((item, index) => (
-                  <div key={item.id} className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <Label className="text-base font-medium leading-relaxed">
-                        {index + 1}. {item.itemName}
-                        <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                        Priority: {item.priority || 0}
-                      </span>
+                {additionalQuestions.map((item, index) => {
+                  const currentValue = additionalFormData[item.id] ?? item.displayValue ?? '';
+                  
+                  return (
+                    <div key={`additional-${item.id}`} className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <Label className="text-base font-medium leading-relaxed">
+                          {index + 1}. {item.itemName}
+                          <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                          Priority: {item.priority || 0}
+                        </span>
+                      </div>
+                      <div className="ml-0">
+                        <QuestionRenderer
+                          item={item}
+                          currentValue={currentValue}
+                          onChange={handleAdditionalInputChange}
+                          isAdditional={true}
+                        />
+                      </div>
                     </div>
-                    <div className="ml-0">
-                      <QuestionComponent item={item} isAdditional={true} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
@@ -433,7 +376,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </div>
       );
     }
-  }, [logicLoading, additionalQuestions, activeSubcategories, handleSaveAdditional, saving, handleConditionalLogicReset]);
+  }, [logicLoading, additionalQuestions, activeSubcategories, handleSaveAdditional, saving, handleConditionalLogicReset, additionalFormData, handleAdditionalInputChange]);
 
   if (loading) {
     return (
