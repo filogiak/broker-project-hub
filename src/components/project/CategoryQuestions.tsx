@@ -2,11 +2,14 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
 import { useParams } from 'react-router-dom';
 import { useItemOptions } from '@/hooks/useItemOptions';
 import { useConditionalLogic } from '@/hooks/useConditionalLogic';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import ConditionalLogicErrorBoundary from './ConditionalLogicErrorBoundary';
+import ConditionalLogicLoader from './ConditionalLogicLoader';
 import TextQuestion from './questions/TextQuestion';
 import NumberQuestion from './questions/NumberQuestion';
 import DateQuestion from './questions/DateQuestion';
@@ -27,6 +30,8 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   const [additionalFormData, setAdditionalFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   
   const participantDesignation = useMemo(() => {
     return applicant === 'applicant_1' 
@@ -71,6 +76,11 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     participantDesignation
   );
 
+  // Reset error boundary when conditional logic reloads
+  const handleConditionalLogicReset = useCallback(() => {
+    loadExistingAdditionalQuestions();
+  }, [loadExistingAdditionalQuestions]);
+
   // Load existing conditional questions on mount
   useEffect(() => {
     if (projectId && categoryId) {
@@ -107,6 +117,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       [itemId]: value,
     }));
     setHasUnsavedChanges(true);
+    setSaveError(null); // Clear any previous errors
   }, []);
 
   const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
@@ -116,12 +127,13 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }));
   }, []);
 
-  // Enhanced save handler with conditional logic integration
+  // Enhanced save handler with better error handling and user feedback
   const handleSave = useCallback(async () => {
     if (!projectId) return;
 
     try {
       setSaving(true);
+      setSaveError(null);
       const savePromises = [];
       
       // Save main questions first
@@ -135,26 +147,37 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
 
       await Promise.all(savePromises);
       
-      // Now evaluate conditional logic based on saved data
+      // Show evaluation feedback
+      toast.info('Evaluating conditional logic...', { duration: 2000 });
+      
       console.log('Evaluating enhanced conditional logic after save...');
       const logicResult = await evaluateOnSave(formData, itemIdToFormIdMap);
       
-      // Reset unsaved changes flag
       setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
       
-      toast.success('Answers saved successfully!');
+      toast.success('Answers saved successfully!', {
+        description: `Saved at ${new Date().toLocaleTimeString()}`,
+      });
       
       if (logicResult.subcategories.length > 0) {
-        const preservedCount = Object.keys(logicResult.preservedAnswers).length;
+        const preservedCount = Object.keys(logicResult.preservedAnswers || {}).length;
         toast.info(
-          `${logicResult.subcategories.length} additional question section(s) unlocked based on your answers.` +
-          (preservedCount > 0 ? ` ${preservedCount} previous answers were preserved.` : '')
+          `${logicResult.subcategories.length} additional question section(s) unlocked!`,
+          {
+            description: preservedCount > 0 ? `${preservedCount} previous answers were preserved.` : undefined,
+            duration: 5000,
+          }
         );
       }
       
     } catch (error) {
       console.error('Error saving form data:', error);
-      toast.error('Failed to save answers. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save answers';
+      setSaveError(errorMessage);
+      toast.error('Failed to save answers', {
+        description: 'Please check your internet connection and try again.',
+      });
     } finally {
       setSaving(false);
     }
@@ -197,7 +220,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       ? (additionalFormData[item.id] ?? item.displayValue ?? '')
       : (formData[item.id] ?? item.displayValue ?? '');
     
-    const { options } = useItemOptions(item.itemId);
+    const { options, loading: optionsLoading } = useItemOptions(item.itemId);
     const onChange = isAdditional ? handleAdditionalInputChange : handleInputChange;
 
     const handleChange = useCallback((value: any) => {
@@ -238,6 +261,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
             value={currentValue}
             onChange={handleChange}
             options={options.map(opt => ({ value: opt.value, label: opt.label }))}
+            disabled={optionsLoading}
             required
           />
         );
@@ -258,10 +282,43 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }
   });
 
+  // Enhanced MainQuestionsContent with better status indicators
   const MainQuestionsContent = useCallback(() => {
     if (categoryItems.length > 0) {
       return (
         <div className="space-y-6">
+          {/* Save status indicator */}
+          {(hasUnsavedChanges || saveError || lastSaveTime) && (
+            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
+              <div className="flex items-center space-x-2">
+                {hasUnsavedChanges && (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-orange-700">You have unsaved changes</span>
+                  </>
+                )}
+                {!hasUnsavedChanges && lastSaveTime && (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-sm text-green-700">
+                      Last saved at {lastSaveTime.toLocaleTimeString()}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error alert */}
+          {saveError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {saveError}. Please try saving again.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="bg-card p-6 rounded-lg border">
             <div className="space-y-8">
               {categoryItems.map((item, index) => (
@@ -283,14 +340,11 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
             </div>
           </div>
           
-          <div className="flex justify-between items-center">
-            {hasUnsavedChanges && (
-              <p className="text-sm text-orange-600">You have unsaved changes</p>
-            )}
+          <div className="flex justify-end">
             <Button 
               onClick={handleSave} 
-              disabled={saving}
-              className="flex items-center gap-2 ml-auto"
+              disabled={saving || !hasUnsavedChanges}
+              className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
               {saving ? 'Saving...' : 'Save Answers'}
@@ -310,64 +364,62 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </div>
       );
     }
-  }, [categoryItems, handleSave, saving, hasUnsavedChanges]);
+  }, [categoryItems, handleSave, saving, hasUnsavedChanges, saveError, lastSaveTime]);
 
+  // Enhanced AdditionalQuestionsContent with error boundary
   const AdditionalQuestionsContent = useCallback(() => {
     if (logicLoading) {
-      return (
-        <div className="text-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading additional questions...</p>
-        </div>
-      );
+      return <ConditionalLogicLoader isEvaluating={true} />;
     }
 
     if (additionalQuestions.length > 0) {
       return (
-        <div className="space-y-6">
-          {activeSubcategories.length > 0 && (
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700">
-                <strong>Active Subcategories:</strong> {activeSubcategories.join(', ')}
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                These additional questions appeared based on your answers to the main questions.
-              </p>
-            </div>
-          )}
+        <ConditionalLogicErrorBoundary onReset={handleConditionalLogicReset}>
+          <div className="space-y-6">
+            {activeSubcategories.length > 0 && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-700">
+                  <strong>Active Subcategories:</strong> {activeSubcategories.join(', ')}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  These additional questions appeared based on your answers to the main questions.
+                </p>
+              </div>
+            )}
 
-          <div className="bg-card p-6 rounded-lg border">
-            <div className="space-y-8">
-              {additionalQuestions.map((item, index) => (
-                <div key={item.id} className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <Label className="text-base font-medium leading-relaxed">
-                      {index + 1}. {item.itemName}
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      Priority: {item.priority || 0}
-                    </span>
+            <div className="bg-card p-6 rounded-lg border">
+              <div className="space-y-8">
+                {additionalQuestions.map((item, index) => (
+                  <div key={item.id} className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Label className="text-base font-medium leading-relaxed">
+                        {index + 1}. {item.itemName}
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        Priority: {item.priority || 0}
+                      </span>
+                    </div>
+                    <div className="ml-0">
+                      <QuestionComponent item={item} isAdditional={true} />
+                    </div>
                   </div>
-                  <div className="ml-0">
-                    <QuestionComponent item={item} isAdditional={true} />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleSaveAdditional} 
+                disabled={saving}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? 'Saving...' : 'Save Additional Answers'}
+              </Button>
             </div>
           </div>
-          
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSaveAdditional} 
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Additional Answers'}
-            </Button>
-          </div>
-        </div>
+        </ConditionalLogicErrorBoundary>
       );
     } else {
       return (
@@ -381,7 +433,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </div>
       );
     }
-  }, [logicLoading, additionalQuestions, activeSubcategories, handleSaveAdditional, saving]);
+  }, [logicLoading, additionalQuestions, activeSubcategories, handleSaveAdditional, saving, handleConditionalLogicReset]);
 
   if (loading) {
     return (
@@ -401,10 +453,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           </div>
         </div>
         
-        <div className="text-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading questions...</p>
-        </div>
+        <ConditionalLogicLoader message="Loading questions..." />
       </div>
     );
   }
