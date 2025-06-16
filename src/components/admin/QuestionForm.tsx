@@ -1,500 +1,658 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Plus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 import QuestionOptionManager from './QuestionOptionManager';
-import LogicRulesManager from './LogicRulesManager';
+import MultiFlowManager, { AdditionalFlow } from './MultiFlowManager';
 import type { Database } from '@/integrations/supabase/types';
 
-type RequiredItem = Database['public']['Tables']['required_items']['Row'];
-type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
-type RequiredItemUpdate = Database['public']['Tables']['required_items']['Update'];
-type ItemsCategory = Database['public']['Tables']['items_categories']['Row'];
+// Use the proper enum types from the database
+type ProjectType = Database['public']['Enums']['project_type'];
 type ItemType = Database['public']['Enums']['item_type'];
 type ItemScope = Database['public']['Enums']['item_scope'];
-type ProjectType = Database['public']['Enums']['project_type'];
 
-const QuestionForm = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const isEditing = Boolean(id);
+// Updated interface to include answer_id and all restored fields
+interface QuestionFormData {
+  item_name: string;
+  answer_id?: string;
+  category_id?: string;
+  subcategory?: string;
+  subcategory_2?: string;
+  subcategory_1_initiator: boolean;
+  subcategory_2_initiator: boolean;
+  priority: number;
+  scope: ItemScope;
+  item_type: ItemType;
+  project_types_applicable: ProjectType[];
+  validation_rules: Record<string, any>;
+}
 
+interface QuestionOption {
+  id?: string;
+  option_value: string;
+  option_label: string;
+  display_order: number;
+}
+
+interface QuestionFormProps {
+  onSuccess: () => void;
+  editingQuestion?: any;
+  onCancel?: () => void;
+}
+
+const ITEM_TYPE_OPTIONS = [
+  { value: 'text', label: 'Text Input' },
+  { value: 'number', label: 'Number Input' },
+  { value: 'date', label: 'Date Input' },
+  { value: 'document', label: 'Document Upload' },
+  { value: 'repeatable_group', label: 'Repeatable Group' },
+  { value: 'single_choice_dropdown', label: 'Single Choice Dropdown' },
+  { value: 'multiple_choice_checkbox', label: 'Multiple Choice Checkbox' }
+] as const;
+
+const SCOPE_OPTIONS = [
+  { value: 'PROJECT', label: 'Project Level' },
+  { value: 'PARTICIPANT', label: 'Participant Level' }
+] as const;
+
+const PROJECT_TYPE_OPTIONS = [
+  { value: 'first_home_purchase', label: 'First Home Purchase' },
+  { value: 'refinance', label: 'Refinance' },
+  { value: 'investment_property', label: 'Investment Property' },
+  { value: 'construction_loan', label: 'Construction Loan' },
+  { value: 'home_equity_loan', label: 'Home Equity Loan' },
+  { value: 'reverse_mortgage', label: 'Reverse Mortgage' }
+] as const;
+
+// All project types as default array
+const ALL_PROJECT_TYPES: ProjectType[] = PROJECT_TYPE_OPTIONS.map(option => option.value as ProjectType);
+
+const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProps) => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<ItemsCategory[]>([]);
-  const [formData, setFormData] = useState<Partial<RequiredItem>>({
-    item_name: '',
-    item_type: 'text' as ItemType,
-    scope: 'PROJECT' as ItemScope,
-    category_id: '',
-    subcategory: '',
-    subcategory_2: '',
-    subcategory_3: '',
-    subcategory_4: '',
-    subcategory_5: '',
-    subcategory_1_initiator: false,
-    subcategory_2_initiator: false,
-    subcategory_3_initiator: false,
-    subcategory_4_initiator: false,
-    subcategory_5_initiator: false,
-    priority: 0,
-    project_types_applicable: [],
-    validation_rules: {},
+  const [options, setOptions] = useState<QuestionOption[]>([]);
+  const [selectedItemType, setSelectedItemType] = useState<ItemType>('text');
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<ProjectType[]>(ALL_PROJECT_TYPES);
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // New multi-flow state
+  const [enableMultiFlow, setEnableMultiFlow] = useState(false);
+  const [additionalFlows, setAdditionalFlows] = useState<AdditionalFlow[]>([]);
+
+  const form = useForm<QuestionFormData>({
+    defaultValues: {
+      item_name: '',
+      answer_id: '',
+      category_id: undefined,
+      subcategory: '',
+      subcategory_2: '',
+      subcategory_1_initiator: false,
+      subcategory_2_initiator: false,
+      priority: 0,
+      scope: 'PROJECT',
+      item_type: 'text',
+      project_types_applicable: ALL_PROJECT_TYPES,
+      validation_rules: {}
+    }
   });
 
-  const projectTypes: ProjectType[] = [
-    'first_home_purchase',
-    'refinance',
-    'investment_property',
-    'construction_loan',
-    'home_equity_loan',
-    'reverse_mortgage'
-  ];
-
+  // Effect 1: Load categories on component mount
   useEffect(() => {
     loadCategories();
-    if (isEditing && id) {
-      loadQuestion(id);
+  }, []);
+
+  // Effect 2: Initialize form data after categories are loaded
+  useEffect(() => {
+    // Only proceed if categories are loaded
+    if (!categoriesLoaded) return;
+
+    if (editingQuestion) {
+      setIsEditMode(true);
+      const editProjectTypes = editingQuestion.project_types_applicable || [];
+      
+      // Validate that the category still exists
+      const categoryExists = categories.some(cat => cat.id === editingQuestion.category_id);
+      
+      form.reset({
+        item_name: editingQuestion.item_name,
+        answer_id: editingQuestion.answer_id || '',
+        category_id: categoryExists ? editingQuestion.category_id : undefined,
+        subcategory: editingQuestion.subcategory || '',
+        subcategory_2: editingQuestion.subcategory_2 || '',
+        subcategory_1_initiator: editingQuestion.subcategory_1_initiator || false,
+        subcategory_2_initiator: editingQuestion.subcategory_2_initiator || false,
+        priority: editingQuestion.priority || 0,
+        scope: editingQuestion.scope,
+        item_type: editingQuestion.item_type,
+        project_types_applicable: editProjectTypes,
+        validation_rules: editingQuestion.validation_rules || {}
+      });
+      
+      setSelectedItemType(editingQuestion.item_type);
+      setSelectedProjectTypes(editProjectTypes);
+      
+      if (editingQuestion.item_options) {
+        setOptions(editingQuestion.item_options);
+      }
+
+      // Check if question has multi-flow logic and load it
+      if (editingQuestion.is_multi_flow_initiator) {
+        setEnableMultiFlow(true);
+        loadExistingLogicFlows(editingQuestion.id);
+      }
+      
+      // Log for debugging
+      console.log('Edit mode initialized:', {
+        categoryId: editingQuestion.category_id,
+        categoryExists,
+        categories: categories.length
+      });
+    } else {
+      // New question mode - use all project types as default
+      setIsEditMode(false);
+      setSelectedProjectTypes(ALL_PROJECT_TYPES);
+      form.setValue('project_types_applicable', ALL_PROJECT_TYPES);
+      
+      // Reset form to defaults for new question
+      form.reset({
+        item_name: '',
+        answer_id: '',
+        category_id: undefined,
+        subcategory: '',
+        subcategory_2: '',
+        subcategory_1_initiator: false,
+        subcategory_2_initiator: false,
+        priority: 0,
+        scope: 'PROJECT',
+        item_type: 'text',
+        project_types_applicable: ALL_PROJECT_TYPES,
+        validation_rules: {}
+      });
+      setOptions([]);
+      setEnableMultiFlow(false);
+      setAdditionalFlows([]);
     }
-  }, [isEditing, id]);
+  }, [editingQuestion, categoriesLoaded, categories, form]);
 
   const loadCategories = async () => {
     try {
       const data = await questionService.getItemsCategories();
       setCategories(data);
+      setCategoriesLoaded(true);
+      console.log('Categories loaded:', data.length);
     } catch (error) {
       console.error('Error loading categories:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load categories",
-        variant: "destructive",
-      });
+      toast.error('Failed to load categories');
+      setCategoriesLoaded(true); // Set to true even on error to prevent infinite loading
     }
   };
 
-  const loadQuestion = async (questionId: string) => {
+  const loadExistingLogicFlows = async (questionId: string) => {
     try {
-      setLoading(true);
-      const question = await questionService.getRequiredItemById(questionId);
-      if (question) {
-        setFormData(question);
-      } else {
-        toast({
-          title: "Error",
-          description: "Question not found",
-          variant: "destructive",
-        });
-        navigate('/admin');
-      }
+      const rules = await questionService.getLogicRules(questionId);
+      const flows: AdditionalFlow[] = rules.map((rule, index) => ({
+        id: `flow-${index + 1}`,
+        answerValue: rule.trigger_value,
+        targetSubcategory: rule.target_subcategory
+      }));
+      setAdditionalFlows(flows);
     } catch (error) {
-      console.error('Error loading question:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load question",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error loading existing logic flows:', error);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.item_name?.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Question name is required",
-        variant: "destructive",
-      });
-      return;
+  // Validate options before saving
+  const validateOptions = (options: QuestionOption[]): string | null => {
+    if (options.length === 0) {
+      return 'At least one option is required for dropdown and checkbox questions';
     }
 
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+      if (!option.option_value?.trim()) {
+        return `Option ${i + 1} is missing a value`;
+      }
+      if (!option.option_label?.trim()) {
+        return `Option ${i + 1} is missing a label`;
+      }
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (data: QuestionFormData) => {
     try {
       setLoading(true);
-
-      if (isEditing && id) {
-        const updates: RequiredItemUpdate = { ...formData };
-        await questionService.updateRequiredItem(id, updates);
-        toast({
-          title: "Success",
-          description: "Question updated successfully",
-        });
-      } else {
-        const newItem: RequiredItemInsert = { ...formData } as RequiredItemInsert;
-        await questionService.createRequiredItem(newItem);
-        toast({
-          title: "Success",
-          description: "Question created successfully",
-        });
+      
+      // Validate options for dropdown/checkbox types
+      if (data.item_type === 'single_choice_dropdown' || data.item_type === 'multiple_choice_checkbox') {
+        const validationError = validateOptions(options);
+        if (validationError) {
+          toast.error(validationError);
+          return;
+        }
       }
 
-      navigate('/admin');
+      // Validate additional flows if multi-flow is enabled
+      if (enableMultiFlow && additionalFlows.length === 0) {
+        toast.error('Multi-flow questions must have at least one additional flow');
+        return;
+      }
+
+      if (enableMultiFlow) {
+        for (const flow of additionalFlows) {
+          if (!flow.answerValue.trim() || !flow.targetSubcategory.trim()) {
+            toast.error('All additional flows must have both answer value and target subcategory');
+            return;
+          }
+        }
+      }
+      
+      let questionId: string;
+      
+      if (editingQuestion) {
+        const updated = await questionService.updateRequiredItem(editingQuestion.id, data);
+        questionId = updated.id;
+      } else {
+        const created = await questionService.createRequiredItem(data);
+        questionId = created.id;
+      }
+
+      // Update the multi-flow initiator flag
+      await questionService.updateRequiredItem(questionId, {
+        ...data,
+        is_multi_flow_initiator: enableMultiFlow
+      });
+
+      // Handle options for dropdown/checkbox types
+      if (data.item_type === 'single_choice_dropdown' || data.item_type === 'multiple_choice_checkbox') {
+        const validOptions = options
+          .filter(option => option.option_value?.trim() && option.option_label?.trim())
+          .map(option => ({
+            option_value: option.option_value.trim(),
+            option_label: option.option_label.trim(),
+            display_order: option.display_order
+          }));
+
+        if (validOptions.length > 0) {
+          await questionService.replaceItemOptions(questionId, validOptions);
+        }
+      }
+
+      // Handle additional flows if multi-flow is enabled
+      if (enableMultiFlow && additionalFlows.length > 0) {
+        await createAdditionalFlowRules(questionId, additionalFlows);
+      } else if (!enableMultiFlow) {
+        // Clear any existing logic rules if multi-flow is disabled
+        await questionService.clearLogicRules(questionId);
+      }
+
+      toast.success(editingQuestion ? 'Question updated successfully' : 'Question created successfully');
+      onSuccess();
     } catch (error) {
       console.error('Error saving question:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save question",
-        variant: "destructive",
-      });
+      toast.error('Failed to save question');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProjectTypeToggle = (projectType: ProjectType, checked: boolean) => {
-    const currentTypes = formData.project_types_applicable || [];
-    let newTypes: ProjectType[];
-    
-    if (checked) {
-      newTypes = [...currentTypes, projectType];
-    } else {
-      newTypes = currentTypes.filter(type => type !== projectType);
+  const createAdditionalFlowRules = async (questionId: string, flows: AdditionalFlow[]) => {
+    try {
+      // First, clear any existing logic rules for this question
+      await questionService.clearLogicRules(questionId);
+
+      // Create new logic rules for each additional flow
+      for (const flow of flows) {
+        await questionService.createLogicRule({
+          trigger_item_id: questionId,
+          trigger_value: flow.answerValue,
+          target_subcategory: flow.targetSubcategory,
+          target_category_id: form.getValues('category_id'),
+          is_active: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating additional flow logic rules:', error);
+      throw error;
     }
-    
-    setFormData(prev => ({
-      ...prev,
-      project_types_applicable: newTypes
-    }));
   };
 
-  if (loading) {
+  const handleProjectTypeChange = (projectType: ProjectType, checked: boolean) => {
+    const updated = checked 
+      ? [...selectedProjectTypes, projectType]
+      : selectedProjectTypes.filter(type => type !== projectType);
+    
+    setSelectedProjectTypes(updated);
+    form.setValue('project_types_applicable', updated);
+  };
+
+  const handleOptionsChange = (newOptions: QuestionOption[]) => {
+    setOptions(newOptions);
+  };
+
+  const handleAdditionalFlowsChange = (flows: AdditionalFlow[]) => {
+    setAdditionalFlows(flows);
+  };
+
+  const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
+
+  // Don't render the form until categories are loaded
+  if (!categoriesLoaded) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" onClick={() => navigate('/admin')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Loading...</h1>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-sm text-muted-foreground">Loading categories...</div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => navigate('/admin')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {isEditing ? 'Edit Question' : 'Create New Question'}
-        </h1>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{editingQuestion ? 'Edit Question' : 'Create New Question'}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="item_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question Label</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter the question text shown to users" />
+                  </FormControl>
+                  <FormDescription>
+                    This is the label that users will see when answering this question
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-      <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="subcategories">Subcategories (5-Slot)</TabsTrigger>
-          <TabsTrigger value="options">Options</TabsTrigger>
-          <TabsTrigger value="logic">Logic Rules</TabsTrigger>
-        </TabsList>
+            <FormField
+              control={form.control}
+              name="answer_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Answer ID (Optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter a unique identifier for this question" />
+                  </FormControl>
+                  <FormDescription>
+                    A unique identifier to help recognize and select this question internally
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <TabsContent value="basic">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>
-                  Configure the core properties of this question
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="item_name">Question Name *</Label>
-                  <Input
-                    id="item_name"
-                    value={formData.item_name || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, item_name: e.target.value }))}
-                    placeholder="Enter question name"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="item_type">Question Type</Label>
-                    <Select
-                      value={formData.item_type || 'text'}
-                      onValueChange={(value: ItemType) => setFormData(prev => ({ ...prev, item_type: value }))}
-                    >
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ''}
+                  >
+                    <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="single_choice_dropdown">Single Choice Dropdown</SelectItem>
-                        <SelectItem value="multiple_choice_checkbox">Multiple Choice Checkbox</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Traditional Subcategory Settings */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="subcategory"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategory</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Optional subcategory" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="subcategory_1_initiator"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Subcategory 1 Initiator</FormLabel>
+                      <FormDescription>
+                        Check if this item initiates subcategory 1 logic
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="subcategory_2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategory 2</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Optional second subcategory" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="subcategory_2_initiator"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Subcategory 2 Initiator</FormLabel>
+                      <FormDescription>
+                        Check if this item initiates subcategory 2 logic
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* New Multi-Flow Section */}
+            <div className="border rounded-lg p-4 bg-blue-50/50">
+              <div className="flex items-center space-x-3 mb-4">
+                <Checkbox
+                  id="enable-multi-flow"
+                  checked={enableMultiFlow}
+                  onCheckedChange={(checked) => setEnableMultiFlow(checked === true)}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="enable-multi-flow" className="font-medium text-blue-700">
+                    Enable Additional Subcategory Flows
+                  </Label>
+                  <div className="text-sm text-muted-foreground">
+                    Allow this question to trigger multiple different subcategories based on different answer values
                   </div>
-
-                  <div>
-                    <Label htmlFor="scope">Scope</Label>
-                    <Select
-                      value={formData.scope || 'PROJECT'}
-                      onValueChange={(value: ItemScope) => setFormData(prev => ({ ...prev, scope: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select scope" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PROJECT">Project</SelectItem>
-                        <SelectItem value="PARTICIPANT">Participant</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="category_id">Category</Label>
-                    <Select
-                      value={formData.category_id || ''}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
+              {enableMultiFlow && (
+                <MultiFlowManager
+                  flows={additionalFlows}
+                  onFlowsChange={handleAdditionalFlowsChange}
+                  questionType={selectedItemType}
+                  options={options.map(opt => ({ value: opt.option_value, label: opt.option_label }))}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </FormControl>
+                    <FormDescription>Higher numbers = higher priority</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="scope"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scope</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
+                        {SCOPE_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-                  <div>
-                    <Label htmlFor="priority">Priority</Label>
-                    <Input
-                      id="priority"
-                      type="number"
-                      value={formData.priority || 0}
-                      onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))}
+            <FormField
+              control={form.control}
+              name="item_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question Type</FormLabel>
+                  <Select 
+                    onValueChange={(value: ItemType) => {
+                      field.onChange(value);
+                      setSelectedItemType(value);
+                    }} 
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ITEM_TYPE_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <Label className="text-base font-medium">Applicable Project Types</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {PROJECT_TYPE_OPTIONS.map(option => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={option.value}
+                      checked={selectedProjectTypes.includes(option.value as ProjectType)}
+                      onCheckedChange={(checked) => 
+                        handleProjectTypeChange(option.value as ProjectType, checked as boolean)
+                      }
                     />
+                    <Label htmlFor={option.value} className="text-sm">
+                      {option.label}
+                    </Label>
                   </div>
-                </div>
-
-                <div>
-                  <Label className="text-base font-medium">Applicable Project Types</Label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Select which project types this question applies to (leave all unchecked for all types)
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {projectTypes.map((projectType) => (
-                      <div key={projectType} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`project-type-${projectType}`}
-                          checked={formData.project_types_applicable?.includes(projectType) || false}
-                          onCheckedChange={(checked) => handleProjectTypeToggle(projectType, !!checked)}
-                        />
-                        <Label htmlFor={`project-type-${projectType}`} className="capitalize">
-                          {projectType.replace(/_/g, ' ')}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  {formData.project_types_applicable && formData.project_types_applicable.length > 0 && (
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      Selected: {formData.project_types_applicable.map(type => type.replace(/_/g, ' ')).join(', ')}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={loading}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {loading ? 'Saving...' : 'Save Question'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        </TabsContent>
-
-        <TabsContent value="subcategories">
-          <Card>
-            <CardHeader>
-              <CardTitle>Enhanced 5-Slot Subcategory System</CardTitle>
-              <CardDescription>
-                Configure up to 5 subcategories and their initiator settings. Each question can belong to multiple subcategories and can initiate conditional logic for any combination of them. Use this for complex multi-flow conditional logic.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Enhanced Subcategory Grid with Initiator Logic */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5].map((num) => {
-                  const subcategoryKey = num === 1 ? 'subcategory' : `subcategory_${num}` as keyof typeof formData;
-                  const initiatorKey = `subcategory_${num}_initiator` as keyof typeof formData;
-                  
-                  return (
-                    <div key={num} className="p-4 border rounded-lg space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">
-                        Subcategory Slot {num}
-                      </h4>
-                      
-                      <div>
-                        <Label htmlFor={`subcategory-${num}`} className="text-sm">
-                          Subcategory Name
-                        </Label>
-                        <Input
-                          id={`subcategory-${num}`}
-                          value={(formData[subcategoryKey] as string) || ''}
-                          onChange={(e) => setFormData(prev => ({ 
-                            ...prev, 
-                            [subcategoryKey]: e.target.value 
-                          }))}
-                          placeholder={`Enter subcategory ${num} name`}
-                          className="text-sm"
-                        />
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`initiator-${num}`}
-                          checked={(formData[initiatorKey] as boolean) || false}
-                          onCheckedChange={(checked) => setFormData(prev => ({ 
-                            ...prev, 
-                            [initiatorKey]: !!checked 
-                          }))}
-                        />
-                        <Label htmlFor={`initiator-${num}`} className="text-sm">
-                          Is Logic Initiator
-                        </Label>
-                      </div>
-                      
-                      {(formData[initiatorKey] as boolean) && (formData[subcategoryKey] as string) && (
-                        <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                          ✓ This question will trigger conditional logic for "{formData[subcategoryKey]}"
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                ))}
               </div>
+            </div>
 
-              {/* Enhanced Logic Summary */}
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Multi-Subcategory Logic Configuration:</h4>
-                <div className="text-sm space-y-2">
-                  {(() => {
-                    const subcategories = [
-                      formData.subcategory,
-                      formData.subcategory_2,
-                      formData.subcategory_3,
-                      formData.subcategory_4,
-                      formData.subcategory_5
-                    ].filter(Boolean);
-                    
-                    const initiators = [];
-                    if (formData.subcategory_1_initiator && formData.subcategory) initiators.push(`"${formData.subcategory}"`);
-                    if (formData.subcategory_2_initiator && formData.subcategory_2) initiators.push(`"${formData.subcategory_2}"`);
-                    if (formData.subcategory_3_initiator && formData.subcategory_3) initiators.push(`"${formData.subcategory_3}"`);
-                    if (formData.subcategory_4_initiator && formData.subcategory_4) initiators.push(`"${formData.subcategory_4}"`);
-                    if (formData.subcategory_5_initiator && formData.subcategory_5) initiators.push(`"${formData.subcategory_5}"`);
-                    
-                    return (
-                      <>
-                        <div>• <strong>Belongs to subcategories:</strong> {subcategories.length ? subcategories.join(', ') : 'None (Main question only)'}</div>
-                        <div>• <strong>Can trigger logic for:</strong> {initiators.length ? initiators.join(', ') : 'None'}</div>
-                        <div>• <strong>Question type:</strong> {
-                          subcategories.length === 0 ? 'Main question' : 
-                          initiators.length > 0 ? `Multi-flow initiator (triggers ${initiators.length} subcategories)` : 
-                          'Conditional question'
-                        }</div>
-                        {initiators.length > 1 && (
-                          <div className="text-blue-600 font-medium">• This question can trigger multiple subcategories simultaneously based on answer values</div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
+            {showOptionsManager && (
+              <QuestionOptionManager
+                options={options}
+                onChange={handleOptionsChange}
+              />
+            )}
 
-              {/* Multi-Flow Logic Explanation */}
-              {(() => {
-                const initiatorCount = [
-                  formData.subcategory_1_initiator,
-                  formData.subcategory_2_initiator,
-                  formData.subcategory_3_initiator,
-                  formData.subcategory_4_initiator,
-                  formData.subcategory_5_initiator
-                ].filter(Boolean).length;
-
-                if (initiatorCount > 1) {
-                  return (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h5 className="font-medium text-blue-800 mb-2">Multi-Flow Logic Enabled</h5>
-                      <div className="text-sm text-blue-700 space-y-1">
-                        <p>• This question can trigger {initiatorCount} different subcategories</p>
-                        <p>• Create logic rules to map specific answer values to different subcategories</p>
-                        <p>• Multiple subcategories can be triggered simultaneously by one answer</p>
-                        <p>• For multi-choice questions, each option can trigger different subcategories</p>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-
-              <div className="flex justify-end pt-4">
-                <Button 
-                  onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)} 
-                  disabled={loading}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Subcategory Settings'}
+            <div className="flex gap-4">
+              {onCancel && (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="options">
-          {isEditing && id ? (
-            <QuestionOptionManager requiredItemId={id} />
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Save the question first to manage options
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="logic">
-          {isEditing && id ? (
-            <LogicRulesManager itemId={id} />
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Save the question first to configure logic rules
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+              )}
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Saving...' : (editingQuestion ? 'Update Question' : 'Create Question')}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };
 

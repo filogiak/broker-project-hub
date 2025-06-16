@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
@@ -272,9 +271,17 @@ const AdminDashboard = () => {
 
             <TabsContent value="questions" className="space-y-6">
               {questionViewMode === 'list' ? (
-                <QuestionsList />
+                <QuestionsList
+                  onCreateNew={handleCreateQuestion}
+                  onEdit={handleEditQuestion}
+                  refreshTrigger={questionsRefreshTrigger}
+                />
               ) : (
-                <QuestionForm />
+                <QuestionForm
+                  onSuccess={handleQuestionSuccess}
+                  editingQuestion={editingQuestion}
+                  onCancel={handleCancelQuestion}
+                />
               )}
             </TabsContent>
 

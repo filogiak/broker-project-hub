@@ -23,15 +23,8 @@ export interface GenerationResult {
       id: string;
       item_name: string;
       subcategory: string | null;
-      subcategory_2: string | null;
-      subcategory_3: string | null;
-      subcategory_4: string | null;
-      subcategory_5: string | null;
       subcategory_1_initiator: boolean | null;
       subcategory_2_initiator: boolean | null;
-      subcategory_3_initiator: boolean | null;
-      subcategory_4_initiator: boolean | null;
-      subcategory_5_initiator: boolean | null;
       project_types_applicable: string[] | null;
       scope: string;
       category_id: string | null;
@@ -127,7 +120,7 @@ export class FormGenerationService {
   }
 
   /**
-   * Apply filtering rules with comprehensive debugging - UPDATED FOR 5 SUBCATEGORIES
+   * Apply filtering rules with comprehensive debugging - RESTORED VERSION
    */
   private static filterItemsByRulesWithDebug(items: RequiredItem[], project: Project): {
     applicableItems: RequiredItem[];
@@ -139,22 +132,15 @@ export class FormGenerationService {
         id: string;
         item_name: string;
         subcategory: string | null;
-        subcategory_2: string | null;
-        subcategory_3: string | null;
-        subcategory_4: string | null;
-        subcategory_5: string | null;
         subcategory_1_initiator: boolean | null;
         subcategory_2_initiator: boolean | null;
-        subcategory_3_initiator: boolean | null;
-        subcategory_4_initiator: boolean | null;
-        subcategory_5_initiator: boolean | null;
         project_types_applicable: string[] | null;
         scope: string;
         category_id: string | null;
       }>;
     };
   } {
-    console.log('\n🔍 === FILTERING DEBUG SESSION (5 SUBCATEGORIES) ===');
+    console.log('\n🔍 === FILTERING DEBUG SESSION (RESTORED) ===');
     
     let itemsAfterProjectTypeFilter = 0;
     let itemsAfterSubcategoryFilter = 0;
@@ -164,12 +150,9 @@ export class FormGenerationService {
       console.log(`   - ID: ${item.id}`);
       console.log(`   - Category: ${item.category_id}`);
       console.log(`   - Scope: ${item.scope}`);
-      console.log(`   - Subcategory 1: ${item.subcategory === null ? 'NULL (main question)' : `"${item.subcategory}"`}`);
-      console.log(`   - Subcategory 2: ${item.subcategory_2 === null ? 'NULL' : `"${item.subcategory_2}"`}`);
-      console.log(`   - Subcategory 3: ${item.subcategory_3 === null ? 'NULL' : `"${item.subcategory_3}"`}`);
-      console.log(`   - Subcategory 4: ${item.subcategory_4 === null ? 'NULL' : `"${item.subcategory_4}"`}`);
-      console.log(`   - Subcategory 5: ${item.subcategory_5 === null ? 'NULL' : `"${item.subcategory_5}"`}`);
-      console.log(`   - Initiator flags: [1:${item.subcategory_1_initiator}, 2:${item.subcategory_2_initiator}, 3:${item.subcategory_3_initiator}, 4:${item.subcategory_4_initiator}, 5:${item.subcategory_5_initiator}]`);
+      console.log(`   - Subcategory: ${item.subcategory === null ? 'NULL (main question)' : `"${item.subcategory}"`}`);
+      console.log(`   - Subcategory 1 Initiator: ${item.subcategory_1_initiator}`);
+      console.log(`   - Subcategory 2 Initiator: ${item.subcategory_2_initiator}`);
       console.log(`   - Project Types Applicable: ${JSON.stringify(item.project_types_applicable)}`);
 
       // Rule 1: Check project_types_applicable
@@ -187,30 +170,19 @@ export class FormGenerationService {
       }
       itemsAfterProjectTypeFilter++;
 
-      // Rule 2: UPDATED - Only include main questions (ALL subcategories NULL) and initiator questions (ANY initiator flag true)
-      const isMainQuestion = item.subcategory === null && item.subcategory_2 === null && item.subcategory_3 === null && item.subcategory_4 === null && item.subcategory_5 === null;
-      const isInitiatorQuestion = item.subcategory_1_initiator === true || 
-                                 item.subcategory_2_initiator === true || 
-                                 item.subcategory_3_initiator === true || 
-                                 item.subcategory_4_initiator === true || 
-                                 item.subcategory_5_initiator === true;
+      // Rule 2: RESTORED subcategory logic - Only include main questions (NULL subcategory) and initiator questions
+      const isMainQuestion = item.subcategory === null;
+      const isInitiatorQuestion = item.subcategory_1_initiator === true || item.subcategory_2_initiator === true;
       
       if (!isMainQuestion && !isInitiatorQuestion) {
-        const subcategories = [item.subcategory, item.subcategory_2, item.subcategory_3, item.subcategory_4, item.subcategory_5].filter(Boolean);
-        console.log(`   ❌ FILTERED OUT: conditional question (has subcategories [${subcategories.join(', ')}] but is not an initiator)`);
+        console.log(`   ❌ FILTERED OUT: conditional question (has subcategory '${item.subcategory}' but is not an initiator)`);
         return false;
       }
       
       if (isMainQuestion) {
-        console.log(`   ✅ PASSED: main question (all subcategories are NULL)`);
+        console.log(`   ✅ PASSED: main question (subcategory is NULL)`);
       } else {
-        const initiatorSubcategories = [];
-        if (item.subcategory_1_initiator) initiatorSubcategories.push(`1:"${item.subcategory}"`);
-        if (item.subcategory_2_initiator) initiatorSubcategories.push(`2:"${item.subcategory_2}"`);
-        if (item.subcategory_3_initiator) initiatorSubcategories.push(`3:"${item.subcategory_3}"`);
-        if (item.subcategory_4_initiator) initiatorSubcategories.push(`4:"${item.subcategory_4}"`);
-        if (item.subcategory_5_initiator) initiatorSubcategories.push(`5:"${item.subcategory_5}"`);
-        console.log(`   ✅ PASSED: initiator question for subcategories [${initiatorSubcategories.join(', ')}]`);
+        console.log(`   ✅ PASSED: initiator question for subcategory '${item.subcategory}'`);
       }
       itemsAfterSubcategoryFilter++;
 
@@ -226,22 +198,15 @@ export class FormGenerationService {
         id: item.id,
         item_name: item.item_name,
         subcategory: item.subcategory,
-        subcategory_2: item.subcategory_2,
-        subcategory_3: item.subcategory_3,
-        subcategory_4: item.subcategory_4,
-        subcategory_5: item.subcategory_5,
         subcategory_1_initiator: item.subcategory_1_initiator,
         subcategory_2_initiator: item.subcategory_2_initiator,
-        subcategory_3_initiator: item.subcategory_3_initiator,
-        subcategory_4_initiator: item.subcategory_4_initiator,
-        subcategory_5_initiator: item.subcategory_5_initiator,
         project_types_applicable: item.project_types_applicable,
         scope: item.scope,
         category_id: item.category_id
       }))
     };
 
-    console.log('\n📊 === FILTERING SUMMARY (5 SUBCATEGORIES) ===');
+    console.log('\n📊 === FILTERING SUMMARY (RESTORED) ===');
     console.log(`Total items: ${items.length}`);
     console.log(`After project type filter: ${itemsAfterProjectTypeFilter}`);
     console.log(`After subcategory filter: ${itemsAfterSubcategoryFilter}`);
@@ -259,6 +224,9 @@ export class FormGenerationService {
     return applicableItems;
   }
 
+  /**
+   * Create checklist items with proper participant designations
+   */
   private static async createChecklistItems(
     items: RequiredItem[],
     project: Project
@@ -273,6 +241,7 @@ export class FormGenerationService {
     for (const item of items) {
       try {
         if (item.scope === 'PROJECT') {
+          // Rule 2a: PROJECT scope - create one item without participant designation
           const checklistItem = await this.createSingleChecklistItem(
             project.id,
             item.id,
@@ -284,6 +253,7 @@ export class FormGenerationService {
             console.log(`Created PROJECT item: ${item.item_name}`);
           }
         } else if (item.scope === 'PARTICIPANT') {
+          // Rule 2b: PARTICIPANT scope - create items based on applicant count
           const participantDesignations = this.getParticipantDesignations(
             project.applicant_count || 'one_applicant'
           );
@@ -312,6 +282,9 @@ export class FormGenerationService {
     return result;
   }
 
+  /**
+   * Create a single checklist item
+   */
   private static async createSingleChecklistItem(
     projectId: string,
     itemId: string,
@@ -329,6 +302,7 @@ export class FormGenerationService {
       .single();
 
     if (error) {
+      // Handle unique constraint violations gracefully
       if (error.code === '23505') {
         console.log(`Checklist item already exists for ${itemId}/${participantDesignation || 'PROJECT'}`);
         return null;
@@ -339,6 +313,9 @@ export class FormGenerationService {
     return data;
   }
 
+  /**
+   * Get participant designations based on applicant count
+   */
   private static getParticipantDesignations(applicantCount: ApplicantCount): ParticipantDesignation[] {
     switch (applicantCount) {
       case 'one_applicant':
@@ -346,15 +323,20 @@ export class FormGenerationService {
       case 'two_applicants':
         return ['applicant_one', 'applicant_two'];
       case 'three_or_more_applicants':
+        // For now, treating this the same as two_applicants
         return ['applicant_one', 'applicant_two'];
       default:
         return ['solo_applicant'];
     }
   }
 
+  /**
+   * Manually trigger form generation for a project (regenerate)
+   */
   static async regenerateChecklistForProject(projectId: string): Promise<GenerationResult> {
     console.log('🔄 Regenerating checklist for project:', projectId);
     
+    // Clear existing checklist items
     const { error: deleteError } = await supabase
       .from('project_checklist_items')
       .delete()
@@ -364,14 +346,19 @@ export class FormGenerationService {
       throw new Error(`Failed to clear existing items: ${deleteError.message}`);
     }
 
+    // Reset generation timestamp
     await supabase
       .from('projects')
       .update({ checklist_generated_at: null })
       .eq('id', projectId);
 
+    // Generate new checklist
     return this.generateChecklistForProject(projectId, true);
   }
 
+  /**
+   * Get generation status for a project
+   */
   static async getGenerationStatus(projectId: string): Promise<{
     isGenerated: boolean;
     generatedAt: string | null;
