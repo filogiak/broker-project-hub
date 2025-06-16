@@ -73,7 +73,12 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
 
-        {/* Answer ID - moved to the left */}
+        {/* Question Name */}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{question.item_name}</div>
+        </div>
+
+        {/* Answer ID - moved to the right of question name */}
         <div className="flex-shrink-0 w-24 flex justify-center">
           {question.answer_id ? (
             <Badge variant="outline" className="font-mono text-xs">
@@ -82,11 +87,6 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           ) : (
             <span className="text-muted-foreground text-sm">—</span>
           )}
-        </div>
-
-        {/* Question Name */}
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">{question.item_name}</div>
         </div>
 
         {/* Type */}
