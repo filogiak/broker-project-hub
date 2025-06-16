@@ -44,7 +44,7 @@ export const useConditionalLogic = (
       const newSubcategories = logicResult.subcategories;
       console.log('Enhanced logic evaluation result:', {
         subcategories: newSubcategories,
-        preservedAnswersCount: Object.keys(logicResult.preservedAnswers).length,
+        preservedAnswersCount: Object.keys(logicResult.preservedAnswers || {}).length,
         targetCategoryId: logicResult.targetCategoryId
       });
 
@@ -67,14 +67,14 @@ export const useConditionalLogic = (
           categoryId,
           projectId,
           participantDesignation,
-          logicResult.preservedAnswers
+          logicResult.preservedAnswers || {}
         );
 
         if (error) {
           console.error('Error fetching enhanced additional questions:', error);
           setAdditionalQuestions([]);
         } else {
-          const typedQuestions = this.transformToTypedQuestions(data || []);
+          const typedQuestions = transformToTypedQuestions(data || []);
           setAdditionalQuestions(typedQuestions);
           console.log('Enhanced additional questions loaded:', typedQuestions.length);
         }
@@ -136,7 +136,7 @@ export const useConditionalLogic = (
         console.error('Error loading existing additional questions:', error);
         setAdditionalQuestions([]);
       } else {
-        const typedQuestions = this.transformToTypedQuestions(data || []);
+        const typedQuestions = transformToTypedQuestions(data || []);
         setAdditionalQuestions(typedQuestions);
         setActiveSubcategories(targetSubcategories);
         console.log('Existing additional questions loaded:', typedQuestions.length);
