@@ -16,7 +16,7 @@ export const useConditionalLogic = (
   const [activeSubcategories, setActiveSubcategories] = useState<string[]>([]);
 
   /**
-   * Enhanced save-triggered evaluation with smart preservation
+   * Enhanced save-triggered evaluation with smart preservation and proper duplicate prevention
    */
   const evaluateOnSave = useCallback(async (
     formData: Record<string, any>,
@@ -28,7 +28,7 @@ export const useConditionalLogic = (
 
     try {
       setLoading(true);
-      console.log('Starting enhanced save-triggered conditional logic evaluation...');
+      console.log('🔧 Starting enhanced save-triggered conditional logic evaluation...');
 
       const params: SaveTriggeredEvaluationParams = {
         formData,
@@ -38,11 +38,11 @@ export const useConditionalLogic = (
         itemIdToFormIdMap,
       };
 
-      // Use the enhanced evaluation method from Phase 2
+      // Use the enhanced evaluation method with duplicate prevention
       const logicResult = await ConditionalLogicService.evaluateLogicOnSave(params);
       
       const newSubcategories = logicResult.subcategories;
-      console.log('Enhanced logic evaluation result:', {
+      console.log('🔧 Enhanced logic evaluation result:', {
         subcategories: newSubcategories,
         preservedAnswersCount: Object.keys(logicResult.preservedAnswers || {}).length,
         targetCategoryId: logicResult.targetCategoryId
@@ -51,7 +51,7 @@ export const useConditionalLogic = (
       // Update active subcategories immediately
       setActiveSubcategories(newSubcategories);
 
-      // Smart conditional question management
+      // Smart conditional question management with proper duplicate prevention
       if (newSubcategories.length > 0) {
         // Use smart clearing that preserves relevant questions
         await ConditionalLogicService.smartClearAdditionalQuestions(
@@ -61,7 +61,7 @@ export const useConditionalLogic = (
           newSubcategories // Keep questions for these subcategories
         );
 
-        // Fetch enhanced additional questions with preserved answers
+        // Fetch enhanced additional questions with preserved answers (FIXED: excludes initiators)
         const { data, error } = await ConditionalLogicService.getAdditionalQuestionsBySubcategoriesWithPreservation(
           newSubcategories,
           categoryId,
@@ -76,7 +76,12 @@ export const useConditionalLogic = (
         } else {
           const typedQuestions = transformToTypedQuestions(data || []);
           setAdditionalQuestions(typedQuestions);
-          console.log('Enhanced additional questions loaded:', typedQuestions.length);
+          console.log('🔧 Enhanced additional questions loaded (excluding initiators):', typedQuestions.length);
+          
+          // Log question details for debugging
+          typedQuestions.forEach(q => {
+            console.log('🔧 Additional question:', q.itemName, 'Type:', q.itemType);
+          });
         }
       } else {
         // Clear all conditional questions if no subcategories are active
@@ -101,7 +106,7 @@ export const useConditionalLogic = (
   }, [projectId, categoryId, participantDesignation]);
 
   /**
-   * Load existing additional questions without triggering evaluation
+   * Load existing additional questions without triggering evaluation (FIXED: excludes initiators)
    */
   const loadExistingAdditionalQuestions = useCallback(async (subcategories?: string[]) => {
     if (!projectId || !categoryId) {
@@ -125,6 +130,7 @@ export const useConditionalLogic = (
         return;
       }
 
+      // Use the FIXED method that excludes initiator questions
       const { data, error } = await ConditionalLogicService.getAdditionalQuestionsBySubcategoriesWithPreservation(
         targetSubcategories,
         categoryId,
@@ -139,7 +145,7 @@ export const useConditionalLogic = (
         const typedQuestions = transformToTypedQuestions(data || []);
         setAdditionalQuestions(typedQuestions);
         setActiveSubcategories(targetSubcategories);
-        console.log('Existing additional questions loaded:', typedQuestions.length);
+        console.log('🔧 Existing additional questions loaded (excluding initiators):', typedQuestions.length);
       }
     } catch (error) {
       console.error('Error loading existing additional questions:', error);

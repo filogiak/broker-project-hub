@@ -68,7 +68,7 @@ export class ConditionalLogicService {
     try {
       const { formData, categoryId, projectId, participantDesignation, itemIdToFormIdMap } = params;
       
-      console.log('Starting enhanced conditional logic evaluation for category:', categoryId);
+      console.log('🔧 Starting enhanced conditional logic evaluation for category:', categoryId);
       
       // Get current active subcategories before evaluation
       const currentActiveSubcategories = await this.getCurrentActiveSubcategories(
@@ -100,7 +100,7 @@ export class ConditionalLogicService {
         uniqueNewSubcategories.sort()
       );
 
-      console.log('Subcategory comparison:', {
+      console.log('🔧 Subcategory comparison:', {
         current: currentActiveSubcategories,
         new: uniqueNewSubcategories,
         changed: subcategoriesChanged
@@ -116,9 +116,9 @@ export class ConditionalLogicService {
         subcategoriesChanged
       );
 
-      // Create conditional questions for newly activated subcategories
+      // Create conditional questions for newly activated subcategories (with proper duplicate prevention)
       if (uniqueNewSubcategories.length > 0) {
-        await this.createConditionalQuestions(
+        await this.createConditionalQuestionsWithDuplicatePrevention(
           projectId,
           categoryId,
           participantDesignation,
@@ -138,16 +138,16 @@ export class ConditionalLogicService {
   }
 
   /**
-   * Create conditional questions for activated subcategories
+   * Enhanced conditional question creation with proper duplicate prevention
    */
-  static async createConditionalQuestions(
+  static async createConditionalQuestionsWithDuplicatePrevention(
     projectId: string,
     categoryId: string,
     participantDesignation?: Database['public']['Enums']['participant_designation'],
     activeSubcategories: string[] = []
   ) {
     try {
-      console.log('Creating conditional questions for subcategories:', activeSubcategories);
+      console.log('🔧 Creating conditional questions with duplicate prevention for subcategories:', activeSubcategories);
       
       // Get all required items that match the active subcategories and are NOT initiators
       const { data: conditionalItems, error } = await supabase
@@ -164,12 +164,39 @@ export class ConditionalLogicService {
       }
 
       if (!conditionalItems || conditionalItems.length === 0) {
-        console.log('No conditional items found for subcategories');
+        console.log('🔧 No conditional items found for subcategories');
         return;
       }
 
-      // Create checklist items for each conditional question
-      const createPromises = conditionalItems.map(async (item) => {
+      console.log('🔧 Found conditional items to potentially create:', conditionalItems.length);
+
+      // Check which items already exist to prevent duplicates
+      let existingQuery = supabase
+        .from('project_checklist_items')
+        .select('item_id')
+        .eq('project_id', projectId)
+        .in('item_id', conditionalItems.map(item => item.id));
+
+      if (participantDesignation) {
+        existingQuery = existingQuery.eq('participant_designation', participantDesignation);
+      }
+
+      const { data: existingItems, error: existingError } = await existingQuery;
+      
+      if (existingError) {
+        console.error('Error checking existing items:', existingError);
+        return;
+      }
+
+      const existingItemIds = new Set(existingItems?.map(item => item.item_id) || []);
+      console.log('🔧 Existing item IDs:', Array.from(existingItemIds));
+
+      // Filter out items that already exist
+      const itemsToCreate = conditionalItems.filter(item => !existingItemIds.has(item.id));
+      console.log('🔧 Items to create after duplicate check:', itemsToCreate.length);
+
+      // Create checklist items for each new conditional question
+      for (const item of itemsToCreate) {
         const insertData: any = {
           project_id: projectId,
           item_id: item.id,
@@ -188,21 +215,103 @@ export class ConditionalLogicService {
             .select()
             .single();
 
-          if (error && error.code !== '23505') { // Ignore duplicate key errors
-            console.error(`Error creating conditional question ${item.item_name}:`, error);
+          if (error) {
+            console.error(`🔧 Error creating conditional question ${item.item_name}:`, error);
           } else if (data) {
-            console.log(`Created conditional question: ${item.item_name}`);
+            console.log(`🔧 ✅ Created conditional question: ${item.item_name}`);
           }
         } catch (err) {
-          console.error(`Exception creating conditional question ${item.item_name}:`, err);
+          console.error(`🔧 Exception creating conditional question ${item.item_name}:`, err);
+        }
+      }
+
+      console.log('🔧 Finished creating conditional questions with duplicate prevention');
+    } catch (error) {
+      console.error('Error in createConditionalQuestionsWithDuplicatePrevention:', error);
+    }
+  }
+
+  /**
+   * FIXED: Get additional questions with proper exclusion of initiator questions
+   */
+  static async getAdditionalQuestionsBySubcategoriesWithPreservation(
+    subcategories: string[],
+    categoryId: string,
+    projectId: string,
+    participantDesignation?: Database['public']['Enums']['participant_designation'],
+    preservedAnswers: Record<string, any> = {}
+  ) {
+    if (subcategories.length === 0) {
+      return { data: [], error: null };
+    }
+
+    console.log('🔧 Fetching additional questions for subcategories:', subcategories);
+
+    let query = supabase
+      .from('project_checklist_items')
+      .select(`
+        *,
+        required_items!inner (
+          item_name,
+          item_type,
+          scope,
+          category_id,
+          priority,
+          subcategory,
+          subcategory_1_initiator,
+          subcategory_2_initiator
+        )
+      `)
+      .in('required_items.subcategory', subcategories)
+      .eq('required_items.category_id', categoryId)
+      .eq('project_id', projectId)
+      // CRITICAL FIX: Exclude initiator questions from additional questions
+      .eq('required_items.subcategory_1_initiator', false)
+      .eq('required_items.subcategory_2_initiator', false);
+
+    if (participantDesignation) {
+      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
+    }
+
+    const result = await query;
+
+    console.log('🔧 Additional questions query result:', {
+      count: result.data?.length || 0,
+      subcategoriesRequested: subcategories,
+      preservedAnswersCount: Object.keys(preservedAnswers).length
+    });
+
+    // Integrate preserved answers into the result
+    if (result.data && Object.keys(preservedAnswers).length > 0) {
+      result.data.forEach(item => {
+        if (preservedAnswers[item.id]) {
+          const requiredItem = item.required_items as any;
+          
+          // Set the appropriate value field based on item type
+          switch (requiredItem.item_type) {
+            case 'text':
+            case 'single_choice_dropdown':
+              item.text_value = preservedAnswers[item.id];
+              break;
+            case 'number':
+              item.numeric_value = preservedAnswers[item.id];
+              break;
+            case 'date':
+              item.date_value = preservedAnswers[item.id];
+              break;
+            case 'boolean':
+              item.boolean_value = preservedAnswers[item.id];
+              break;
+            case 'multiple_choice_checkbox':
+              item.json_value = preservedAnswers[item.id];
+              break;
+          }
+          console.log('🔧 Applied preserved answer for item:', item.id);
         }
       });
-
-      await Promise.all(createPromises);
-      console.log('Finished creating conditional questions');
-    } catch (error) {
-      console.error('Error in createConditionalQuestions:', error);
     }
+
+    return result;
   }
 
   /**
@@ -466,75 +575,6 @@ export class ConditionalLogicService {
   }
 
   /**
-   * Get additional questions based on active subcategories with preserved answers integration
-   */
-  static async getAdditionalQuestionsBySubcategoriesWithPreservation(
-    subcategories: string[],
-    categoryId: string,
-    projectId: string,
-    participantDesignation?: Database['public']['Enums']['participant_designation'],
-    preservedAnswers: Record<string, any> = {}
-  ) {
-    if (subcategories.length === 0) {
-      return { data: [], error: null };
-    }
-
-    let query = supabase
-      .from('project_checklist_items')
-      .select(`
-        *,
-        required_items!inner (
-          item_name,
-          item_type,
-          scope,
-          category_id,
-          priority,
-          subcategory
-        )
-      `)
-      .in('required_items.subcategory', subcategories)
-      .eq('required_items.category_id', categoryId)
-      .eq('project_id', projectId);
-
-    if (participantDesignation) {
-      query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
-    }
-
-    const result = await query;
-
-    // Integrate preserved answers into the result
-    if (result.data && Object.keys(preservedAnswers).length > 0) {
-      result.data.forEach(item => {
-        if (preservedAnswers[item.id]) {
-          const requiredItem = item.required_items as any;
-          
-          // Set the appropriate value field based on item type
-          switch (requiredItem.item_type) {
-            case 'text':
-            case 'single_choice_dropdown':
-              item.text_value = preservedAnswers[item.id];
-              break;
-            case 'number':
-              item.numeric_value = preservedAnswers[item.id];
-              break;
-            case 'date':
-              item.date_value = preservedAnswers[item.id];
-              break;
-            case 'boolean':
-              item.boolean_value = preservedAnswers[item.id];
-              break;
-            case 'multiple_choice_checkbox':
-              item.json_value = preservedAnswers[item.id];
-              break;
-          }
-        }
-      });
-    }
-
-    return result;
-  }
-
-  /**
    * Legacy method - kept for backward compatibility
    */
   static async getAdditionalQuestionsBySubcategories(
@@ -636,5 +676,22 @@ export class ConditionalLogicService {
       console.error('Error evaluating conditional logic:', error);
       return { subcategories: [], preservedAnswers: {} };
     }
+  }
+
+  /**
+   * Legacy method - use createConditionalQuestionsWithDuplicatePrevention instead
+   */
+  static async createConditionalQuestions(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: Database['public']['Enums']['participant_designation'],
+    activeSubcategories: string[] = []
+  ) {
+    return await this.createConditionalQuestionsWithDuplicatePrevention(
+      projectId,
+      categoryId,
+      participantDesignation,
+      activeSubcategories
+    );
   }
 }
