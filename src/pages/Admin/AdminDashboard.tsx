@@ -272,16 +272,10 @@ const AdminDashboard = () => {
             <TabsContent value="questions" className="space-y-6">
               {questionViewMode === 'list' ? (
                 <QuestionsList
-                  onCreateNew={handleCreateQuestion}
-                  onEdit={handleEditQuestion}
                   refreshTrigger={questionsRefreshTrigger}
                 />
               ) : (
-                <QuestionForm
-                  onSuccess={handleQuestionSuccess}
-                  editingQuestion={editingQuestion}
-                  onCancel={handleCancelQuestion}
-                />
+                <QuestionForm />
               )}
             </TabsContent>
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -309,6 +310,11 @@ const QuestionForm = () => {
                       </div>
                     ))}
                   </div>
+                  {formData.project_types_applicable && formData.project_types_applicable.length > 0 && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Selected: {formData.project_types_applicable.map(type => type.replace(/_/g, ' ')).join(', ')}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-4">
