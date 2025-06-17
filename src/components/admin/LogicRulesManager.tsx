@@ -5,11 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle, Check, ChevronsUpDown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTriggerItemDetails } from '@/hooks/useTriggerItemDetails';
+import { cn } from '@/lib/utils';
 
 interface LogicRule {
   id: string;
@@ -43,6 +46,7 @@ const LogicRulesManager = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
   // Form state for new rule
@@ -81,6 +85,12 @@ const LogicRulesManager = () => {
       setNewRule(prev => ({ ...prev, trigger_value: '' }));
     }
   }, [newRule.trigger_item_id, itemDetails?.hasOptions]);
+
+  // Helper function to get selected trigger item name
+  const getSelectedTriggerItemName = () => {
+    const item = requiredItems.find(item => item.id === newRule.trigger_item_id);
+    return item ? item.item_name : '';
+  };
 
   const fetchData = async () => {
     try {
@@ -374,27 +384,49 @@ const LogicRulesManager = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="trigger-item">Trigger Question</Label>
-              <Select
-                value={newRule.trigger_item_id}
-                onValueChange={(value) => setNewRule(prev => ({ ...prev, trigger_item_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select trigger question" />
-                </SelectTrigger>
-                <SelectContent>
-                  {requiredItems.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                      No questions available
-                    </div>
-                  ) : (
-                    requiredItems.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.item_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {newRule.trigger_item_id
+                      ? getSelectedTriggerItemName()
+                      : "Select trigger question..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search questions..." />
+                    <CommandList>
+                      <CommandEmpty>No questions found.</CommandEmpty>
+                      <CommandGroup>
+                        {requiredItems.map((item) => (
+                          <CommandItem
+                            key={item.id}
+                            value={item.item_name}
+                            onSelect={() => {
+                              setNewRule(prev => ({ ...prev, trigger_item_id: item.id }));
+                              setOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                newRule.trigger_item_id === item.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {item.item_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
