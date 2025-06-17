@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, GripVertical } from 'lucide-react';
+import { Edit2, Trash2, GripVertical, Star } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -54,6 +54,46 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
     transition,
   };
 
+  // Helper function to get all subcategories with their initiator status
+  const getSubcategories = () => {
+    const subcategories = [];
+    
+    if (question.subcategory) {
+      subcategories.push({
+        name: question.subcategory,
+        isInitiator: question.subcategory_1_initiator
+      });
+    }
+    if (question.subcategory_2) {
+      subcategories.push({
+        name: question.subcategory_2,
+        isInitiator: question.subcategory_2_initiator
+      });
+    }
+    if (question.subcategory_3) {
+      subcategories.push({
+        name: question.subcategory_3,
+        isInitiator: question.subcategory_3_initiator
+      });
+    }
+    if (question.subcategory_4) {
+      subcategories.push({
+        name: question.subcategory_4,
+        isInitiator: question.subcategory_4_initiator
+      });
+    }
+    if (question.subcategory_5) {
+      subcategories.push({
+        name: question.subcategory_5,
+        isInitiator: question.subcategory_5_initiator
+      });
+    }
+    
+    return subcategories;
+  };
+
+  const subcategories = getSubcategories();
+
   return (
     <div
       ref={setNodeRef}
@@ -62,8 +102,8 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         isDragging ? 'opacity-50 shadow-lg scale-105 z-50' : 'hover:shadow-md'
       }`}
     >
-      <div className="flex items-center justify-between w-full">
-        {/* Drag Handle and Question Name - grouped together on the left */}
+      <div className="flex items-center justify-between w-full gap-4">
+        {/* Left: Drag Handle and Question Name */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div
             {...attributes}
@@ -78,7 +118,34 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           </div>
         </div>
 
-        {/* Answer ID and button group - aligned to the right */}
+        {/* Center: Metadata section with scope and subcategories */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Scope Badge */}
+          <Badge 
+            variant={question.scope === 'PROJECT' ? 'default' : 'secondary'}
+            className="text-xs"
+          >
+            {question.scope}
+          </Badge>
+
+          {/* Subcategories */}
+          {subcategories.map((subcategory, index) => (
+            <Badge
+              key={index}
+              variant="outline"
+              className={`text-xs flex items-center gap-1 ${
+                subcategory.isInitiator ? 'border-orange-500 text-orange-700 bg-orange-50' : ''
+              }`}
+            >
+              {subcategory.isInitiator && (
+                <Star className="h-3 w-3 fill-current" />
+              )}
+              {subcategory.name}
+            </Badge>
+          ))}
+        </div>
+
+        {/* Right: Answer ID and Action buttons */}
         <div className="flex items-center gap-4 flex-shrink-0">
           {/* Answer ID */}
           <div className="flex-shrink-0">
@@ -91,7 +158,7 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
             )}
           </div>
           
-          {/* Button group */}
+          {/* Action buttons */}
           <div className="flex gap-2">
             <Button
               variant="ghost"
