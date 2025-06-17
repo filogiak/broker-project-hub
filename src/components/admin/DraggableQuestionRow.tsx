@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -102,9 +101,9 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
         isDragging ? 'opacity-50 shadow-lg scale-105 z-50' : 'hover:shadow-md'
       }`}
     >
-      <div className="flex items-center justify-between w-full gap-4">
-        {/* Left: Drag Handle and Question Name */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="grid grid-cols-12 gap-4 items-center w-full">
+        {/* Column 1: Drag Handle (1 col) */}
+        <div className="col-span-1 flex justify-center">
           <div
             {...attributes}
             {...listeners}
@@ -112,23 +111,25 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="font-medium truncate">{question.item_name}</div>
-          </div>
         </div>
 
-        {/* Center: Metadata section with scope and subcategories */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Scope Badge */}
+        {/* Column 2: Question Name (4 cols) */}
+        <div className="col-span-4 min-w-0">
+          <div className="font-medium truncate">{question.item_name}</div>
+        </div>
+
+        {/* Column 3: Scope (1 col) */}
+        <div className="col-span-1 flex justify-center">
           <Badge 
             variant={question.scope === 'PROJECT' ? 'default' : 'secondary'}
             className="text-xs"
           >
             {question.scope}
           </Badge>
+        </div>
 
-          {/* Subcategories */}
+        {/* Column 4: Subcategories (3 cols) */}
+        <div className="col-span-3 flex flex-wrap gap-1">
           {subcategories.map((subcategory, index) => (
             <Badge
               key={index}
@@ -145,38 +146,35 @@ const DraggableQuestionRow = ({ question, onEdit, onDelete }: DraggableQuestionR
           ))}
         </div>
 
-        {/* Right: Answer ID and Action buttons */}
-        <div className="flex items-center gap-4 flex-shrink-0">
-          {/* Answer ID */}
-          <div className="flex-shrink-0">
-            {question.answer_id ? (
-              <Badge variant="outline" className="font-mono text-xs">
-                {question.answer_id}
-              </Badge>
-            ) : (
-              <span className="text-muted-foreground text-sm">—</span>
-            )}
-          </div>
-          
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(question)}
-              className="h-8 w-8 p-0"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(question.id)}
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* Column 5: Answer ID (1 col) */}
+        <div className="col-span-1 flex justify-center">
+          {question.answer_id ? (
+            <Badge variant="outline" className="font-mono text-xs">
+              {question.answer_id}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+        
+        {/* Column 6: Action buttons (2 cols) */}
+        <div className="col-span-2 flex gap-2 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(question)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(question.id)}
+            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
