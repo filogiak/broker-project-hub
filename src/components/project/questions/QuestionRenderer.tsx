@@ -85,6 +85,9 @@ const QuestionRenderer = React.memo(({
         />
       );
 
+    case 'document':
+      return null; // Documents are handled in DocumentsRenderer
+
     default:
       return <div className="text-muted-foreground">Unsupported question type: {item.itemType}</div>;
   }

@@ -319,34 +319,6 @@ export class ChecklistItemService {
   }
 
   /**
-   * Gets the display value from a checklist item based on its type
-   */
-  private static getDisplayValueFromItem(item: any, itemType: string): string {
-    switch (itemType) {
-      case 'text':
-      case 'single_choice_dropdown':
-        return item.text_value || '';
-      
-      case 'number':
-        return item.numeric_value?.toString() || '';
-      
-      case 'date':
-        return item.date_value || '';
-      
-      case 'multiple_choice_checkbox':
-        return Array.isArray(item.json_value) 
-          ? item.json_value.join(', ') 
-          : '';
-      
-      case 'document':
-        return item.document_reference_id || '';
-      
-      default:
-        return '';
-    }
-  }
-
-  /**
    * Gets the display value from a typed checklist item
    */
   static getDisplayValue(item: TypedChecklistItem): any {

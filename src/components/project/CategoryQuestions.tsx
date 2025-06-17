@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +9,7 @@ import { ChecklistItemService } from '@/services/checklistItemService';
 import ConditionalLogicLoader from './ConditionalLogicLoader';
 import MainQuestionsRenderer from './questions/MainQuestionsRenderer';
 import AdditionalQuestionsRenderer from './questions/AdditionalQuestionsRenderer';
+import DocumentsRenderer from './questions/DocumentsRenderer';
 import { toast } from 'sonner';
 
 interface CategoryQuestionsProps {
@@ -60,6 +60,16 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       .sort((a, b) => (a.priority || 0) - (b.priority || 0));
   }, [items, categoryId]);
 
+  // Filter document items for the documents tab
+  const documentItems = useMemo(() => {
+    return categoryItems.filter(item => item.itemType === 'document');
+  }, [categoryItems]);
+
+  // Filter non-document items for main questions
+  const nonDocumentItems = useMemo(() => {
+    return categoryItems.filter(item => item.itemType !== 'document');
+  }, [categoryItems]);
+
   // Stable item ID to form ID mapping
   const itemIdToFormIdMap = useMemo(() => {
     return categoryItems.reduce((map, item) => {
@@ -80,6 +90,16 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     categoryId,
     participantDesignation
   );
+
+  // Filter additional documents from additional questions
+  const additionalDocuments = useMemo(() => {
+    return additionalQuestions.filter(item => item.itemType === 'document');
+  }, [additionalQuestions]);
+
+  // Filter additional non-document questions
+  const additionalNonDocuments = useMemo(() => {
+    return additionalQuestions.filter(item => item.itemType !== 'document');
+  }, [additionalQuestions]);
 
   // Reset error boundary when conditional logic reloads
   const handleConditionalLogicReset = useCallback(() => {
@@ -248,6 +268,73 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     }
   }, [projectId, additionalQuestions, additionalFormData, validateAndConvertValue, updateItem]);
 
+  // Enhanced save handler for documents
+  const handleSaveDocuments = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      setSaving(true);
+      setSaveError(null);
+      const savePromises = [];
+      
+      // Save main document items
+      for (const item of documentItems) {
+        const inputValue = formData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
+
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+      }
+
+      await Promise.all(savePromises);
+      
+      setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
+      
+      toast.success('Documents saved successfully!', {
+        description: `Saved at ${new Date().toLocaleTimeString()}`,
+      });
+      
+    } catch (error) {
+      console.error('Error saving documents:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save documents';
+      setSaveError(errorMessage);
+      toast.error('Failed to save documents', {
+        description: 'Please check your internet connection and try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, documentItems, formData, validateAndConvertValue, updateItem]);
+
+  // Enhanced save handler for additional documents
+  const handleSaveAdditionalDocuments = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      setSaving(true);
+      const savePromises = [];
+      
+      // Save additional document items
+      for (const item of additionalDocuments) {
+        const inputValue = additionalFormData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
+
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+      }
+
+      await Promise.all(savePromises);
+      toast.success('Additional documents saved successfully!');
+      
+    } catch (error) {
+      console.error('Error saving additional documents:', error);
+      toast.error('Failed to save additional documents. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, additionalDocuments, additionalFormData, validateAndConvertValue, updateItem]);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -300,18 +387,30 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           </TabsTrigger>
           <TabsTrigger value="additional-questions">
             Additional Questions
-            {additionalQuestions.length > 0 && (
+            {additionalNonDocuments.length > 0 && (
               <span className="ml-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                {additionalQuestions.length}
+                {additionalNonDocuments.length}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents
+            {(documentItems.length > 0 || additionalDocuments.length > 0) && (
+              <span className="ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                {documentItems.length + additionalDocuments.length}
+              </span>
+            )}
+            {additionalDocuments.length > 0 && (
+              <span className="ml-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                {additionalDocuments.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="main-questions" className="mt-6">
           <MainQuestionsRenderer
-            categoryItems={categoryItems}
+            categoryItems={nonDocumentItems}
             formData={formData}
             hasUnsavedChanges={hasUnsavedChanges}
             saveError={saveError}
@@ -324,7 +423,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         
         <TabsContent value="additional-questions" className="mt-6">
           <AdditionalQuestionsRenderer
-            additionalQuestions={additionalQuestions}
+            additionalQuestions={additionalNonDocuments}
             additionalFormData={additionalFormData}
             activeSubcategories={activeSubcategories}
             logicLoading={logicLoading}
@@ -336,14 +435,21 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </TabsContent>
         
         <TabsContent value="documents" className="mt-6">
-          <div className="bg-muted/50 p-8 rounded-lg text-center">
-            <p className="text-lg text-muted-foreground">
-              Document management will be available here soon.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              You'll be able to upload and manage required documents for this category.
-            </p>
-          </div>
+          <DocumentsRenderer
+            documentItems={documentItems}
+            additionalDocuments={additionalDocuments}
+            formData={formData}
+            additionalFormData={additionalFormData}
+            hasUnsavedChanges={hasUnsavedChanges}
+            saveError={saveError}
+            lastSaveTime={lastSaveTime}
+            saving={saving}
+            onInputChange={handleInputChange}
+            onAdditionalInputChange={handleAdditionalInputChange}
+            onSave={handleSaveDocuments}
+            onSaveAdditional={handleSaveAdditionalDocuments}
+            logicLoading={logicLoading}
+          />
         </TabsContent>
       </Tabs>
     </div>
