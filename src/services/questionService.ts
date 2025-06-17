@@ -8,6 +8,12 @@ type ItemOption = Database['public']['Tables']['item_options']['Row'];
 type ItemOptionInsert = Database['public']['Tables']['item_options']['Insert'];
 type ItemsCategory = Database['public']['Tables']['items_categories']['Row'];
 
+interface PriorityUpdate {
+  id: string;
+  priority: number;
+  category_id?: string;
+}
+
 export const questionService = {
   // Items Categories (renamed from Document Categories)
   async getItemsCategories(): Promise<ItemsCategory[]> {
@@ -105,6 +111,32 @@ export const questionService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  // Batch update method for priorities
+  async batchUpdatePriorities(updates: PriorityUpdate[]): Promise<void> {
+    if (updates.length === 0) return;
+
+    // Use a transaction-like approach by updating each item
+    const updatePromises = updates.map(({ id, priority, category_id }) => {
+      const updateData: RequiredItemUpdate = { priority };
+      if (category_id !== undefined) {
+        updateData.category_id = category_id;
+      }
+      
+      return supabase
+        .from('required_items')
+        .update(updateData)
+        .eq('id', id);
+    });
+
+    const results = await Promise.all(updatePromises);
+    
+    // Check for any errors
+    const errors = results.filter(result => result.error);
+    if (errors.length > 0) {
+      throw new Error(`Failed to update ${errors.length} items: ${errors[0].error?.message}`);
+    }
   },
 
   // Item Options

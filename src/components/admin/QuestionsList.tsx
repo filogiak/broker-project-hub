@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Save, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { questionService } from '@/services/questionService';
+import { useAutoSave } from '@/hooks/useAutoSave';
 import CategoryFilter from './CategoryFilter';
 import CategorySection from './CategorySection';
 import DraggableQuestionRow from './DraggableQuestionRow';
@@ -16,6 +17,12 @@ interface QuestionsListProps {
   onCreateNew: () => void;
   onEdit: (question: any) => void;
   refreshTrigger: number;
+}
+
+interface PendingUpdate {
+  id: string;
+  priority: number;
+  category_id?: string;
 }
 
 const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListProps) => {
@@ -27,6 +34,7 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<any>(null);
+  const [pendingUpdates, setPendingUpdates] = useState<PendingUpdate[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -35,6 +43,27 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       },
     })
   );
+
+  const saveQueuedChanges = async () => {
+    if (pendingUpdates.length === 0) return;
+
+    try {
+      await questionService.batchUpdatePriorities(pendingUpdates);
+      setPendingUpdates([]);
+      console.log('Successfully saved', pendingUpdates.length, 'question priority updates');
+    } catch (error) {
+      console.error('Failed to save priority updates:', error);
+      throw error;
+    }
+  };
+
+  const { triggerSave, saveImmediately, isSaving, hasUnsavedChanges } = useAutoSave({
+    delay: 3000,
+    onSave: saveQueuedChanges,
+    onError: (error) => {
+      toast.error('Failed to auto-save question positions');
+    }
+  });
 
   useEffect(() => {
     loadData();
@@ -82,6 +111,15 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
     }
   };
 
+  const addPendingUpdate = (update: PendingUpdate) => {
+    setPendingUpdates(prev => {
+      // Remove any existing update for this question
+      const filtered = prev.filter(u => u.id !== update.id);
+      return [...filtered, update];
+    });
+    triggerSave();
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     if (active.data.current?.type === 'question') {
@@ -108,19 +146,23 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       const newCategoryId = overData.categoryId;
       
       if (activeQuestion.category_id !== newCategoryId) {
-        try {
-          // Move question to new category with priority 1 (top of the list)
-          await questionService.updateRequiredItem(activeId, {
-            category_id: newCategoryId,
-            priority: 1
-          });
-          
-          toast.success('Question moved to new category');
-          loadData();
-        } catch (error) {
-          console.error('Error moving question:', error);
-          toast.error('Failed to move question');
-        }
+        // Optimistically update local state
+        setQuestions(prevQuestions => 
+          prevQuestions.map(q => 
+            q.id === activeId 
+              ? { ...q, category_id: newCategoryId, priority: 1 }
+              : q
+          )
+        );
+
+        // Queue the update for background save
+        addPendingUpdate({
+          id: activeId,
+          category_id: newCategoryId,
+          priority: 1
+        });
+
+        toast.success('Question moved to new category');
       }
       return;
     }
@@ -131,28 +173,47 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       const overQuestion = overData.question;
       
       if (activeQuestion.category_id === overQuestion.category_id && activeId !== overId) {
-        try {
-          const categoryQuestions = questions
-            .filter(q => q.category_id === activeQuestion.category_id)
-            .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+        // Get current category questions and apply optimistic reordering
+        const categoryQuestions = questions
+          .filter(q => q.category_id === activeQuestion.category_id)
+          .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+        
+        const oldIndex = categoryQuestions.findIndex(q => q.id === activeId);
+        const newIndex = categoryQuestions.findIndex(q => q.id === overId);
+        
+        const reorderedQuestions = arrayMove(categoryQuestions, oldIndex, newIndex);
+        
+        // Optimistically update local state
+        setQuestions(prevQuestions => {
+          const updatedQuestions = [...prevQuestions];
           
-          const oldIndex = categoryQuestions.findIndex(q => q.id === activeId);
-          const newIndex = categoryQuestions.findIndex(q => q.id === overId);
+          reorderedQuestions.forEach((question, index) => {
+            const questionIndex = updatedQuestions.findIndex(q => q.id === question.id);
+            if (questionIndex !== -1) {
+              updatedQuestions[questionIndex] = {
+                ...updatedQuestions[questionIndex],
+                priority: index + 1
+              };
+            }
+          });
           
-          const reorderedQuestions = arrayMove(categoryQuestions, oldIndex, newIndex);
-          
-          // Update priorities for all questions in the category
-          const updatePromises = reorderedQuestions.map((question, index) =>
-            questionService.updateRequiredItem(question.id, { priority: index + 1 })
-          );
-          
-          await Promise.all(updatePromises);
-          toast.success('Questions reordered');
-          loadData();
-        } catch (error) {
-          console.error('Error reordering questions:', error);
-          toast.error('Failed to reorder questions');
-        }
+          return updatedQuestions;
+        });
+
+        // Queue all priority updates for background save
+        const updates = reorderedQuestions.map((question, index) => ({
+          id: question.id,
+          priority: index + 1
+        }));
+
+        setPendingUpdates(prev => {
+          // Remove any existing updates for these questions
+          const filtered = prev.filter(u => !updates.some(update => update.id === u.id));
+          return [...filtered, ...updates];
+        });
+
+        triggerSave();
+        toast.success('Questions reordered');
       }
     }
   };
@@ -232,15 +293,50 @@ const QuestionsList = ({ onCreateNew, onEdit, refreshTrigger }: QuestionsListPro
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Questions Management</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Questions Management
+              {(hasUnsavedChanges || isSaving) && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  {isSaving ? (
+                    <>
+                      <Save className="h-3 w-3 animate-pulse" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="h-3 w-3" />
+                      Unsaved changes
+                    </>
+                  )}
+                </div>
+              )}
+            </CardTitle>
             <CardDescription>
               Manage and organize questions by category. Drag questions to reorder or move between categories.
+              {hasUnsavedChanges && (
+                <span className="block text-orange-600 text-sm mt-1">
+                  Changes will be saved automatically in a few seconds.
+                </span>
+              )}
             </CardDescription>
           </div>
-          <Button onClick={onCreateNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Question
-          </Button>
+          <div className="flex gap-2">
+            {hasUnsavedChanges && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={saveImmediately}
+                disabled={isSaving}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Save Now
+              </Button>
+            )}
+            <Button onClick={onCreateNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Question
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
