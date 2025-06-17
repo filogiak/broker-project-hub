@@ -62,21 +62,81 @@ const CategorySection = ({
 
   const sortedQuestions = [...questions].sort((a, b) => (a.priority || 0) - (b.priority || 0));
   
-  // Helper function to check if a question is an initiator
-  const isInitiatorQuestion = (question: Question) => {
-    return question.subcategory_1_initiator || 
-           question.subcategory_2_initiator || 
-           question.subcategory_3_initiator || 
-           question.subcategory_4_initiator || 
-           question.subcategory_5_initiator;
+  // Helper function to check if a question is a main question
+  const isMainQuestion = (question: Question) => {
+    // A question is a main question if:
+    // 1. It has no subcategories at all, OR
+    // 2. It has any subcategory with the corresponding initiator flag enabled
+    
+    const hasNoSubcategories = !question.subcategory && 
+                              !question.subcategory_2 && 
+                              !question.subcategory_3 && 
+                              !question.subcategory_4 && 
+                              !question.subcategory_5;
+    
+    if (hasNoSubcategories) return true;
+    
+    // Check if any subcategory has its initiator flag enabled
+    const hasInitiatorFlag = question.subcategory_1_initiator || 
+                             question.subcategory_2_initiator || 
+                             question.subcategory_3_initiator || 
+                             question.subcategory_4_initiator || 
+                             question.subcategory_5_initiator;
+    
+    return hasInitiatorFlag;
   };
 
-  // Separate questions into initiator and non-initiator
-  const initiatorQuestions = sortedQuestions.filter(isInitiatorQuestion);
-  const nonInitiatorQuestions = sortedQuestions.filter(q => !isInitiatorQuestion(q));
+  // Helper function to get all subcategories for a question (for non-main questions)
+  const getQuestionSubcategories = (question: Question): string[] => {
+    const subcategories: string[] = [];
+    
+    if (question.subcategory && !question.subcategory_1_initiator) {
+      subcategories.push(question.subcategory);
+    }
+    if (question.subcategory_2 && !question.subcategory_2_initiator) {
+      subcategories.push(question.subcategory_2);
+    }
+    if (question.subcategory_3 && !question.subcategory_3_initiator) {
+      subcategories.push(question.subcategory_3);
+    }
+    if (question.subcategory_4 && !question.subcategory_4_initiator) {
+      subcategories.push(question.subcategory_4);
+    }
+    if (question.subcategory_5 && !question.subcategory_5_initiator) {
+      subcategories.push(question.subcategory_5);
+    }
+    
+    return subcategories;
+  };
+
+  // Separate questions into main questions and subcategory groups
+  const mainQuestions = sortedQuestions.filter(isMainQuestion);
+  const nonMainQuestions = sortedQuestions.filter(q => !isMainQuestion(q));
   
-  const initiatorQuestionIds = initiatorQuestions.map(q => q.id);
-  const nonInitiatorQuestionIds = nonInitiatorQuestions.map(q => q.id);
+  // Group non-main questions by subcategory
+  const subcategoryGroups: Record<string, Question[]> = {};
+  
+  nonMainQuestions.forEach(question => {
+    const subcategories = getQuestionSubcategories(question);
+    
+    // For questions with multiple subcategories, add them to each subcategory group
+    subcategories.forEach(subcategory => {
+      if (!subcategoryGroups[subcategory]) {
+        subcategoryGroups[subcategory] = [];
+      }
+      subcategoryGroups[subcategory].push(question);
+    });
+  });
+
+  // Remove duplicates in subcategory groups (in case a question appears in multiple subcategories)
+  Object.keys(subcategoryGroups).forEach(subcategory => {
+    const uniqueQuestions = subcategoryGroups[subcategory].filter((question, index, arr) => 
+      arr.findIndex(q => q.id === question.id) === index
+    );
+    subcategoryGroups[subcategory] = uniqueQuestions;
+  });
+
+  const mainQuestionIds = mainQuestions.map(q => q.id);
 
   return (
     <Card 
@@ -117,15 +177,15 @@ const CategorySection = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Initiator Questions Section */}
-              {initiatorQuestions.length > 0 && (
+              {/* Main Questions Section */}
+              {mainQuestions.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-3 px-2">
-                    Main Questions ({initiatorQuestions.length})
+                    Main Questions ({mainQuestions.length})
                   </div>
-                  <SortableContext items={initiatorQuestionIds} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={mainQuestionIds} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
-                      {initiatorQuestions.map((question) => (
+                      {mainQuestions.map((question) => (
                         <DraggableQuestionRow
                           key={question.id}
                           question={question}
@@ -138,26 +198,30 @@ const CategorySection = ({
                 </div>
               )}
 
-              {/* Non-Initiator Questions Section */}
-              {nonInitiatorQuestions.length > 0 && (
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-3 px-2">
-                    Follow-up Questions ({nonInitiatorQuestions.length})
-                  </div>
-                  <SortableContext items={nonInitiatorQuestionIds} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-2">
-                      {nonInitiatorQuestions.map((question) => (
-                        <DraggableQuestionRow
-                          key={question.id}
-                          question={question}
-                          onEdit={onEdit}
-                          onDelete={onDelete}
-                        />
-                      ))}
+              {/* Subcategory Sections */}
+              {Object.entries(subcategoryGroups).map(([subcategoryName, subcategoryQuestions]) => {
+                const subcategoryQuestionIds = subcategoryQuestions.map(q => q.id);
+                
+                return (
+                  <div key={subcategoryName}>
+                    <div className="text-sm font-medium text-muted-foreground mb-3 px-2">
+                      {subcategoryName} ({subcategoryQuestions.length})
                     </div>
-                  </SortableContext>
-                </div>
-              )}
+                    <SortableContext items={subcategoryQuestionIds} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {subcategoryQuestions.map((question) => (
+                          <DraggableQuestionRow
+                            key={question.id}
+                            question={question}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
