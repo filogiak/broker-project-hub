@@ -262,13 +262,23 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         return;
       }
       
+      // Convert empty string subcategories to null before saving
+      const sanitizedData = {
+        ...data,
+        subcategory: data.subcategory?.trim() || null,
+        subcategory_2: data.subcategory_2?.trim() || null,
+        subcategory_3: data.subcategory_3?.trim() || null,
+        subcategory_4: data.subcategory_4?.trim() || null,
+        subcategory_5: data.subcategory_5?.trim() || null,
+      };
+      
       let questionId: string;
       
       if (editingQuestion) {
-        const updated = await questionService.updateRequiredItem(editingQuestion.id, data);
+        const updated = await questionService.updateRequiredItem(editingQuestion.id, sanitizedData);
         questionId = updated.id;
       } else {
-        const created = await questionService.createRequiredItem(data);
+        const created = await questionService.createRequiredItem(sanitizedData);
         questionId = created.id;
       }
 

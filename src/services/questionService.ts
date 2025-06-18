@@ -60,12 +60,14 @@ export const questionService = {
   },
 
   async createRequiredItem(item: RequiredItemInsert): Promise<RequiredItem> {
-    // Ensure all subcategory fields are included
+    // Ensure all subcategory fields are included and convert empty strings to null
     const completeItem = {
       ...item,
-      subcategory_3: item.subcategory_3 || null,
-      subcategory_4: item.subcategory_4 || null,
-      subcategory_5: item.subcategory_5 || null,
+      subcategory: item.subcategory?.trim() || null,
+      subcategory_2: item.subcategory_2?.trim() || null,
+      subcategory_3: item.subcategory_3?.trim() || null,
+      subcategory_4: item.subcategory_4?.trim() || null,
+      subcategory_5: item.subcategory_5?.trim() || null,
       subcategory_3_initiator: item.subcategory_3_initiator || false,
       subcategory_4_initiator: item.subcategory_4_initiator || false,
       subcategory_5_initiator: item.subcategory_5_initiator || false,
@@ -82,12 +84,14 @@ export const questionService = {
   },
 
   async updateRequiredItem(id: string, updates: RequiredItemUpdate): Promise<RequiredItem> {
-    // Ensure all subcategory fields are included in updates
+    // Ensure all subcategory fields are included in updates and convert empty strings to null
     const completeUpdates = {
       ...updates,
-      subcategory_3: updates.subcategory_3 !== undefined ? updates.subcategory_3 : null,
-      subcategory_4: updates.subcategory_4 !== undefined ? updates.subcategory_4 : null,
-      subcategory_5: updates.subcategory_5 !== undefined ? updates.subcategory_5 : null,
+      subcategory: updates.subcategory !== undefined ? (updates.subcategory?.trim() || null) : null,
+      subcategory_2: updates.subcategory_2 !== undefined ? (updates.subcategory_2?.trim() || null) : null,
+      subcategory_3: updates.subcategory_3 !== undefined ? (updates.subcategory_3?.trim() || null) : null,
+      subcategory_4: updates.subcategory_4 !== undefined ? (updates.subcategory_4?.trim() || null) : null,
+      subcategory_5: updates.subcategory_5 !== undefined ? (updates.subcategory_5?.trim() || null) : null,
       subcategory_3_initiator: updates.subcategory_3_initiator !== undefined ? updates.subcategory_3_initiator : false,
       subcategory_4_initiator: updates.subcategory_4_initiator !== undefined ? updates.subcategory_4_initiator : false,
       subcategory_5_initiator: updates.subcategory_5_initiator !== undefined ? updates.subcategory_5_initiator : false,
