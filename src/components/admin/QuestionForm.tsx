@@ -116,6 +116,8 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
 
       const submitData = {
         ...formData,
+        // Ensure item_type is properly typed
+        item_type: formData.item_type as 'text' | 'number' | 'date' | 'single_choice_dropdown' | 'multiple_choice_checkbox' | 'document' | 'repeatable_group',
         // Convert empty strings to null for subcategory fields
         subcategory: formData.subcategory?.trim() || null,
         subcategory_2: formData.subcategory_2?.trim() || null,
@@ -127,8 +129,7 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
         repeatable_group_subtitle: formData.repeatable_group_subtitle?.trim() || null,
         repeatable_group_top_button_text: formData.repeatable_group_top_button_text?.trim() || null,
         repeatable_group_start_button_text: formData.repeatable_group_start_button_text?.trim() || null,
-        // Fix TypeScript error: ensure proper enum type
-        repeatable_group_target_table: formData.repeatable_group_target_table || null as 'project_secondary_incomes' | 'project_dependents' | 'project_debts' | null,
+        repeatable_group_target_table: formData.repeatable_group_target_table || null,
         // Convert validation_rules to proper JSONB format
         validation_rules: formData.validation_rules as any,
       };
@@ -439,10 +440,10 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
           </div>
         </form>
 
-        {/* Question Options Manager */}
+        {/* Question Options Manager - Fix prop name */}
         {question && (formData.item_type === 'single_choice_dropdown' || formData.item_type === 'multiple_choice_checkbox') && (
           <div className="mt-8">
-            <QuestionOptionManager questionId={question.id} />
+            <QuestionOptionManager question={question} />
           </div>
         )}
       </CardContent>

@@ -1,9 +1,10 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, GripVertical } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { questionService } from '@/services/questionService';
 
 interface QuestionOption {
   id?: string;
@@ -13,18 +14,61 @@ interface QuestionOption {
 }
 
 interface QuestionOptionManagerProps {
-  options: QuestionOption[];
-  onChange: (options: QuestionOption[]) => void;
+  question: any; // Update prop name from questionId to question
 }
 
-const QuestionOptionManager = ({ options, onChange }: QuestionOptionManagerProps) => {
+const QuestionOptionManager = ({ question }: QuestionOptionManagerProps) => {
+  const [options, setOptions] = useState<QuestionOption[]>([]);
+  const [editingOption, setEditingOption] = useState<QuestionOption | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadOptions();
+  }, [question.id]);
+
+  const loadOptions = async () => {
+    try {
+      setLoading(true);
+      const data = await questionService.getItemOptions(question.id);
+      setOptions(data || []);
+    } catch (error) {
+      console.error('Error loading options:', error);
+      toast.error('Failed to load options');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveOption = async (optionData: any) => {
+    try {
+      if (editingOption) {
+        await questionService.updateItemOption(editingOption.id, optionData);
+        toast.success('Option updated successfully');
+      } else {
+        await questionService.createItemOption({
+          ...optionData,
+          item_id: question.id,
+        });
+        toast.success('Option created successfully');
+      }
+      
+      loadOptions();
+      setEditingOption(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving option:', error);
+      toast.error('Failed to save option');
+    }
+  };
+
   const updateOptions = (newOptions: QuestionOption[]) => {
     // Update display_order based on array position
     const updatedOptions = newOptions.map((option, index) => ({
       ...option,
       display_order: index
     }));
-    onChange(updatedOptions);
+    setOptions(updatedOptions);
   };
 
   const addOption = () => {

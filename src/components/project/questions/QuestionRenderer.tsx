@@ -8,24 +8,10 @@ import DateQuestion from './DateQuestion';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import MultipleChoiceQuestion from './MultipleChoiceQuestion';
 import RepeatableGroupRenderer from './RepeatableGroupRenderer';
-
-interface QuestionItem {
-  id: string;
-  itemId: string;
-  itemName: string;
-  itemType: string;
-  displayValue?: any;
-  priority?: number;
-  participantDesignation?: string;
-  repeatable_group_title?: string;
-  repeatable_group_subtitle?: string;
-  repeatable_group_top_button_text?: string;
-  repeatable_group_start_button_text?: string;
-  repeatable_group_target_table?: 'project_secondary_incomes' | 'project_dependents' | 'project_debts';
-}
+import type { TypedChecklistItem } from '@/services/checklistItemService';
 
 interface QuestionRendererProps {
-  item: QuestionItem;
+  item: TypedChecklistItem;
   currentValue: any;
   onChange: (itemId: string, value: any) => void;
   isAdditional?: boolean;

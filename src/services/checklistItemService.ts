@@ -1,379 +1,199 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-type ProjectChecklistItem = Database['public']['Tables']['project_checklist_items']['Row'];
-type ChecklistStatus = Database['public']['Enums']['checklist_status'];
-type ItemType = Database['public']['Enums']['item_type'];
-type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
+type RequiredItem = Database['public']['Tables']['required_items']['Row'];
+type ChecklistItem = Database['public']['Tables']['project_checklist_items']['Row'];
 
-export interface TypedChecklistItemValue {
-  textValue?: string | null;
-  numericValue?: number | null;
-  dateValue?: string | null;
-  booleanValue?: boolean | null;
-  jsonValue?: any | null;
-  documentReferenceId?: string | null;
-}
-
-export interface TypedChecklistItem {
-  id: string;
-  projectId: string;
+export interface TypedChecklistItem extends ChecklistItem {
   itemId: string;
-  participantDesignation?: ParticipantDesignation | null;
-  status: ChecklistStatus;
-  createdAt: string;
-  updatedAt: string;
   itemName: string;
-  itemType: ItemType;
-  scope: Database['public']['Enums']['item_scope'];
-  categoryId?: string | null;
-  priority?: number | null;
-  displayValue?: any;
-  typedValue: TypedChecklistItemValue;
-  
-  // New fields for subcategory logic
-  subcategory?: string | null;
-  subcategory1Initiator?: boolean | null;
-  subcategory2Initiator?: boolean | null;
+  itemType: string;
+  categoryId: string;
+  subcategory: string | null;
+  subcategory2: string | null;
+  subcategory3: string | null;
+  subcategory4: string | null;
+  subcategory5: string | null;
+  subcategory1Initiator: boolean;
+  subcategory2Initiator: boolean;
+  subcategory3Initiator: boolean;
+  subcategory4Initiator: boolean;
+  subcategory5Initiator: boolean;
+  priority: number | null;
+  helpText: string | null;
+  placeholderText: string | null;
+  required: boolean;
+  validationRules: any;
+  participantDesignation: string | null;
+  // Add repeatable group fields
+  repeatable_group_title: string | null;
+  repeatable_group_subtitle: string | null;
+  repeatable_group_top_button_text: string | null;
+  repeatable_group_start_button_text: string | null;
+  repeatable_group_target_table: 'project_secondary_incomes' | 'project_dependents' | 'project_debts' | null;
 }
 
 export class ChecklistItemService {
-  /**
-   * Get checklist items for a project category with enhanced subcategory information
-   */
-  static async getChecklistItemsByCategory(
-    projectId: string,
-    categoryId: string,
-    participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
-    try {
-      let query = supabase
-        .from('project_checklist_items')
-        .select(`
-          *,
-          required_items!inner (
-            item_name,
-            item_type,
-            scope,
-            category_id,
-            priority,
-            subcategory,
-            subcategory_1_initiator,
-            subcategory_2_initiator
-          )
-        `)
-        .eq('project_id', projectId)
-        .eq('required_items.category_id', categoryId);
+  static async getRequiredItems(): Promise<RequiredItem[]> {
+    const { data, error } = await supabase
+      .from('required_items')
+      .select('*')
+      .order('display_order', { ascending: true });
 
-      if (participantDesignation) {
-        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
-      }
+    if (error) {
+      console.error("Error fetching required items:", error);
+      throw new Error(error.message);
+    }
 
-      const { data, error } = await query;
+    return data || [];
+  }
 
-      if (error) {
-        console.error('Error fetching checklist items:', error);
-        return { data: null, error };
-      }
+  static async getRequiredItem(id: string): Promise<RequiredItem | null> {
+    const { data, error } = await supabase
+      .from('required_items')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
-        const requiredItem = item.required_items as any;
-        return {
-          id: item.id,
-          projectId: item.project_id,
-          itemId: item.item_id,
-          participantDesignation: item.participant_designation,
-          status: item.status,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          itemName: requiredItem?.item_name || '',
-          itemType: requiredItem?.item_type || 'text',
-          scope: requiredItem?.scope || 'PROJECT',
-          categoryId: requiredItem?.category_id,
-          priority: requiredItem?.priority || 0,
-          displayValue: this.getDisplayValue({
-            typedValue: {
-              textValue: item.text_value,
-              numericValue: item.numeric_value,
-              dateValue: item.date_value,
-              booleanValue: item.boolean_value,
-              jsonValue: item.json_value,
-              documentReferenceId: item.document_reference_id,
-            },
-            itemType: requiredItem?.item_type || 'text',
-          } as TypedChecklistItem),
-          typedValue: {
-            textValue: item.text_value,
-            numericValue: item.numeric_value,
-            dateValue: item.date_value,
-            booleanValue: item.boolean_value,
-            jsonValue: item.json_value,
-            documentReferenceId: item.document_reference_id,
-          },
-          // Enhanced subcategory fields
-          subcategory: requiredItem?.subcategory,
-          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
-          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
-        };
-      });
+    if (error) {
+      console.error(`Error fetching required item with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
 
-      return { data: typedItems, error: null };
-    } catch (err) {
-      console.error('Exception in getChecklistItemsByCategory:', err);
-      return { data: null, error: err };
+    return data || null;
+  }
+
+  static async createRequiredItem(item: Omit<RequiredItem, 'id' | 'created_at'>): Promise<RequiredItem> {
+    const { data, error } = await supabase
+      .from('required_items')
+      .insert([item])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error("Error creating required item:", error);
+      throw new Error(error.message);
+    }
+
+    return data;
+  }
+
+  static async updateRequiredItem(id: string, updates: Partial<RequiredItem>): Promise<RequiredItem | null> {
+    const { data, error } = await supabase
+      .from('required_items')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(`Error updating required item with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
+
+    return data || null;
+  }
+
+  static async deleteRequiredItem(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('required_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(`Error deleting required item with ID ${id}:`, error);
+      throw new Error(error.message);
     }
   }
 
-  /**
-   * Get all checklist items for a project with enhanced subcategory information
-   */
-  static async getProjectChecklistItems(
-    projectId: string,
-    participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
-    try {
-      let query = supabase
-        .from('project_checklist_items')
-        .select(`
-          *,
-          required_items!inner (
-            item_name,
-            item_type,
-            scope,
-            category_id,
-            priority,
-            subcategory,
-            subcategory_1_initiator,
-            subcategory_2_initiator
-          )
-        `)
-        .eq('project_id', projectId);
+  static async getProjectChecklistItems(projectId: string): Promise<ChecklistItem[]> {
+    const { data, error } = await supabase
+      .from('project_checklist_items')
+      .select('*')
+      .eq('project_id', projectId);
 
-      if (participantDesignation) {
-        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
-      }
+    if (error) {
+      console.error(`Error fetching checklist items for project ID ${projectId}:`, error);
+      throw new Error(error.message);
+    }
 
-      const { data, error } = await query;
+    return data || [];
+  }
 
-      if (error) {
-        console.error('Error fetching project checklist items:', error);
-        return { data: null, error };
-      }
+  static async getProjectChecklistItem(id: string): Promise<ChecklistItem | null> {
+    const { data, error } = await supabase
+      .from('project_checklist_items')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      const typedItems: TypedChecklistItem[] = (data || []).map(item => {
-        const requiredItem = item.required_items as any;
-        return {
-          id: item.id,
-          projectId: item.project_id,
-          itemId: item.item_id,
-          participantDesignation: item.participant_designation,
-          status: item.status,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          itemName: requiredItem?.item_name || '',
-          itemType: requiredItem?.item_type || 'text',
-          scope: requiredItem?.scope || 'PROJECT',
-          categoryId: requiredItem?.category_id,
-          priority: requiredItem?.priority || 0,
-          displayValue: this.getDisplayValue({
-            typedValue: {
-              textValue: item.text_value,
-              numericValue: item.numeric_value,
-              dateValue: item.date_value,
-              booleanValue: item.boolean_value,
-              jsonValue: item.json_value,
-              documentReferenceId: item.document_reference_id,
-            },
-            itemType: requiredItem?.item_type || 'text',
-          } as TypedChecklistItem),
-          typedValue: {
-            textValue: item.text_value,
-            numericValue: item.numeric_value,
-            dateValue: item.date_value,
-            booleanValue: item.boolean_value,
-            jsonValue: item.json_value,
-            documentReferenceId: item.document_reference_id,
-          },
-          // Enhanced subcategory fields
-          subcategory: requiredItem?.subcategory,
-          subcategory1Initiator: requiredItem?.subcategory_1_initiator,
-          subcategory2Initiator: requiredItem?.subcategory_2_initiator,
-        };
-      });
+    if (error) {
+      console.error(`Error fetching checklist item with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
 
-      return { data: typedItems, error: null };
-    } catch (err) {
-      console.error('Exception in getProjectChecklistItems:', err);
-      return { data: null, error: err };
+    return data || null;
+  }
+
+  static async createProjectChecklistItem(item: Omit<ChecklistItem, 'id' | 'created_at'>): Promise<ChecklistItem> {
+    const { data, error } = await supabase
+      .from('project_checklist_items')
+      .insert([item])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error("Error creating project checklist item:", error);
+      throw new Error(error.message);
+    }
+
+    return data;
+  }
+
+  static async updateProjectChecklistItem(id: string, updates: Partial<ChecklistItem>): Promise<ChecklistItem | null> {
+    const { data, error } = await supabase
+      .from('project_checklist_items')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(`Error updating project checklist item with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
+
+    return data || null;
+  }
+
+  static async deleteProjectChecklistItem(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('project_checklist_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(`Error deleting project checklist item with ID ${id}:`, error);
+      throw new Error(error.message);
     }
   }
 
-  /**
-   * Creates a new checklist item with proper type validation
-   */
-  static async createChecklistItem(
-    projectId: string,
-    itemId: string,
-    value: TypedChecklistItemValue,
-    participantDesignation?: ParticipantDesignation
-  ): Promise<{ data: any; error: any }> {
-    try {
-      const insertData: any = {
-        project_id: projectId,
-        item_id: itemId,
-        status: 'pending',
-      };
-
-      if (participantDesignation) {
-        insertData.participant_designation = participantDesignation;
-      }
-
-      // Set the appropriate value field based on the value type
-      if (value.textValue !== undefined) insertData.text_value = value.textValue;
-      if (value.numericValue !== undefined) insertData.numeric_value = value.numericValue;
-      if (value.dateValue !== undefined) insertData.date_value = value.dateValue;
-      if (value.booleanValue !== undefined) insertData.boolean_value = value.booleanValue;
-      if (value.jsonValue !== undefined) insertData.json_value = value.jsonValue;
-      if (value.documentReferenceId !== undefined) insertData.document_reference_id = value.documentReferenceId;
-
-      const { data, error } = await supabase
-        .from('project_checklist_items')
-        .insert(insertData)
-        .select()
-        .single();
-
-      return { data, error };
-    } catch (err) {
-      console.error('Exception in createChecklistItem:', err);
-      return { data: null, error: err };
-    }
-  }
-
-  /**
-   * Updates an existing checklist item with proper type validation
-   */
-  static async updateChecklistItem(
-    itemId: string,
-    value: TypedChecklistItemValue,
-    status?: ChecklistStatus
-  ): Promise<{ data: any; error: any }> {
-    try {
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
-
-      if (status) {
-        updateData.status = status;
-      }
-
-      // Set the appropriate value field based on the value type
-      if (value.textValue !== undefined) updateData.text_value = value.textValue;
-      if (value.numericValue !== undefined) updateData.numeric_value = value.numericValue;
-      if (value.dateValue !== undefined) updateData.date_value = value.dateValue;
-      if (value.booleanValue !== undefined) updateData.boolean_value = value.booleanValue;
-      if (value.jsonValue !== undefined) updateData.json_value = value.jsonValue;
-      if (value.documentReferenceId !== undefined) updateData.document_reference_id = value.documentReferenceId;
-
-      const { data, error } = await supabase
-        .from('project_checklist_items')
-        .update(updateData)
-        .eq('id', itemId)
-        .select()
-        .single();
-
-      return { data, error };
-    } catch (err) {
-      console.error('Exception in updateChecklistItem:', err);
-      return { data: null, error: err };
-    }
-  }
-
-  /**
-   * Validates and converts input value based on item type
-   */
-  static validateAndConvertValue(itemType: ItemType, inputValue: any): TypedChecklistItemValue {
-    const result: TypedChecklistItemValue = {};
-
-    switch (itemType) {
-      case 'text':
-      case 'single_choice_dropdown':
-        result.textValue = inputValue ? String(inputValue) : null;
-        break;
-      case 'number':
-        result.numericValue = inputValue ? Number(inputValue) : null;
-        break;
-      case 'date':
-        result.dateValue = inputValue ? String(inputValue) : null;
-        break;
-      case 'multiple_choice_checkbox':
-        result.jsonValue = Array.isArray(inputValue) ? inputValue : [];
-        break;
-      case 'document':
-        result.documentReferenceId = inputValue ? String(inputValue) : null;
-        break;
-      default:
-        result.textValue = inputValue ? String(inputValue) : null;
-    }
-
-    return result;
-  }
-
-  /**
-   * Gets the display value from a typed checklist item
-   */
-  static getDisplayValue(item: TypedChecklistItem): any {
-    const { typedValue, itemType } = item;
-    
-    switch (itemType) {
-      case 'text':
-      case 'single_choice_dropdown':
-        return typedValue.textValue || '';
-      
-      case 'number':
-        return typedValue.numericValue || '';
-      
-      case 'date':
-        return typedValue.dateValue || '';
-      
-      case 'multiple_choice_checkbox':
-        return Array.isArray(typedValue.jsonValue) 
-          ? typedValue.jsonValue.join(', ') 
-          : '';
-      
-      case 'document':
-        return typedValue.documentReferenceId || '';
-      
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Question classification helper functions
-   */
   static isMainQuestion(item: TypedChecklistItem): boolean {
-    // A question is considered "main" if it:
-    // 1. Has no subcategory (is a root question)
-    // 2. OR is marked as an initiator for any subcategory level
-    // 3. OR is a repeatable group (these should always be included as main questions)
-    
-    const hasNoSubcategory = !item.subcategory;
-    const isInitiator = item.subcategory_1_initiator || 
-                       item.subcategory_2_initiator || 
-                       item.subcategory_3_initiator || 
-                       item.subcategory_4_initiator || 
-                       item.subcategory_5_initiator;
-    const isRepeatableGroup = item.itemType === 'repeatable_group';
-    
-    return hasNoSubcategory || isInitiator || isRepeatableGroup;
-  }
+    // Always include repeatable groups as main questions
+    if (item.itemType === 'repeatable_group') {
+      return true;
+    }
 
-  static isConditionalQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Conditional questions have a non-null subcategory AND are not initiators
-    return (
-      item.subcategory !== null && 
-      item.subcategory1Initiator !== true && 
-      item.subcategory2Initiator !== true
-    );
+    // Check if item has no subcategory or is an initiator
+    const hasNoSubcategory = !item.subcategory && !item.subcategory2 && 
+                            !item.subcategory3 && !item.subcategory4 && !item.subcategory5;
+    
+    const isInitiator = item.subcategory1Initiator ||
+                       item.subcategory2Initiator ||
+                       item.subcategory3Initiator ||
+                       item.subcategory4Initiator ||
+                       item.subcategory5Initiator;
+    
+    return hasNoSubcategory || isInitiator;
   }
 }
