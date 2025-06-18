@@ -11,6 +11,7 @@ import MainQuestionsRenderer from './questions/MainQuestionsRenderer';
 import AdditionalQuestionsRenderer from './questions/AdditionalQuestionsRenderer';
 import DocumentsRenderer from './questions/DocumentsRenderer';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
 interface CategoryQuestionsProps {
   categoryId: string;

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -303,26 +302,26 @@ export class ChecklistItemService {
     }
 
     if (typeof value === 'string') {
-      return { text_value: value };
+      return { textValue: value };
     }
     
     if (typeof value === 'number') {
-      return { numeric_value: value };
+      return { numericValue: value };
     }
     
     if (typeof value === 'boolean') {
-      return { boolean_value: value };
+      return { booleanValue: value };
     }
     
     if (value instanceof Date) {
-      return { date_value: value.toISOString().split('T')[0] };
+      return { dateValue: value };
     }
     
     if (Array.isArray(value) || typeof value === 'object') {
-      return { json_value: value };
+      return { jsonValue: value };
     }
 
-    return { text_value: String(value) };
+    return { textValue: String(value) };
   }
 
   static getDisplayValue(item: TypedChecklistItem): any {
