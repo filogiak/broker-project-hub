@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ChecklistItemService, TypedChecklistItem } from '@/services/checklistItemService';
@@ -74,10 +75,12 @@ export const useConditionalLogic = (
 
   const evaluateOnSave = useCallback(
     async (
-      formData: Record<string, any>,
-      itemIdToFormIdMap: Record<string, string>
+      formDataByItemId: Record<string, any>,
+      itemIdToChecklistItemIdMap: Record<string, string>
     ): Promise<ConditionalLogicResult> => {
-      console.log('Evaluating conditional logic...');
+      console.log('Evaluating conditional logic with formDataByItemId:', formDataByItemId);
+      console.log('Using mapping:', itemIdToChecklistItemIdMap);
+      
       const unlockedSubcategories: string[] = [];
       const preservedAnswers: Record<string, any> = {};
   
@@ -95,81 +98,76 @@ export const useConditionalLogic = (
         }
   
         // Filter items that have conditional logic (validation rules)
-        const conditionalItems = allItems?.filter(item => item.validation_rules) || [];
+        const conditionalItems = allItems?.filter(item => 
+          item.validation_rules && 
+          typeof item.validation_rules === 'object' && 
+          item.validation_rules !== null
+        ) || [];
+        
+        console.log('Found conditional items:', conditionalItems.length);
   
         for (const item of conditionalItems) {
           try {
-            const validationRules = item.validation_rules;
+            const validationRules = item.validation_rules as Record<string, any>;
+            console.log(`Evaluating rules for item ${item.item_name}:`, validationRules);
   
-            if (validationRules && typeof validationRules === 'object') {
-              for (const subcategory in validationRules) {
-                if (validationRules.hasOwnProperty(subcategory)) {
-                  const conditions = validationRules[subcategory];
+            for (const subcategory in validationRules) {
+              if (validationRules.hasOwnProperty(subcategory)) {
+                const conditions = validationRules[subcategory];
+                console.log(`Checking subcategory ${subcategory} with conditions:`, conditions);
   
-                  if (Array.isArray(conditions)) {
-                    let allConditionsMet = true;
+                if (Array.isArray(conditions)) {
+                  let allConditionsMet = true;
   
-                    for (const condition of conditions) {
-                      const formId = itemIdToFormIdMap[item.id];
-                      const inputValue = formData[formId];
-  
-                      if (inputValue === undefined) {
-                        allConditionsMet = false;
-                        break;
-                      }
-  
-                      // Evaluate the condition based on its type
-                      let conditionMet = false;
-                      if (condition.type === 'equals') {
-                        conditionMet = inputValue == condition.value;
-                      } else if (condition.type === 'notEquals') {
-                        conditionMet = inputValue != condition.value;
-                      } else if (condition.type === 'greaterThan') {
-                        conditionMet = Number(inputValue) > Number(condition.value);
-                      } else if (condition.type === 'lessThan') {
-                        conditionMet = Number(inputValue) < Number(condition.value);
-                      } else if (condition.type === 'contains') {
-                        if (Array.isArray(inputValue)) {
-                          conditionMet = inputValue.includes(condition.value);
-                        } else if (typeof inputValue === 'string') {
-                          conditionMet = inputValue.includes(condition.value);
-                        }
-                      } else if (condition.type === 'notContains') {
-                        if (Array.isArray(inputValue)) {
-                          conditionMet = !inputValue.includes(condition.value);
-                        } else if (typeof inputValue === 'string') {
-                          conditionMet = !inputValue.includes(condition.value);
-                        }
-                      }
-  
-                      if (!conditionMet) {
-                        allConditionsMet = false;
-                        break;
-                      }
+                  for (const condition of conditions) {
+                    // Use item.id (the required_items ID) to look up the input value
+                    const inputValue = formDataByItemId[item.id];
+                    console.log(`Condition check - Item ID: ${item.id}, Input Value: ${inputValue}, Condition:`, condition);
+
+                    if (inputValue === undefined || inputValue === null || inputValue === '') {
+                      console.log(`No input value for item ${item.id}, condition not met`);
+                      allConditionsMet = false;
+                      break;
                     }
   
-                    if (allConditionsMet && !unlockedSubcategories.includes(subcategory)) {
-                      unlockedSubcategories.push(subcategory);
-  
-                      // Preserve existing answers for the subcategory
-                      const { data: subcategoryItems, error: subcategoryItemsError } = await supabase
-                        .from('required_items')
-                        .select('id')
-                        .eq('category_id', categoryId)
-                        .eq('subcategory', subcategory);
-  
-                      if (subcategoryItemsError) {
-                        console.error('Error fetching subcategory items:', subcategoryItemsError);
-                        continue;
+                    // Evaluate the condition based on its type
+                    let conditionMet = false;
+                    if (condition.type === 'equals') {
+                      conditionMet = inputValue == condition.value;
+                    } else if (condition.type === 'notEquals') {
+                      conditionMet = inputValue != condition.value;
+                    } else if (condition.type === 'greaterThan') {
+                      conditionMet = Number(inputValue) > Number(condition.value);
+                    } else if (condition.type === 'lessThan') {
+                      conditionMet = Number(inputValue) < Number(condition.value);
+                    } else if (condition.type === 'contains') {
+                      if (Array.isArray(inputValue)) {
+                        conditionMet = inputValue.includes(condition.value);
+                      } else if (typeof inputValue === 'string') {
+                        conditionMet = inputValue.includes(condition.value);
                       }
-  
-                      subcategoryItems?.forEach(subItem => {
-                        const formId = itemIdToFormIdMap[subItem.id];
-                        if (formData.hasOwnProperty(formId)) {
-                          preservedAnswers[formId] = formData[formId];
-                        }
-                      });
+                    } else if (condition.type === 'notContains') {
+                      if (Array.isArray(inputValue)) {
+                        conditionMet = !inputValue.includes(condition.value);
+                      } else if (typeof inputValue === 'string') {
+                        conditionMet = !inputValue.includes(condition.value);
+                      }
                     }
+                    
+                    console.log(`Condition result: ${conditionMet}`);
+  
+                    if (!conditionMet) {
+                      allConditionsMet = false;
+                      break;
+                    }
+                  }
+  
+                  if (allConditionsMet && !unlockedSubcategories.includes(subcategory)) {
+                    console.log(`✅ All conditions met for subcategory: ${subcategory}`);
+                    unlockedSubcategories.push(subcategory);
+  
+                    // Create new checklist items for this subcategory
+                    await this.createSubcategoryItems(projectId, categoryId, subcategory, participantDesignation);
                   }
                 }
               }
@@ -183,12 +181,74 @@ export const useConditionalLogic = (
         setError(error instanceof Error ? error.message : 'Unknown error');
       }
   
-      console.log('Unlocked subcategories:', unlockedSubcategories);
-      console.log('Preserved answers:', preservedAnswers);
+      console.log('Final unlocked subcategories:', unlockedSubcategories);
       return { subcategories: unlockedSubcategories, preservedAnswers };
     },
-    [categoryId]
+    [categoryId, projectId, participantDesignation]
   );
+
+  // Helper method to create subcategory items
+  const createSubcategoryItems = async (
+    projectId: string,
+    categoryId: string,
+    subcategory: string,
+    participantDesignation: ParticipantDesignation
+  ) => {
+    try {
+      console.log(`Creating items for subcategory: ${subcategory}`);
+      
+      // Get all items for this subcategory
+      const { data: subcategoryItems, error } = await supabase
+        .from('required_items')
+        .select('*')
+        .eq('category_id', categoryId)
+        .or(`subcategory.eq.${subcategory},subcategory_2.eq.${subcategory},subcategory_3.eq.${subcategory},subcategory_4.eq.${subcategory},subcategory_5.eq.${subcategory}`);
+
+      if (error) {
+        console.error('Error fetching subcategory items:', error);
+        return;
+      }
+
+      // Create checklist items for each required item
+      const createPromises = subcategoryItems?.map(async (item) => {
+        // Check if item already exists
+        const { data: existing } = await supabase
+          .from('project_checklist_items')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('item_id', item.id)
+          .eq('participant_designation', participantDesignation)
+          .single();
+
+        if (existing) {
+          console.log(`Item already exists for ${item.item_name}`);
+          return;
+        }
+
+        // Create new checklist item
+        const insertData: any = {
+          project_id: projectId,
+          item_id: item.id,
+          participant_designation: participantDesignation,
+          status: 'pending'
+        };
+
+        const { error: insertError } = await supabase
+          .from('project_checklist_items')
+          .insert(insertData);
+
+        if (insertError) {
+          console.error(`Error creating checklist item for ${item.item_name}:`, insertError);
+        } else {
+          console.log(`✅ Created checklist item for ${item.item_name}`);
+        }
+      }) || [];
+
+      await Promise.all(createPromises);
+    } catch (error) {
+      console.error('Error creating subcategory items:', error);
+    }
+  };
 
   useEffect(() => {
     if (projectId && categoryId) {

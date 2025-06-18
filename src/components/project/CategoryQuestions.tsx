@@ -68,41 +68,61 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       item.itemType === 'document' && ChecklistItemService.isMainQuestion(item)
     );
     
+    // Filter additional questions to exclude initiator questions
+    const additionalNonDocs = additionalQuestions.filter(item => {
+      const isDocument = item.itemType === 'document';
+      const isInitiator = item.subcategory1Initiator || 
+                         item.subcategory2Initiator || 
+                         item.subcategory3Initiator || 
+                         item.subcategory4Initiator || 
+                         item.subcategory5Initiator;
+      return !isDocument && !isInitiator;
+    });
+    
     const additionalDocs = additionalQuestions.filter(item => 
       item.itemType === 'document'
     );
     
-    console.log('Filtered results:', { main: main.length, documents: documents.length, additionalDocs: additionalDocs.length });
+    console.log('Filtered results:', { 
+      main: main.length, 
+      documents: documents.length, 
+      additionalNonDocs: additionalNonDocs.length,
+      additionalDocs: additionalDocs.length 
+    });
     
     return {
       mainQuestions: main.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
       documentQuestions: documents.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
-      additionalDocuments: additionalDocs.sort((a, b) => (a.priority || 0) - (b.priority || 0))
+      additionalDocuments: additionalDocs.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
+      additionalNonDocuments: additionalNonDocs.sort((a, b) => (a.priority || 0) - (b.priority || 0))
     };
   }, [items, additionalQuestions]);
 
-  // Initialize form data with existing values
+  // Initialize form data with existing values using checklist item IDs
   useEffect(() => {
     const initialMainData: Record<string, any> = {};
     mainQuestions.forEach(item => {
-      if (item.displayValue && item.displayValue !== '') {
+      if (item.displayValue !== null && item.displayValue !== undefined && item.displayValue !== '') {
         initialMainData[item.id] = item.displayValue;
       }
     });
     setMainFormData(initialMainData);
+    console.log('Initialized main form data:', initialMainData);
   }, [mainQuestions]);
 
   useEffect(() => {
     const initialAdditionalData: Record<string, any> = {};
     additionalQuestions.forEach(item => {
-      if (item.displayValue && item.displayValue !== '') {
+      if (item.displayValue !== null && item.displayValue !== undefined && item.displayValue !== '') {
         initialAdditionalData[item.id] = item.displayValue;
       }
     });
     setAdditionalFormData(initialAdditionalData);
+    console.log('Initialized additional form data:', initialAdditionalData);
   }, [additionalQuestions]);
 
   const handleMainInputChange = useCallback((itemId: string, value: any) => {
+    console.log('Main input change:', { itemId, value });
     setMainFormData(prev => ({
       ...prev,
       [itemId]: value,
@@ -112,6 +132,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, []);
 
   const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
+    console.log('Additional input change:', { itemId, value });
     setAdditionalFormData(prev => ({
       ...prev,
       [itemId]: value,
@@ -119,33 +140,64 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, []);
 
   const handleSaveMain = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
 
     try {
       setSaving(true);
       setSaveError(null);
+      console.log('Starting save with form data:', mainFormData);
       
-      // Create item ID to form ID mapping for conditional logic
-      const itemIdToFormIdMap: Record<string, string> = {};
+      // Create item ID to checklist item ID mapping for conditional logic
+      const itemIdToChecklistItemIdMap: Record<string, string> = {};
       mainQuestions.forEach(item => {
-        itemIdToFormIdMap[item.itemId] = item.id;
+        itemIdToChecklistItemIdMap[item.itemId] = item.id;
       });
+      console.log('Item ID mapping:', itemIdToChecklistItemIdMap);
 
-      // Save main questions
+      // Save main questions using checklist item IDs
       const savePromises = [];
-      for (const item of mainQuestions) {
-        const inputValue = mainFormData[item.id];
-        if (inputValue === undefined || inputValue === '') continue;
+      for (const [checklistItemId, inputValue] of Object.entries(mainFormData)) {
+        if (inputValue === undefined || inputValue === '' || inputValue === null) {
+          console.log(`Skipping empty value for item ${checklistItemId}`);
+          continue;
+        }
 
-        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+        // Find the item to get its type
+        const item = mainQuestions.find(q => q.id === checklistItemId);
+        if (!item) {
+          console.error(`Item not found for checklist item ID: ${checklistItemId}`);
+          continue;
+        }
+
+        console.log(`Saving item ${checklistItemId} (${item.itemName}):`, inputValue);
+        
+        try {
+          const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
+          console.log(`Converted value for ${checklistItemId}:`, typedValue);
+          savePromises.push(updateItem(checklistItemId, typedValue, 'submitted'));
+        } catch (validationError) {
+          console.error(`Validation error for item ${checklistItemId}:`, validationError);
+          throw validationError;
+        }
       }
 
+      console.log(`Saving ${savePromises.length} items...`);
       await Promise.all(savePromises);
 
-      // Evaluate conditional logic after saving
-      console.log('Evaluating conditional logic with data:', mainFormData);
-      const { subcategories } = await evaluateOnSave(mainFormData, itemIdToFormIdMap);
+      // Evaluate conditional logic after saving - use itemId for logic evaluation
+      const formDataByItemId: Record<string, any> = {};
+      for (const [checklistItemId, value] of Object.entries(mainFormData)) {
+        const item = mainQuestions.find(q => q.id === checklistItemId);
+        if (item) {
+          formDataByItemId[item.itemId] = value;
+        }
+      }
+      
+      console.log('Evaluating conditional logic with data by item ID:', formDataByItemId);
+      const { subcategories } = await evaluateOnSave(formDataByItemId, itemIdToChecklistItemIdMap);
       
       if (subcategories.length > 0) {
         console.log('Conditional logic triggered new subcategories:', subcategories);
@@ -165,7 +217,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       console.error('Error saving main form data:', error);
       setSaveError('Failed to save main answers');
       toast.error('Failed to save main answers', {
-        description: 'Please check your internet connection and try again.',
+        description: error instanceof Error ? error.message : 'Please check your internet connection and try again.',
       });
     } finally {
       setSaving(false);
@@ -173,20 +225,43 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, [projectId, mainQuestions, mainFormData, validateAndConvertValue, updateItem, evaluateOnSave, refreshItems, loadExistingAdditionalQuestions]);
 
   const handleSaveAdditional = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
 
     try {
       setSaving(true);
+      console.log('Saving additional form data:', additionalFormData);
+      
       const savePromises = [];
       
-      for (const item of additionalQuestions) {
-        const inputValue = additionalFormData[item.id];
-        if (inputValue === undefined || inputValue === '') continue;
+      for (const [checklistItemId, inputValue] of Object.entries(additionalFormData)) {
+        if (inputValue === undefined || inputValue === '' || inputValue === null) {
+          console.log(`Skipping empty value for additional item ${checklistItemId}`);
+          continue;
+        }
 
-        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+        // Find the item to get its type
+        const item = additionalQuestions.find(q => q.id === checklistItemId);
+        if (!item) {
+          console.error(`Additional item not found for checklist item ID: ${checklistItemId}`);
+          continue;
+        }
+
+        console.log(`Saving additional item ${checklistItemId} (${item.itemName}):`, inputValue);
+        
+        try {
+          const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
+          console.log(`Converted additional value for ${checklistItemId}:`, typedValue);
+          savePromises.push(updateItem(checklistItemId, typedValue, 'submitted'));
+        } catch (validationError) {
+          console.error(`Validation error for additional item ${checklistItemId}:`, validationError);
+          throw validationError;
+        }
       }
 
+      console.log(`Saving ${savePromises.length} additional items...`);
       await Promise.all(savePromises);
       
       toast.success('Additional answers saved successfully!', {
@@ -196,7 +271,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     } catch (error) {
       console.error('Error saving additional form data:', error);
       toast.error('Failed to save additional answers', {
-        description: 'Please check your internet connection and try again.',
+        description: error instanceof Error ? error.message : 'Please check your internet connection and try again.',
       });
     } finally {
       setSaving(false);
@@ -262,9 +337,9 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           </TabsTrigger>
           <TabsTrigger value="additional" className="relative">
             Additional Questions
-            {additionalQuestions.length > 0 && (
+            {(additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator).length) > 0 && (
               <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {additionalQuestions.filter(q => q.itemType !== 'document').length}
+                {additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator).length}
               </span>
             )}
           </TabsTrigger>
@@ -293,7 +368,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
 
         <TabsContent value="additional" className="mt-6">
           <AdditionalQuestionsRenderer
-            additionalQuestions={additionalQuestions.filter(q => q.itemType !== 'document')}
+            additionalQuestions={additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator)}
             additionalFormData={additionalFormData}
             activeSubcategories={activeSubcategories}
             logicLoading={logicLoading}
