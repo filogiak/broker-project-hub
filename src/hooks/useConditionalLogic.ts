@@ -96,13 +96,18 @@ export const useConditionalLogic = (
           setError(itemsError.message);
           return { subcategories: [], preservedAnswers: {} };
         }
+
+        if (!allItems) {
+          console.log('No items found for category');
+          return { subcategories: [], preservedAnswers: {} };
+        }
   
         // Filter items that have conditional logic (validation rules)
-        const conditionalItems = allItems?.filter(item => 
+        const conditionalItems = allItems.filter(item => 
           item.validation_rules && 
           typeof item.validation_rules === 'object' && 
           item.validation_rules !== null
-        ) || [];
+        );
         
         console.log('Found conditional items:', conditionalItems.length);
   
@@ -126,6 +131,13 @@ export const useConditionalLogic = (
 
                     if (inputValue === undefined || inputValue === null || inputValue === '') {
                       console.log(`No input value for item ${item.id}, condition not met`);
+                      allConditionsMet = false;
+                      break;
+                    }
+
+                    // Add null check for condition object
+                    if (!condition || typeof condition !== 'object') {
+                      console.log(`Invalid condition object for item ${item.id}`);
                       allConditionsMet = false;
                       break;
                     }
@@ -167,7 +179,7 @@ export const useConditionalLogic = (
                     unlockedSubcategories.push(subcategory);
   
                     // Create new checklist items for this subcategory
-                    await this.createSubcategoryItems(projectId, categoryId, subcategory, participantDesignation);
+                    await createSubcategoryItems(projectId, categoryId, subcategory, participantDesignation);
                   }
                 }
               }
@@ -209,8 +221,13 @@ export const useConditionalLogic = (
         return;
       }
 
+      if (!subcategoryItems) {
+        console.log('No subcategory items found');
+        return;
+      }
+
       // Create checklist items for each required item
-      const createPromises = subcategoryItems?.map(async (item) => {
+      const createPromises = subcategoryItems.map(async (item) => {
         // Check if item already exists
         const { data: existing } = await supabase
           .from('project_checklist_items')
@@ -242,7 +259,7 @@ export const useConditionalLogic = (
         } else {
           console.log(`✅ Created checklist item for ${item.item_name}`);
         }
-      }) || [];
+      });
 
       await Promise.all(createPromises);
     } catch (error) {
