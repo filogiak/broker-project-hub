@@ -45,6 +45,13 @@ export class FormGenerationService {
    * Transform snake_case database fields to camelCase for frontend compatibility
    */
   private static transformRequiredItem(item: RequiredItem): TransformedRequiredItem {
+    console.log('🔄 Transforming required item:', {
+      id: item.id,
+      item_name: item.item_name,
+      original_target_table: item.repeatable_group_target_table,
+      item_type: item.item_type
+    });
+
     const transformed: TransformedRequiredItem = {
       ...item,
       repeatableGroupTitle: item.repeatable_group_title || undefined,
@@ -61,7 +68,42 @@ export class FormGenerationService {
     delete (transformed as any).repeatable_group_top_button_text;
     delete (transformed as any).repeatable_group_target_table;
 
+    console.log('✅ Transformed item:', {
+      id: transformed.id,
+      item_name: transformed.item_name,
+      transformed_target_table: transformed.repeatableGroupTargetTable,
+      item_type: transformed.item_type
+    });
+
     return transformed;
+  }
+
+  /**
+   * Get all required items with transformation applied
+   */
+  static async getAllRequiredItems(): Promise<TransformedRequiredItem[]> {
+    console.log('📝 Fetching all required items from database...');
+    
+    const { data: allItems, error: itemsError } = await supabase
+      .from('required_items')
+      .select('*')
+      .order('priority', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (itemsError) {
+      throw new Error(`Failed to fetch required items: ${itemsError.message}`);
+    }
+
+    const transformedItems = (allItems || []).map(item => this.transformRequiredItem(item));
+    
+    console.log(`📝 Total items fetched and transformed: ${transformedItems.length}`);
+    console.log('🔍 Repeatable group items found:', transformedItems.filter(item => item.item_type === 'repeatable_group').map(item => ({
+      id: item.id,
+      name: item.item_name,
+      targetTable: item.repeatableGroupTargetTable
+    })));
+    
+    return transformedItems;
   }
 
   /**
