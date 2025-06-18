@@ -1,16 +1,16 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft } from 'lucide-react';
 import { useTypedChecklistItems } from '@/hooks/useTypedChecklistItems';
-import { useConditionalLogic } from '@/hooks/useConditionalLogic';
 import { useParams } from 'react-router-dom';
+import { useConditionalLogic } from '@/hooks/useConditionalLogic';
+import { ChecklistItemService } from '@/services/checklistItemService';
+import ConditionalLogicLoader from './ConditionalLogicLoader';
 import MainQuestionsRenderer from './questions/MainQuestionsRenderer';
 import AdditionalQuestionsRenderer from './questions/AdditionalQuestionsRenderer';
 import DocumentsRenderer from './questions/DocumentsRenderer';
-import { ChecklistItemService } from '@/services/checklistItemService';
 import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
 
 interface CategoryQuestionsProps {
   categoryId: string;
@@ -21,12 +21,16 @@ interface CategoryQuestionsProps {
 
 const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onBack }: CategoryQuestionsProps) => {
   const { projectId } = useParams();
-  const [mainFormData, setMainFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const [additionalFormData, setAdditionalFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Track which fields have been touched by user to preserve their input
+  const touchedFields = useRef<Set<string>>(new Set());
   
   const participantDesignation = useMemo(() => {
     return applicant === 'applicant_1' 
@@ -41,102 +45,131 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     loading,
     updateItem,
     validateAndConvertValue,
-    refreshItems,
   } = useTypedChecklistItems(projectId!, categoryId, participantDesignation);
 
+  // Enhanced category items filtering using proper database fields
+  const categoryItems = useMemo(() => {
+    return items
+      .filter(item => {
+        // Only include items from the current category
+        if (item.categoryId !== categoryId) return false;
+        
+        // Use proper question classification logic
+        return ChecklistItemService.isMainQuestion(item);
+      })
+      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  }, [items, categoryId]);
+
+  // Filter document items for the documents tab
+  const documentItems = useMemo(() => {
+    return categoryItems.filter(item => item.itemType === 'document');
+  }, [categoryItems]);
+
+  // Filter non-document items for main questions
+  const nonDocumentItems = useMemo(() => {
+    return categoryItems.filter(item => item.itemType !== 'document');
+  }, [categoryItems]);
+
+  // Stable item ID to form ID mapping
+  const itemIdToFormIdMap = useMemo(() => {
+    return categoryItems.reduce((map, item) => {
+      map[item.itemId] = item.id;
+      return map;
+    }, {} as Record<string, string>);
+  }, [categoryItems]);
+
+  // Enhanced conditional logic hook
   const {
     additionalQuestions,
     loading: logicLoading,
     activeSubcategories,
     evaluateOnSave,
     loadExistingAdditionalQuestions,
-  } = useConditionalLogic(projectId!, categoryId, participantDesignation);
+  } = useConditionalLogic(
+    projectId!,
+    categoryId,
+    participantDesignation
+  );
 
-  // Filter items by type for different tabs
-  const { mainQuestions, documentQuestions, additionalDocuments } = useMemo(() => {
-    console.log('Filtering items for tabs:', items);
-    
-    const main = items.filter(item => {
-      const isMain = ChecklistItemService.isMainQuestion(item);
-      const isDocument = item.itemType === 'document';
-      console.log(`Item ${item.itemName}: isMain=${isMain}, isDocument=${isDocument}`);
-      return isMain && !isDocument;
-    });
-    
-    const documents = items.filter(item => 
-      item.itemType === 'document' && ChecklistItemService.isMainQuestion(item)
-    );
-    
-    // Filter additional questions to exclude initiator questions and only include non-documents
-    const additionalNonDocs = additionalQuestions.filter(item => {
-      const isDocument = item.itemType === 'document';
-      const isInitiator = item.subcategory1Initiator || 
-                         item.subcategory2Initiator || 
-                         item.subcategory3Initiator || 
-                         item.subcategory4Initiator || 
-                         item.subcategory5Initiator;
-      return !isDocument && !isInitiator;
-    });
-    
-    const additionalDocs = additionalQuestions.filter(item => 
-      item.itemType === 'document'
-    );
-    
-    console.log('Filtered results:', { 
-      main: main.length, 
-      documents: documents.length, 
-      additionalNonDocs: additionalNonDocs.length,
-      additionalDocs: additionalDocs.length 
-    });
-    
-    return {
-      mainQuestions: main.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
-      documentQuestions: documents.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
-      additionalDocuments: additionalDocs.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
-      additionalNonDocuments: additionalNonDocs.sort((a, b) => (a.priority || 0) - (b.priority || 0))
-    };
-  }, [items, additionalQuestions]);
-
-  // Initialize form data with existing values using checklist item IDs - ENHANCED for proper data types
-  useEffect(() => {
-    const initialMainData: Record<string, any> = {};
-    mainQuestions.forEach(item => {
-      const displayValue = item.displayValue;
-      if (displayValue !== null && displayValue !== undefined && displayValue !== '') {
-        console.log(`Initializing main form data for ${item.itemName}:`, { 
-          id: item.id, 
-          value: displayValue, 
-          type: typeof displayValue,
-          itemType: item.itemType 
-        });
-        initialMainData[item.id] = displayValue;
-      }
-    });
-    setMainFormData(initialMainData);
-    console.log('Initialized main form data:', initialMainData);
-  }, [mainQuestions]);
-
-  useEffect(() => {
-    const initialAdditionalData: Record<string, any> = {};
-    additionalQuestions.forEach(item => {
-      const displayValue = item.displayValue;
-      if (displayValue !== null && displayValue !== undefined && displayValue !== '') {
-        console.log(`Initializing additional form data for ${item.itemName}:`, { 
-          id: item.id, 
-          value: displayValue, 
-          type: typeof displayValue,
-          itemType: item.itemType 
-        });
-        initialAdditionalData[item.id] = displayValue;
-      }
-    });
-    setAdditionalFormData(initialAdditionalData);
-    console.log('Initialized additional form data:', initialAdditionalData);
+  // Filter additional documents from additional questions
+  const additionalDocuments = useMemo(() => {
+    return additionalQuestions.filter(item => item.itemType === 'document');
   }, [additionalQuestions]);
 
-  const handleMainInputChange = useCallback((itemId: string, value: any) => {
-    console.log('Main input change:', { itemId, value, type: typeof value });
-    setMainFormData(prev => ({
+  // Filter additional non-document questions
+  const additionalNonDocuments = useMemo(() => {
+    return additionalQuestions.filter(item => item.itemType !== 'document');
+  }, [additionalQuestions]);
+
+  // Reset error boundary when conditional logic reloads
+  const handleConditionalLogicReset = useCallback(() => {
+    loadExistingAdditionalQuestions();
+  }, [loadExistingAdditionalQuestions]);
+
+  // Load existing conditional questions on mount
+  useEffect(() => {
+    if (projectId && categoryId) {
+      loadExistingAdditionalQuestions();
+    }
+  }, [projectId, categoryId, loadExistingAdditionalQuestions]);
+
+  // FIXED: Initialize form data only once and preserve user input
+  useEffect(() => {
+    if (categoryItems.length > 0 && !isInitialized) {
+      console.log('🔧 INIT: Initializing form data for first time');
+      const initialFormData: Record<string, any> = {};
+      categoryItems.forEach(item => {
+        if (item.displayValue && item.displayValue !== '') {
+          initialFormData[item.id] = item.displayValue;
+          console.log(`🔧 INIT: Setting initial value for ${item.itemName}:`, item.displayValue);
+        }
+      });
+      setFormData(initialFormData);
+      setIsInitialized(true);
+    } else if (categoryItems.length > 0 && isInitialized) {
+      // Smart merge: only update fields that haven't been touched by user
+      console.log('🔧 MERGE: Smart merging new category items with existing form data');
+      setFormData(prevFormData => {
+        const mergedData = { ...prevFormData };
+        let hasChanges = false;
+        
+        categoryItems.forEach(item => {
+          const fieldId = item.id;
+          const isFieldTouched = touchedFields.current.has(fieldId);
+          const hasDisplayValue = item.displayValue && item.displayValue !== '';
+          const fieldExists = fieldId in mergedData;
+          
+          // Only update if field hasn't been touched by user AND has a display value AND doesn't exist yet
+          if (!isFieldTouched && hasDisplayValue && !fieldExists) {
+            mergedData[fieldId] = item.displayValue;
+            hasChanges = true;
+            console.log(`🔧 MERGE: Adding new field ${item.itemName}:`, item.displayValue);
+          }
+        });
+        
+        return hasChanges ? mergedData : prevFormData;
+      });
+    }
+  }, [categoryItems, isInitialized]);
+
+  // Initialize additional form data with existing values
+  useEffect(() => {
+    const initialAdditionalFormData: Record<string, any> = {};
+    additionalQuestions.forEach(item => {
+      if (item.displayValue && item.displayValue !== '') {
+        initialAdditionalFormData[item.id] = item.displayValue;
+      }
+    });
+    setAdditionalFormData(initialAdditionalFormData);
+  }, [additionalQuestions]);
+
+  // FIXED: Enhanced input change handlers that track touched fields
+  const handleInputChange = useCallback((itemId: string, value: any) => {
+    console.log('🔧 INPUT: User input change for', itemId, ':', value);
+    // Mark field as touched by user
+    touchedFields.current.add(itemId);
+    
+    setFormData(prev => ({
       ...prev,
       [itemId]: value,
     }));
@@ -145,173 +178,162 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, []);
 
   const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
-    console.log('Additional input change:', { itemId, value, type: typeof value });
     setAdditionalFormData(prev => ({
       ...prev,
       [itemId]: value,
     }));
   }, []);
 
-  const handleSaveMain = useCallback(async () => {
-    if (!projectId) {
-      console.error('No project ID available');
-      return;
-    }
+  // Enhanced save handler with better error handling and user feedback
+  const handleSave = useCallback(async () => {
+    if (!projectId) return;
 
     try {
       setSaving(true);
       setSaveError(null);
-      console.log('Starting save with form data:', mainFormData);
-      
-      // Save main questions - each entry in mainFormData uses checklist item ID as key
       const savePromises = [];
-      const savedDataByRequiredItemId: Record<string, any> = {};
-      const itemIdToChecklistItemIdMap: Record<string, string> = {};
       
-      for (const [checklistItemId, inputValue] of Object.entries(mainFormData)) {
-        if (inputValue === undefined || inputValue === '' || inputValue === null) {
-          console.log(`Skipping empty value for item ${checklistItemId}`);
-          continue;
-        }
+      // Save main questions first
+      for (const item of categoryItems) {
+        const inputValue = formData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
 
-        // Find the item to get its type and itemId (required_items.id)
-        const item = mainQuestions.find(q => q.id === checklistItemId);
-        if (!item) {
-          console.error(`Item not found for checklist item ID: ${checklistItemId}`);
-          continue;
-        }
-
-        console.log(`Saving item ${checklistItemId} (${item.itemName}):`, { 
-          value: inputValue, 
-          type: typeof inputValue,
-          itemType: item.itemType 
-        });
-        
-        try {
-          const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-          console.log(`Converted value for ${checklistItemId}:`, { 
-            original: inputValue, 
-            converted: typedValue,
-            originalType: typeof inputValue,
-            convertedType: typeof typedValue
-          });
-          
-          const success = await updateItem(checklistItemId, typedValue, 'submitted');
-          if (success) {
-            // Store the saved data using itemId (required_items.id) for conditional logic
-            savedDataByRequiredItemId[item.itemId] = typedValue;
-            itemIdToChecklistItemIdMap[item.itemId] = checklistItemId;
-            savePromises.push(Promise.resolve(true));
-          }
-        } catch (validationError) {
-          console.error(`Validation error for item ${checklistItemId}:`, validationError);
-          throw validationError;
-        }
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 
-      console.log(`Attempted to save ${Object.keys(mainFormData).length} items`);
-      console.log('Saved data for conditional logic (by required item ID):', savedDataByRequiredItemId);
-      console.log('Item ID to checklist item ID mapping:', itemIdToChecklistItemIdMap);
-
-      // Wait for all saves to complete
       await Promise.all(savePromises);
-
-      // Evaluate conditional logic after saving - pass data keyed by checklist item ID but map to required item IDs internally
-      console.log('Evaluating conditional logic with saved data:', mainFormData);
-      const { subcategories } = await evaluateOnSave(mainFormData, itemIdToChecklistItemIdMap);
       
-      if (subcategories.length > 0) {
-        console.log('Conditional logic triggered new subcategories:', subcategories);
-        // Refresh items to get newly created questions
-        await refreshItems();
-        await loadExistingAdditionalQuestions();
-      }
+      // Show evaluation feedback
+      toast.info('Evaluating conditional logic...', { duration: 2000 });
+      
+      console.log('Evaluating enhanced conditional logic after save...');
+      const logicResult = await evaluateOnSave(formData, itemIdToFormIdMap);
       
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
       
-      toast.success('Main answers saved successfully!', {
+      toast.success('Answers saved successfully!', {
         description: `Saved at ${new Date().toLocaleTimeString()}`,
       });
       
+      if (logicResult.subcategories.length > 0) {
+        const preservedCount = Object.keys(logicResult.preservedAnswers || {}).length;
+        toast.info(
+          `${logicResult.subcategories.length} additional question section(s) unlocked!`,
+          {
+            description: preservedCount > 0 ? `${preservedCount} previous answers were preserved.` : undefined,
+            duration: 5000,
+          }
+        );
+      }
+      
     } catch (error) {
-      console.error('Error saving main form data:', error);
-      setSaveError('Failed to save main answers');
-      toast.error('Failed to save main answers', {
-        description: error instanceof Error ? error.message : 'Please check your internet connection and try again.',
+      console.error('Error saving form data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save answers';
+      setSaveError(errorMessage);
+      toast.error('Failed to save answers', {
+        description: 'Please check your internet connection and try again.',
       });
     } finally {
       setSaving(false);
     }
-  }, [projectId, mainQuestions, mainFormData, validateAndConvertValue, updateItem, evaluateOnSave, refreshItems, loadExistingAdditionalQuestions]);
+  }, [projectId, categoryItems, formData, itemIdToFormIdMap, validateAndConvertValue, updateItem, evaluateOnSave]);
 
+  // Enhanced save handler for additional questions
   const handleSaveAdditional = useCallback(async () => {
-    if (!projectId) {
-      console.error('No project ID available');
-      return;
-    }
+    if (!projectId) return;
 
     try {
       setSaving(true);
-      console.log('Saving additional form data:', additionalFormData);
-      
       const savePromises = [];
       
-      for (const [checklistItemId, inputValue] of Object.entries(additionalFormData)) {
-        if (inputValue === undefined || inputValue === '' || inputValue === null) {
-          console.log(`Skipping empty value for additional item ${checklistItemId}`);
-          continue;
-        }
+      // Save additional questions
+      for (const item of additionalQuestions) {
+        const inputValue = additionalFormData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
 
-        // Find the item to get its type
-        const item = additionalQuestions.find(q => q.id === checklistItemId);
-        if (!item) {
-          console.error(`Additional item not found for checklist item ID: ${checklistItemId}`);
-          continue;
-        }
-
-        console.log(`Saving additional item ${checklistItemId} (${item.itemName}):`, { 
-          value: inputValue, 
-          type: typeof inputValue,
-          itemType: item.itemType 
-        });
-        
-        try {
-          const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-          console.log(`Converted additional value for ${checklistItemId}:`, { 
-            original: inputValue, 
-            converted: typedValue,
-            originalType: typeof inputValue,
-            convertedType: typeof typedValue
-          });
-          savePromises.push(updateItem(checklistItemId, typedValue, 'submitted'));
-        } catch (validationError) {
-          console.error(`Validation error for additional item ${checklistItemId}:`, validationError);
-          throw validationError;
-        }
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 
-      console.log(`Saving ${savePromises.length} additional items...`);
-      const results = await Promise.all(savePromises);
-      const successCount = results.filter(result => result).length;
-      
-      toast.success(`Additional answers saved successfully! (${successCount} items)`, {
-        description: `Saved at ${new Date().toLocaleTimeString()}`,
-      });
+      await Promise.all(savePromises);
+      toast.success('Additional answers saved successfully!');
       
     } catch (error) {
       console.error('Error saving additional form data:', error);
-      toast.error('Failed to save additional answers', {
-        description: error instanceof Error ? error.message : 'Please check your internet connection and try again.',
-      });
+      toast.error('Failed to save additional answers. Please try again.');
     } finally {
       setSaving(false);
     }
   }, [projectId, additionalQuestions, additionalFormData, validateAndConvertValue, updateItem]);
 
-  const handleConditionalLogicReset = useCallback(() => {
-    loadExistingAdditionalQuestions();
-  }, [loadExistingAdditionalQuestions]);
+  // Enhanced save handler for documents
+  const handleSaveDocuments = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      setSaving(true);
+      setSaveError(null);
+      const savePromises = [];
+      
+      // Save main document items
+      for (const item of documentItems) {
+        const inputValue = formData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
+
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+      }
+
+      await Promise.all(savePromises);
+      
+      setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
+      
+      toast.success('Documents saved successfully!', {
+        description: `Saved at ${new Date().toLocaleTimeString()}`,
+      });
+      
+    } catch (error) {
+      console.error('Error saving documents:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save documents';
+      setSaveError(errorMessage);
+      toast.error('Failed to save documents', {
+        description: 'Please check your internet connection and try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, documentItems, formData, validateAndConvertValue, updateItem]);
+
+  // Enhanced save handler for additional documents
+  const handleSaveAdditionalDocuments = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      setSaving(true);
+      const savePromises = [];
+      
+      // Save additional document items
+      for (const item of additionalDocuments) {
+        const inputValue = additionalFormData[item.id];
+        if (inputValue === undefined || inputValue === '') continue;
+
+        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        savePromises.push(updateItem(item.id, typedValue, 'submitted'));
+      }
+
+      await Promise.all(savePromises);
+      toast.success('Additional documents saved successfully!');
+      
+    } catch (error) {
+      console.error('Error saving additional documents:', error);
+      toast.error('Failed to save additional documents. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, additionalDocuments, additionalFormData, validateAndConvertValue, updateItem]);
 
   if (loading) {
     return (
@@ -331,12 +353,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           </div>
         </div>
         
-        <div className="flex items-center justify-center min-h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading questions...</p>
-          </div>
-        </div>
+        <ConditionalLogicLoader message="Loading questions..." />
       </div>
     );
   }
@@ -358,48 +375,55 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         </div>
       </div>
       
-      <Tabs defaultValue="main" className="w-full">
+      <Tabs defaultValue="main-questions" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="main" className="relative">
+          <TabsTrigger value="main-questions">
             Main Questions
             {hasUnsavedChanges && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full"></span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="additional" className="relative">
-            Additional Questions
-            {(additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator).length) > 0 && (
-              <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator).length}
+              <span className="ml-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                !
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="documents" className="relative">
+          <TabsTrigger value="additional-questions">
+            Additional Questions
+            {additionalNonDocuments.length > 0 && (
+              <span className="ml-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                {additionalNonDocuments.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="documents">
             Documents
-            {(documentQuestions.length + additionalDocuments.length) > 0 && (
-              <span className="ml-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {documentQuestions.length + additionalDocuments.length}
+            {(documentItems.length > 0 || additionalDocuments.length > 0) && (
+              <span className="ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                {documentItems.length + additionalDocuments.length}
+              </span>
+            )}
+            {additionalDocuments.length > 0 && (
+              <span className="ml-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                {additionalDocuments.length}
               </span>
             )}
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="main" className="mt-6">
+        
+        <TabsContent value="main-questions" className="mt-6">
           <MainQuestionsRenderer
-            categoryItems={mainQuestions}
-            formData={mainFormData}
+            categoryItems={nonDocumentItems}
+            formData={formData}
             hasUnsavedChanges={hasUnsavedChanges}
             saveError={saveError}
             lastSaveTime={lastSaveTime}
             saving={saving}
-            onInputChange={handleMainInputChange}
-            onSave={handleSaveMain}
+            onInputChange={handleInputChange}
+            onSave={handleSave}
           />
         </TabsContent>
-
-        <TabsContent value="additional" className="mt-6">
+        
+        <TabsContent value="additional-questions" className="mt-6">
           <AdditionalQuestionsRenderer
-            additionalQuestions={additionalQuestions.filter(q => q.itemType !== 'document' && !q.subcategory1Initiator && !q.subcategory2Initiator && !q.subcategory3Initiator && !q.subcategory4Initiator && !q.subcategory5Initiator)}
+            additionalQuestions={additionalNonDocuments}
             additionalFormData={additionalFormData}
             activeSubcategories={activeSubcategories}
             logicLoading={logicLoading}
@@ -409,21 +433,21 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
             onConditionalLogicReset={handleConditionalLogicReset}
           />
         </TabsContent>
-
+        
         <TabsContent value="documents" className="mt-6">
           <DocumentsRenderer
-            documentItems={documentQuestions}
+            documentItems={documentItems}
             additionalDocuments={additionalDocuments}
-            formData={mainFormData}
+            formData={formData}
             additionalFormData={additionalFormData}
             hasUnsavedChanges={hasUnsavedChanges}
             saveError={saveError}
             lastSaveTime={lastSaveTime}
             saving={saving}
-            onInputChange={handleMainInputChange}
+            onInputChange={handleInputChange}
             onAdditionalInputChange={handleAdditionalInputChange}
-            onSave={handleSaveMain}
-            onSaveAdditional={handleSaveAdditional}
+            onSave={handleSaveDocuments}
+            onSaveAdditional={handleSaveAdditionalDocuments}
             logicLoading={logicLoading}
           />
         </TabsContent>

@@ -30,7 +30,6 @@ const AdminDashboard = () => {
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
-  const [showQuestionForm, setShowQuestionForm] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -279,16 +278,9 @@ const AdminDashboard = () => {
                 />
               ) : (
                 <QuestionForm
-                  question={editingQuestion}
-                  onSave={() => {
-                    setShowQuestionForm(false);
-                    setEditingQuestion(null);
-                    // Reload questions if needed
-                  }}
-                  onCancel={() => {
-                    setShowQuestionForm(false);
-                    setEditingQuestion(null);
-                  }}
+                  onSuccess={handleQuestionSuccess}
+                  editingQuestion={editingQuestion}
+                  onCancel={handleCancelQuestion}
                 />
               )}
             </TabsContent>

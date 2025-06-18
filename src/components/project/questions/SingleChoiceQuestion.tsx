@@ -8,8 +8,8 @@ interface SelectOption {
 }
 
 interface SingleChoiceQuestionProps {
-  value: string | boolean | number;
-  onChange: (value: string | boolean | number) => void;
+  value: string;
+  onChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
   required?: boolean;
@@ -24,34 +24,10 @@ const SingleChoiceQuestion = React.memo(({
   required = false,
   disabled = false
 }: SingleChoiceQuestionProps) => {
-  
-  // Convert the value to string for the Select component
-  const stringValue = value !== null && value !== undefined ? String(value) : '';
-  
-  // Handle value conversion when selection changes
-  const handleValueChange = (selectedValue: string) => {
-    console.log('SingleChoiceQuestion value change:', selectedValue);
-    
-    // Try to convert back to original type if it was boolean or number
-    if (selectedValue.toLowerCase() === 'true') {
-      onChange(true);
-    } else if (selectedValue.toLowerCase() === 'false') {
-      onChange(false);
-    } else {
-      // Check if it's a number
-      const numValue = Number(selectedValue);
-      if (!isNaN(numValue) && selectedValue.trim() !== '') {
-        onChange(numValue);
-      } else {
-        onChange(selectedValue);
-      }
-    }
-  };
-
   return (
     <Select
-      value={stringValue}
-      onValueChange={handleValueChange}
+      value={value}
+      onValueChange={onChange}
       required={required}
       disabled={disabled}
     >

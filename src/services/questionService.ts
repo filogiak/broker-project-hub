@@ -71,12 +71,6 @@ export const questionService = {
       subcategory_3_initiator: item.subcategory_3_initiator || false,
       subcategory_4_initiator: item.subcategory_4_initiator || false,
       subcategory_5_initiator: item.subcategory_5_initiator || false,
-      // Handle repeatable group fields
-      repeatable_group_title: item.repeatable_group_title?.trim() || null,
-      repeatable_group_subtitle: item.repeatable_group_subtitle?.trim() || null,
-      repeatable_group_top_button_text: item.repeatable_group_top_button_text?.trim() || null,
-      repeatable_group_start_button_text: item.repeatable_group_start_button_text?.trim() || null,
-      repeatable_group_target_table: item.repeatable_group_target_table || null,
     };
 
     const { data, error } = await supabase
@@ -93,20 +87,14 @@ export const questionService = {
     // Ensure all subcategory fields are included in updates and convert empty strings to null
     const completeUpdates = {
       ...updates,
-      subcategory: updates.subcategory !== undefined ? (updates.subcategory?.trim() || null) : undefined,
-      subcategory_2: updates.subcategory_2 !== undefined ? (updates.subcategory_2?.trim() || null) : undefined,
-      subcategory_3: updates.subcategory_3 !== undefined ? (updates.subcategory_3?.trim() || null) : undefined,
-      subcategory_4: updates.subcategory_4 !== undefined ? (updates.subcategory_4?.trim() || null) : undefined,
-      subcategory_5: updates.subcategory_5 !== undefined ? (updates.subcategory_5?.trim() || null) : undefined,
-      subcategory_3_initiator: updates.subcategory_3_initiator !== undefined ? updates.subcategory_3_initiator : undefined,
-      subcategory_4_initiator: updates.subcategory_4_initiator !== undefined ? updates.subcategory_4_initiator : undefined,
-      subcategory_5_initiator: updates.subcategory_5_initiator !== undefined ? updates.subcategory_5_initiator : undefined,
-      // Handle repeatable group fields in updates
-      repeatable_group_title: updates.repeatable_group_title !== undefined ? (updates.repeatable_group_title?.trim() || null) : undefined,
-      repeatable_group_subtitle: updates.repeatable_group_subtitle !== undefined ? (updates.repeatable_group_subtitle?.trim() || null) : undefined,
-      repeatable_group_top_button_text: updates.repeatable_group_top_button_text !== undefined ? (updates.repeatable_group_top_button_text?.trim() || null) : undefined,
-      repeatable_group_start_button_text: updates.repeatable_group_start_button_text !== undefined ? (updates.repeatable_group_start_button_text?.trim() || null) : undefined,
-      repeatable_group_target_table: updates.repeatable_group_target_table !== undefined ? updates.repeatable_group_target_table : undefined,
+      subcategory: updates.subcategory !== undefined ? (updates.subcategory?.trim() || null) : null,
+      subcategory_2: updates.subcategory_2 !== undefined ? (updates.subcategory_2?.trim() || null) : null,
+      subcategory_3: updates.subcategory_3 !== undefined ? (updates.subcategory_3?.trim() || null) : null,
+      subcategory_4: updates.subcategory_4 !== undefined ? (updates.subcategory_4?.trim() || null) : null,
+      subcategory_5: updates.subcategory_5 !== undefined ? (updates.subcategory_5?.trim() || null) : null,
+      subcategory_3_initiator: updates.subcategory_3_initiator !== undefined ? updates.subcategory_3_initiator : false,
+      subcategory_4_initiator: updates.subcategory_4_initiator !== undefined ? updates.subcategory_4_initiator : false,
+      subcategory_5_initiator: updates.subcategory_5_initiator !== undefined ? updates.subcategory_5_initiator : false,
     };
 
     const { data, error } = await supabase

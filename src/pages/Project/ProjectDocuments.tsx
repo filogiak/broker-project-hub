@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -11,6 +10,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+// Updated categories to match actual database data
+const MOCK_CATEGORIES = [
+  { id: '1', name: 'La Casa' },
+  { id: '2', name: 'Professione' },
+  { id: '3', name: 'Redditi Secondari' },
+  { id: '4', name: 'Finanziamenti' },
+  { id: '5', name: 'Patrimonio' },
+];
 
 type ViewState = 
   | { type: 'categories' }
