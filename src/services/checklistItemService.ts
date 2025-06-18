@@ -31,10 +31,17 @@ export interface TypedChecklistItem {
   displayValue?: any;
   typedValue: TypedChecklistItemValue;
   
-  // New fields for subcategory logic
+  // Enhanced subcategory fields
   subcategory?: string | null;
   subcategory1Initiator?: boolean | null;
   subcategory2Initiator?: boolean | null;
+  
+  // NEW: Repeatable group properties
+  repeatableGroupTitle?: string | null;
+  repeatableGroupSubtitle?: string | null;
+  repeatableGroupTopButtonText?: string | null;
+  repeatableGroupStartButtonText?: string | null;
+  repeatableGroupTargetTable?: Database['public']['Enums']['target_table'] | null;
 }
 
 export class ChecklistItemService {
@@ -59,7 +66,12 @@ export class ChecklistItemService {
             priority,
             subcategory,
             subcategory_1_initiator,
-            subcategory_2_initiator
+            subcategory_2_initiator,
+            repeatable_group_title,
+            repeatable_group_subtitle,
+            repeatable_group_top_button_text,
+            repeatable_group_start_button_text,
+            repeatable_group_target_table
           )
         `)
         .eq('project_id', projectId)
@@ -114,6 +126,12 @@ export class ChecklistItemService {
           subcategory: requiredItem?.subcategory,
           subcategory1Initiator: requiredItem?.subcategory_1_initiator,
           subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+          // NEW: Repeatable group fields
+          repeatableGroupTitle: requiredItem?.repeatable_group_title,
+          repeatableGroupSubtitle: requiredItem?.repeatable_group_subtitle,
+          repeatableGroupTopButtonText: requiredItem?.repeatable_group_top_button_text,
+          repeatableGroupStartButtonText: requiredItem?.repeatable_group_start_button_text,
+          repeatableGroupTargetTable: requiredItem?.repeatable_group_target_table,
         };
       });
 
@@ -144,7 +162,12 @@ export class ChecklistItemService {
             priority,
             subcategory,
             subcategory_1_initiator,
-            subcategory_2_initiator
+            subcategory_2_initiator,
+            repeatable_group_title,
+            repeatable_group_subtitle,
+            repeatable_group_top_button_text,
+            repeatable_group_start_button_text,
+            repeatable_group_target_table
           )
         `)
         .eq('project_id', projectId);
@@ -198,6 +221,12 @@ export class ChecklistItemService {
           subcategory: requiredItem?.subcategory,
           subcategory1Initiator: requiredItem?.subcategory_1_initiator,
           subcategory2Initiator: requiredItem?.subcategory_2_initiator,
+          // NEW: Repeatable group fields
+          repeatableGroupTitle: requiredItem?.repeatable_group_title,
+          repeatableGroupSubtitle: requiredItem?.repeatable_group_subtitle,
+          repeatableGroupTopButtonText: requiredItem?.repeatable_group_top_button_text,
+          repeatableGroupStartButtonText: requiredItem?.repeatable_group_start_button_text,
+          repeatableGroupTargetTable: requiredItem?.repeatable_group_target_table,
         };
       });
 

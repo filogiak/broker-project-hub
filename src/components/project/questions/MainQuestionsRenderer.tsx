@@ -92,7 +92,7 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
               isRepeatable: item.itemType === 'repeatable_group'
             });
 
-            // FIXED: Handle repeatable groups with proper renderer
+            // FIXED: Handle repeatable groups with proper renderer and callback adaptation
             if (item.itemType === 'repeatable_group') {
               return (
                 <div key={`repeatable-${item.id}`} className="space-y-3">
@@ -118,7 +118,7 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
                         repeatableGroupTargetTable: item.repeatableGroupTargetTable,
                         subcategory: item.subcategory,
                       }}
-                      onChange={onInputChange}
+                      onChange={(value) => onInputChange(item.id, value)}
                     />
                   </div>
                 </div>
