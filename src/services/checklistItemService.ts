@@ -41,7 +41,7 @@ export interface TypedChecklistItem {
   repeatableGroupSubtitle?: string | null;
   repeatableGroupTopButtonText?: string | null;
   repeatableGroupStartButtonText?: string | null;
-  repeatableGroupTargetTable?: Database['public']['Enums']['target_table'] | null;
+  repeatableGroupTargetTable?: Database['public']['Enums']['repeatable_group_target_table'] | null;
 }
 
 export class ChecklistItemService {
