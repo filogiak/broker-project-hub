@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -39,12 +40,12 @@ export interface TypedChecklistItem extends ChecklistItem {
 export type TypedChecklistItemValue = string | number | boolean | Date | any;
 
 export interface TypedValueResult {
-  textValue?: string | null;
-  numericValue?: number | null;
-  dateValue?: Date | null;
-  booleanValue?: boolean | null;
-  jsonValue?: any;
-  documentReferenceId?: string | null;
+  text_value?: string | null;
+  numeric_value?: number | null;
+  date_value?: Date | null;
+  boolean_value?: boolean | null;
+  json_value?: any;
+  document_reference_id?: string | null;
 }
 
 export class ChecklistItemService {
@@ -251,6 +252,8 @@ export class ChecklistItemService {
         updateData.status = status;
       }
 
+      console.log('Updating checklist item with data:', updateData);
+
       const { data, error } = await supabase
         .from('project_checklist_items')
         .update(updateData)
@@ -263,6 +266,7 @@ export class ChecklistItemService {
         return { data: null, error };
       }
 
+      console.log('Successfully updated checklist item:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error in updateChecklistItem:', error);
@@ -315,26 +319,26 @@ export class ChecklistItemService {
     }
 
     if (typeof value === 'string') {
-      return { textValue: value };
+      return { text_value: value };
     }
     
     if (typeof value === 'number') {
-      return { numericValue: value };
+      return { numeric_value: value };
     }
     
     if (typeof value === 'boolean') {
-      return { booleanValue: value };
+      return { boolean_value: value };
     }
     
     if (value instanceof Date) {
-      return { dateValue: value };
+      return { date_value: value };
     }
     
     if (Array.isArray(value) || typeof value === 'object') {
-      return { jsonValue: value };
+      return { json_value: value };
     }
 
-    return { textValue: String(value) };
+    return { text_value: String(value) };
   }
 
   static getDisplayValue(item: TypedChecklistItem): any {
