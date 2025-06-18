@@ -75,6 +75,47 @@ export class RepeatableGroupService {
     }
   }
 
+  static async getMaxGroupIndex(projectId: string, targetTable: string): Promise<number> {
+    let query;
+    
+    switch (targetTable) {
+      case 'project_secondary_income_items':
+        query = supabase
+          .from('project_secondary_income_items')
+          .select('group_index')
+          .eq('project_id', projectId)
+          .order('group_index', { ascending: false })
+          .limit(1);
+        break;
+
+      case 'project_dependent_items':
+        query = supabase
+          .from('project_dependent_items')
+          .select('group_index')
+          .eq('project_id', projectId)
+          .order('group_index', { ascending: false })
+          .limit(1);
+        break;
+
+      case 'project_debt_items':
+        query = supabase
+          .from('project_debt_items')
+          .select('group_index')
+          .eq('project_id', projectId)
+          .order('group_index', { ascending: false })
+          .limit(1);
+        break;
+
+      default:
+        throw new Error(`Unsupported table: ${targetTable}`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    return data && data.length > 0 ? data[0].group_index : 0;
+  }
+
   static async loadExistingAnswers(projectId: string, targetTable: string, groupIndex: number) {
     switch (targetTable) {
       case 'project_secondary_income_items':
@@ -154,6 +195,39 @@ export class RepeatableGroupService {
         return await supabase
           .from('project_debt_items')
           .insert(baseData);
+
+      default:
+        throw new Error(`Unsupported table: ${targetTable}`);
+    }
+  }
+
+  static async createNewGroup(projectId: string, targetTable: string): Promise<number> {
+    const maxIndex = await this.getMaxGroupIndex(projectId, targetTable);
+    return maxIndex + 1;
+  }
+
+  static async deleteGroup(projectId: string, targetTable: string, groupIndex: number) {
+    switch (targetTable) {
+      case 'project_secondary_income_items':
+        return await supabase
+          .from('project_secondary_income_items')
+          .delete()
+          .eq('project_id', projectId)
+          .eq('group_index', groupIndex);
+
+      case 'project_dependent_items':
+        return await supabase
+          .from('project_dependent_items')
+          .delete()
+          .eq('project_id', projectId)
+          .eq('group_index', groupIndex);
+
+      case 'project_debt_items':
+        return await supabase
+          .from('project_debt_items')
+          .delete()
+          .eq('project_id', projectId)
+          .eq('group_index', groupIndex);
 
       default:
         throw new Error(`Unsupported table: ${targetTable}`);

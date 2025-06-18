@@ -16,8 +16,7 @@ interface QuestionItem {
 
 export const useRepeatableGroupQuestions = (
   targetTable: string,
-  subcategory: string,
-  groupIndex?: number
+  subcategory: string
 ) => {
   const { projectId } = useParams();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);

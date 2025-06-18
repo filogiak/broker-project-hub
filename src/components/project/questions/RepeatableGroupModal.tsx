@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { X, Save } from 'lucide-react';
 import QuestionRenderer from './QuestionRenderer';
 import { useRepeatableGroupQuestions } from '@/hooks/useRepeatableGroupQuestions';
+import { RepeatableGroupService } from '@/services/repeatableGroupService';
 
 interface QuestionItem {
   id: string;
@@ -21,6 +22,7 @@ interface GroupData {
   id: string;
   completedQuestions: number;
   totalQuestions: number;
+  groupIndex: number;
 }
 
 interface RepeatableGroupModalProps {
@@ -40,6 +42,7 @@ const RepeatableGroupModal = ({
 }: RepeatableGroupModalProps) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [actualGroupIndex, setActualGroupIndex] = useState<number | null>(null);
 
   const {
     questions,
@@ -48,18 +51,28 @@ const RepeatableGroupModal = ({
     loadExistingAnswers
   } = useRepeatableGroupQuestions(
     item.repeatableGroupTargetTable!,
-    item.subcategory!,
-    groupIndex !== null ? groupIndex + 1 : undefined
+    item.subcategory!
   );
 
   useEffect(() => {
-    if (isOpen && existingGroup && groupIndex !== null) {
-      loadExistingAnswers(groupIndex + 1).then(data => {
-        setFormData(data);
-      });
-    } else if (isOpen && groupIndex === null) {
-      setFormData({});
-    }
+    const initializeGroupData = async () => {
+      if (isOpen) {
+        if (existingGroup && groupIndex !== null) {
+          // Editing existing group - use the group's actual index
+          const actualIndex = existingGroup.groupIndex;
+          setActualGroupIndex(actualIndex);
+          
+          const data = await loadExistingAnswers(actualIndex);
+          setFormData(data);
+        } else {
+          // Creating new group - we'll get the index when saving
+          setActualGroupIndex(null);
+          setFormData({});
+        }
+      }
+    };
+
+    initializeGroupData();
   }, [isOpen, existingGroup, groupIndex, loadExistingAnswers]);
 
   const handleInputChange = (itemId: string, value: any) => {
@@ -72,7 +85,17 @@ const RepeatableGroupModal = ({
   const handleSave = async () => {
     try {
       setSaving(true);
-      const targetGroupIndex = groupIndex !== null ? groupIndex + 1 : await getNextGroupIndex();
+      
+      let targetGroupIndex = actualGroupIndex;
+      
+      // If creating a new group, get the next available index
+      if (targetGroupIndex === null) {
+        targetGroupIndex = await RepeatableGroupService.createNewGroup(
+          window.location.pathname.split('/')[2], // Extract project ID from URL
+          item.repeatableGroupTargetTable!
+        );
+      }
+      
       await saveAnswers(formData, targetGroupIndex);
       onClose();
     } catch (error) {
@@ -80,12 +103,6 @@ const RepeatableGroupModal = ({
     } finally {
       setSaving(false);
     }
-  };
-
-  const getNextGroupIndex = async () => {
-    // This would typically query the database to get the next available group_index
-    // For now, we'll use a simple increment
-    return Date.now(); // Temporary solution
   };
 
   const completedQuestions = Object.keys(formData).filter(key => 
@@ -103,7 +120,7 @@ const RepeatableGroupModal = ({
           <div className="flex items-center justify-between">
             <DialogTitle>
               {item.repeatableGroupTitle || item.itemName}
-              {groupIndex !== null && ` - Entry #${groupIndex + 1}`}
+              {existingGroup && ` - Entry #${existingGroup.groupIndex}`}
             </DialogTitle>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />

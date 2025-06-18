@@ -68,15 +68,80 @@ export const useRepeatableGroups = (
   }, [projectId, targetTable, subcategory, toast]);
 
   const createGroup = async (formData: Record<string, any>) => {
-    console.log('Creating new group with data:', formData);
+    try {
+      console.log('Creating new group with data:', formData);
+      
+      // Get the next available group index
+      const newGroupIndex = await RepeatableGroupService.createNewGroup(projectId, targetTable);
+      
+      // This will be handled by the modal's save logic
+      // The formData will be saved through useRepeatableGroupQuestions
+      
+      toast({
+        title: "Group created",
+        description: "New group has been created successfully.",
+      });
+      
+      await refreshGroups();
+      return newGroupIndex;
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast({
+        title: "Error creating group",
+        description: "Failed to create new group.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const updateGroup = async (groupIndex: number, formData: Record<string, any>) => {
-    console.log('Updating group', groupIndex, 'with data:', formData);
+    try {
+      console.log('Updating group', groupIndex, 'with data:', formData);
+      
+      // This will be handled by the modal's save logic
+      // The formData will be saved through useRepeatableGroupQuestions
+      
+      toast({
+        title: "Group updated",
+        description: "Group has been updated successfully.",
+      });
+      
+      await refreshGroups();
+    } catch (error) {
+      console.error('Error updating group:', error);
+      toast({
+        title: "Error updating group",
+        description: "Failed to update group.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const deleteGroup = async (groupIndex: number) => {
-    console.log('Deleting group', groupIndex);
+    try {
+      console.log('Deleting group', groupIndex);
+      
+      const { error } = await RepeatableGroupService.deleteGroup(projectId, targetTable, groupIndex);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Group deleted",
+        description: "Group has been deleted successfully.",
+      });
+      
+      await refreshGroups();
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast({
+        title: "Error deleting group",
+        description: "Failed to delete group.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   useEffect(() => {
