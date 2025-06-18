@@ -1203,9 +1203,9 @@ export type Database = {
         | "home_equity_loan"
         | "reverse_mortgage"
       repeatable_group_target_table:
-        | "project_secondary_incomes"
-        | "project_dependents"
-        | "project_debts"
+        | "project_secondary_income_items"
+        | "project_dependent_items"
+        | "project_debt_items"
       user_role:
         | "superadmin"
         | "brokerage_owner"
@@ -1364,9 +1364,9 @@ export const Constants = {
         "reverse_mortgage",
       ],
       repeatable_group_target_table: [
-        "project_secondary_incomes",
-        "project_dependents",
-        "project_debts",
+        "project_secondary_income_items",
+        "project_dependent_items",
+        "project_debt_items",
       ],
       user_role: [
         "superadmin",
