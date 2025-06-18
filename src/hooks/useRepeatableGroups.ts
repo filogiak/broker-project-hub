@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { RepeatableGroupService } from '@/services/repeatableGroupService';
 
 interface RepeatableGroup {
   id: string;
@@ -19,18 +19,16 @@ export const useRepeatableGroups = (
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const refreshGroups = async () => {
-    if (!projectId || !targetTable || !subcategory) return;
+  const refreshGroups = useCallback(async () => {
+    if (!projectId || !targetTable || !subcategory) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       
-      // Query the target table to get existing groups
-      const { data, error } = await supabase
-        .from(targetTable)
-        .select('group_index, id, status')
-        .eq('project_id', projectId)
-        .order('group_index', { ascending: true });
+      const { data, error } = await RepeatableGroupService.loadGroups(projectId, targetTable);
 
       if (error) throw error;
 
@@ -67,26 +65,23 @@ export const useRepeatableGroups = (
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId, targetTable, subcategory, toast]);
 
   const createGroup = async (formData: Record<string, any>) => {
-    // This will be implemented when we have the questions ready
     console.log('Creating new group with data:', formData);
   };
 
   const updateGroup = async (groupIndex: number, formData: Record<string, any>) => {
-    // This will be implemented when we have the questions ready
     console.log('Updating group', groupIndex, 'with data:', formData);
   };
 
   const deleteGroup = async (groupIndex: number) => {
-    // This will be implemented when we have the questions ready
     console.log('Deleting group', groupIndex);
   };
 
   useEffect(() => {
     refreshGroups();
-  }, [projectId, targetTable, subcategory]);
+  }, [refreshGroups]);
 
   return {
     groups,

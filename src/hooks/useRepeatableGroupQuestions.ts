@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'react-router-dom';
+import { RepeatableGroupService } from '@/services/repeatableGroupService';
 
 interface QuestionItem {
   id: string;
@@ -23,17 +24,15 @@ export const useRepeatableGroupQuestions = (
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadQuestions();
-  }, [targetTable, subcategory]);
-
-  const loadQuestions = async () => {
-    if (!subcategory) return;
+  const loadQuestions = useCallback(async () => {
+    if (!subcategory) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       
-      // Get all questions with the same subcategory as the repeatable group
       const { data, error } = await supabase
         .from('required_items')
         .select(`
@@ -44,7 +43,7 @@ export const useRepeatableGroupQuestions = (
           subcategory
         `)
         .eq('subcategory', subcategory)
-        .neq('item_type', 'repeatable_group') // Exclude the repeatable group itself
+        .neq('item_type', 'repeatable_group')
         .order('priority', { ascending: true });
 
       if (error) throw error;
@@ -54,7 +53,7 @@ export const useRepeatableGroupQuestions = (
         itemId: item.id,
         itemName: item.item_name,
         itemType: item.item_type,
-        required: true, // Assume all questions in repeatable groups are required
+        required: true,
         priority: item.priority || 0
       })) || [];
 
@@ -70,23 +69,22 @@ export const useRepeatableGroupQuestions = (
     } finally {
       setLoading(false);
     }
-  };
+  }, [subcategory, toast]);
 
-  const loadExistingAnswers = async (targetGroupIndex: number) => {
+  const loadExistingAnswers = useCallback(async (targetGroupIndex: number) => {
     if (!projectId || !targetTable || !targetGroupIndex) return {};
 
     try {
-      const { data, error } = await supabase
-        .from(targetTable)
-        .select('item_id, text_value, numeric_value, boolean_value, date_value, json_value')
-        .eq('project_id', projectId)
-        .eq('group_index', targetGroupIndex);
+      const { data, error } = await RepeatableGroupService.loadExistingAnswers(
+        projectId, 
+        targetTable, 
+        targetGroupIndex
+      );
 
       if (error) throw error;
 
       const formData: Record<string, any> = {};
       data?.forEach(item => {
-        // Determine the correct value based on the stored data
         const value = item.text_value || 
                      item.numeric_value || 
                      item.boolean_value || 
@@ -103,9 +101,9 @@ export const useRepeatableGroupQuestions = (
       console.error('Error loading existing answers:', error);
       return {};
     }
-  };
+  }, [projectId, targetTable]);
 
-  const saveAnswers = async (formData: Record<string, any>, targetGroupIndex: number) => {
+  const saveAnswers = useCallback(async (formData: Record<string, any>, targetGroupIndex: number) => {
     if (!projectId || !targetTable) return;
 
     try {
@@ -113,15 +111,8 @@ export const useRepeatableGroupQuestions = (
         const value = formData[question.id];
         if (value === undefined || value === '') return;
 
-        // Determine the correct column based on question type
-        let insertData: any = {
-          project_id: projectId,
-          item_id: question.id,
-          group_index: targetGroupIndex,
-          status: 'submitted'
-        };
+        let insertData: any = {};
 
-        // Route to appropriate column based on type
         switch (question.itemType) {
           case 'number':
             insertData.numeric_value = Number(value);
@@ -130,7 +121,6 @@ export const useRepeatableGroupQuestions = (
             insertData.date_value = value;
             break;
           case 'single_choice_dropdown':
-            // Check if the value represents a boolean
             if (value === 'TRUE' || value === 'FALSE') {
               insertData.boolean_value = value === 'TRUE';
             } else if (!isNaN(Number(value))) {
@@ -146,17 +136,13 @@ export const useRepeatableGroupQuestions = (
             insertData.text_value = String(value);
         }
 
-        // Delete existing entry for this item and group, then insert new one
-        await supabase
-          .from(targetTable)
-          .delete()
-          .eq('project_id', projectId)
-          .eq('item_id', question.id)
-          .eq('group_index', targetGroupIndex);
-
-        const { error } = await supabase
-          .from(targetTable)
-          .insert(insertData);
+        const { error } = await RepeatableGroupService.saveAnswer(
+          projectId,
+          targetTable,
+          question.id,
+          targetGroupIndex,
+          insertData
+        );
 
         if (error) throw error;
       });
@@ -177,7 +163,11 @@ export const useRepeatableGroupQuestions = (
       });
       throw error;
     }
-  };
+  }, [projectId, targetTable, questions, toast]);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
 
   return {
     questions,
