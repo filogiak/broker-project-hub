@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,9 @@ import type { Database } from '@/integrations/supabase/types';
 type ProjectType = Database['public']['Enums']['project_type'];
 type ItemType = Database['public']['Enums']['item_type'];
 type ItemScope = Database['public']['Enums']['item_scope'];
+type RepeatableGroupTargetTable = Database['public']['Enums']['repeatable_group_target_table'];
 
-// Updated interface to include all subcategory fields and initiators
+// Updated interface to include all subcategory fields, initiators, and repeatable group fields
 interface QuestionFormData {
   item_name: string;
   answer_id?: string;
@@ -38,6 +40,12 @@ interface QuestionFormData {
   item_type: ItemType;
   project_types_applicable: ProjectType[];
   validation_rules: Record<string, any>;
+  // Repeatable group fields
+  repeatable_group_target_table?: RepeatableGroupTargetTable;
+  repeatable_group_title?: string;
+  repeatable_group_subtitle?: string;
+  repeatable_group_top_button_text?: string;
+  repeatable_group_start_button_text?: string;
 }
 
 interface QuestionOption {
@@ -77,6 +85,12 @@ const PROJECT_TYPE_OPTIONS = [
   { value: 'reverse_mortgage', label: 'Reverse Mortgage' }
 ] as const;
 
+const REPEATABLE_GROUP_TARGET_TABLE_OPTIONS = [
+  { value: 'project_secondary_income_items', label: 'Secondary Income Items' },
+  { value: 'project_dependent_items', label: 'Dependent Items' },
+  { value: 'project_debt_items', label: 'Debt Items' }
+] as const;
+
 // All project types as default array
 const ALL_PROJECT_TYPES: ProjectType[] = PROJECT_TYPE_OPTIONS.map(option => option.value as ProjectType);
 
@@ -108,7 +122,13 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
       scope: 'PROJECT',
       item_type: 'text',
       project_types_applicable: ALL_PROJECT_TYPES,
-      validation_rules: {}
+      validation_rules: {},
+      // Repeatable group defaults
+      repeatable_group_target_table: undefined,
+      repeatable_group_title: '',
+      repeatable_group_subtitle: '',
+      repeatable_group_top_button_text: 'Add',
+      repeatable_group_start_button_text: 'Start'
     }
   });
 
@@ -147,7 +167,13 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         scope: editingQuestion.scope,
         item_type: editingQuestion.item_type,
         project_types_applicable: editProjectTypes,
-        validation_rules: editingQuestion.validation_rules || {}
+        validation_rules: editingQuestion.validation_rules || {},
+        // Repeatable group fields with fallbacks
+        repeatable_group_target_table: editingQuestion.repeatable_group_target_table || undefined,
+        repeatable_group_title: editingQuestion.repeatable_group_title || '',
+        repeatable_group_subtitle: editingQuestion.repeatable_group_subtitle || '',
+        repeatable_group_top_button_text: editingQuestion.repeatable_group_top_button_text || 'Add',
+        repeatable_group_start_button_text: editingQuestion.repeatable_group_start_button_text || 'Start'
       });
       
       setSelectedItemType(editingQuestion.item_type);
@@ -188,7 +214,13 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         scope: 'PROJECT',
         item_type: 'text',
         project_types_applicable: ALL_PROJECT_TYPES,
-        validation_rules: {}
+        validation_rules: {},
+        // Reset repeatable group fields
+        repeatable_group_target_table: undefined,
+        repeatable_group_title: '',
+        repeatable_group_subtitle: '',
+        repeatable_group_top_button_text: 'Add',
+        repeatable_group_start_button_text: 'Start'
       });
       setOptions([]);
     }
@@ -238,6 +270,18 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
           return;
         }
       }
+
+      // Validate repeatable group fields
+      if (data.item_type === 'repeatable_group') {
+        if (!data.repeatable_group_target_table) {
+          toast.error('Target table is required for repeatable group questions');
+          return;
+        }
+        if (!data.repeatable_group_title?.trim()) {
+          toast.error('Group title is required for repeatable group questions');
+          return;
+        }
+      }
       
       // Validate that subcategory initiators have corresponding subcategory values
       const subcategoryValidationErrors = [];
@@ -270,6 +314,12 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
         subcategory_3: data.subcategory_3?.trim() || null,
         subcategory_4: data.subcategory_4?.trim() || null,
         subcategory_5: data.subcategory_5?.trim() || null,
+        // Sanitize repeatable group fields (only include them if it's a repeatable group)
+        repeatable_group_target_table: data.item_type === 'repeatable_group' ? data.repeatable_group_target_table : null,
+        repeatable_group_title: data.item_type === 'repeatable_group' ? (data.repeatable_group_title?.trim() || null) : null,
+        repeatable_group_subtitle: data.item_type === 'repeatable_group' ? (data.repeatable_group_subtitle?.trim() || null) : null,
+        repeatable_group_top_button_text: data.item_type === 'repeatable_group' ? (data.repeatable_group_top_button_text?.trim() || 'Add') : null,
+        repeatable_group_start_button_text: data.item_type === 'repeatable_group' ? (data.repeatable_group_start_button_text?.trim() || 'Start') : null,
       };
       
       let questionId: string;
@@ -322,6 +372,7 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
   };
 
   const showOptionsManager = selectedItemType === 'single_choice_dropdown' || selectedItemType === 'multiple_choice_checkbox';
+  const showRepeatableGroupFields = selectedItemType === 'repeatable_group';
 
   // Get active initiator count for display
   const getActiveInitiatorCount = () => {
@@ -686,6 +737,117 @@ const QuestionForm = ({ onSuccess, editingQuestion, onCancel }: QuestionFormProp
                 </FormItem>
               )}
             />
+
+            {/* Repeatable Group Configuration */}
+            {showRepeatableGroupFields && (
+              <Card className="border-muted">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Repeatable Group Configuration</CardTitle>
+                  <FormDescription>
+                    Configure the repeatable group settings including target table and UI text.
+                  </FormDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="repeatable_group_target_table"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Table</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select target table" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {REPEATABLE_GROUP_TARGET_TABLE_OPTIONS.map(option => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Select which table will store the repeatable group data
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="repeatable_group_title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Group Title</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., Additional Income Sources" />
+                        </FormControl>
+                        <FormDescription>
+                          Main title displayed for the repeatable group section
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="repeatable_group_subtitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Group Subtitle (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., Add any additional sources of income" />
+                        </FormControl>
+                        <FormDescription>
+                          Optional subtitle or description for the repeatable group
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="repeatable_group_top_button_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Add Button Text</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Add" />
+                          </FormControl>
+                          <FormDescription>
+                            Text for the button that adds new entries
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="repeatable_group_start_button_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Button Text</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Start" />
+                          </FormControl>
+                          <FormDescription>
+                            Text for the initial start button
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div>
               <Label className="text-base font-medium">Applicable Project Types</Label>
