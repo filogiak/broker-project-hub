@@ -131,7 +131,8 @@ export class ChecklistItemService {
         .eq('project_id', projectId);
 
       if (participantDesignation) {
-        query = query.eq('participant_designation', participantDesignation);
+        // Include both items for this participant AND project-level items (which have null participant_designation)
+        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
       }
 
       const { data, error } = await query;
@@ -155,6 +156,12 @@ export class ChecklistItemService {
     participantDesignation?: ParticipantDesignation
   ): Promise<{ data: TypedChecklistItem[] | null; error: any }> {
     try {
+      console.log('getChecklistItemsByCategory called with:', {
+        projectId,
+        categoryId,
+        participantDesignation
+      });
+
       let query = supabase
         .from('project_checklist_items')
         .select(`
@@ -165,10 +172,14 @@ export class ChecklistItemService {
         .eq('required_items.category_id', categoryId);
 
       if (participantDesignation) {
-        query = query.eq('participant_designation', participantDesignation);
+        // Include both items for this participant AND project-level items (which have null participant_designation)
+        query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
       }
 
+      console.log('Executing query...');
       const { data, error } = await query;
+
+      console.log('Query result:', { data, error });
 
       if (error) {
         console.error(`Error fetching checklist items for category ${categoryId}:`, error);
@@ -176,6 +187,8 @@ export class ChecklistItemService {
       }
 
       const typedItems = data?.map(item => this.mapToTypedChecklistItem(item)) || [];
+      console.log('Mapped typed items:', typedItems);
+      
       return { data: typedItems, error: null };
     } catch (error) {
       console.error('Unexpected error in getChecklistItemsByCategory:', error);

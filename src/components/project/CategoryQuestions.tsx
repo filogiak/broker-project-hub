@@ -37,11 +37,21 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     validateAndConvertValue,
   } = useTypedChecklistItems(projectId!, categoryId, participantDesignation);
 
-  // Filter items for this category
+  // Remove the redundant filtering - the hook already filters by categoryId
+  // Just sort the items by priority
   const categoryItems = useMemo(() => {
-    return items
-      .filter(item => item.categoryId === categoryId)
-      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+    console.log('Raw items from hook:', items);
+    console.log('CategoryId filter:', categoryId);
+    
+    // The hook should already return filtered items, but let's be safe
+    const filtered = items.filter(item => {
+      console.log('Item categoryId:', item.categoryId, 'Target categoryId:', categoryId);
+      return item.categoryId === categoryId;
+    });
+    
+    console.log('Filtered items:', filtered);
+    
+    return filtered.sort((a, b) => (a.priority || 0) - (b.priority || 0));
   }, [items, categoryId]);
 
   // Initialize form data with existing values
@@ -121,6 +131,8 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     );
   }
 
+  console.log('Final categoryItems to render:', categoryItems);
+
   if (categoryItems.length === 0) {
     return (
       <div className="space-y-6">
@@ -142,6 +154,9 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         <div className="bg-muted/50 p-8 rounded-lg text-center">
           <p className="text-lg text-muted-foreground">
             No questions available for this category yet.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Debug info: Category ID: {categoryId}, Participant: {participantDesignation}
           </p>
         </div>
       </div>

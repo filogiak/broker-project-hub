@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ChecklistItemService, TypedChecklistItem, TypedChecklistItemValue } from '@/services/checklistItemService';
 import type { Database } from '@/integrations/supabase/types';
@@ -22,6 +21,12 @@ export const useTypedChecklistItems = (
       setLoading(true);
       setError(null);
 
+      console.log('Fetching items with params:', {
+        projectId,
+        categoryId,
+        participantDesignation
+      });
+
       let result;
       if (categoryId) {
         result = await ChecklistItemService.getChecklistItemsByCategory(
@@ -36,6 +41,8 @@ export const useTypedChecklistItems = (
         );
       }
 
+      console.log('Raw result from service:', result);
+
       if (result.error) {
         setError(result.error.message);
         toast({
@@ -44,10 +51,12 @@ export const useTypedChecklistItems = (
           variant: "destructive",
         });
       } else {
+        console.log('Setting items:', result.data);
         setItems(result.data || []);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Hook error:', err);
       setError(errorMessage);
       toast({
         title: "Error loading checklist items",
