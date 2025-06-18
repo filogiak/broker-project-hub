@@ -198,7 +198,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         const inputValue = formData[item.id];
         if (inputValue === undefined || inputValue === '') continue;
 
-        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
         savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 
@@ -253,7 +253,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         const inputValue = additionalFormData[item.id];
         if (inputValue === undefined || inputValue === '') continue;
 
-        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
         savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 
@@ -282,7 +282,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         const inputValue = formData[item.id];
         if (inputValue === undefined || inputValue === '') continue;
 
-        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
         savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 
@@ -320,7 +320,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         const inputValue = additionalFormData[item.id];
         if (inputValue === undefined || inputValue === '') continue;
 
-        const typedValue = validateAndConvertValue(item.itemType, inputValue);
+        const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
         savePromises.push(updateItem(item.id, typedValue, 'submitted'));
       }
 

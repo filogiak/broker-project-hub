@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, GripVertical } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { questionService } from '@/services/questionService';
 
 interface QuestionOption {
@@ -14,7 +15,7 @@ interface QuestionOption {
 }
 
 interface QuestionOptionManagerProps {
-  question: any; // Update prop name from questionId to question
+  question: any;
 }
 
 const QuestionOptionManager = ({ question }: QuestionOptionManagerProps) => {

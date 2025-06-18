@@ -1,209 +1,205 @@
-
-import { useState, useCallback } from 'react';
-import { ConditionalLogicService, ConditionalLogicResult, SaveTriggeredEvaluationParams } from '@/services/conditionalLogicService';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { ChecklistItemService, TypedChecklistItem } from '@/services/checklistItemService';
 import type { Database } from '@/integrations/supabase/types';
 
 type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
+interface ConditionalLogicResult {
+  subcategories: string[];
+  preservedAnswers: Record<string, any>;
+}
+
 export const useConditionalLogic = (
   projectId: string,
   categoryId: string,
-  participantDesignation?: ParticipantDesignation
+  participantDesignation: ParticipantDesignation
 ) => {
   const [additionalQuestions, setAdditionalQuestions] = useState<TypedChecklistItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeSubcategories, setActiveSubcategories] = useState<string[]>([]);
 
-  /**
-   * Enhanced save-triggered evaluation with smart preservation and proper duplicate prevention
-   */
-  const evaluateOnSave = useCallback(async (
-    formData: Record<string, any>,
-    itemIdToFormIdMap: Record<string, string>
-  ): Promise<ConditionalLogicResult> => {
-    if (!projectId || !categoryId) {
-      return { subcategories: [], preservedAnswers: {} };
-    }
+  const loadExistingAdditionalQuestions = useCallback(async () => {
+    if (!projectId || !categoryId) return;
 
     try {
       setLoading(true);
-      console.log('🔧 Starting enhanced save-triggered conditional logic evaluation...');
+      console.log('🔄 Loading existing additional questions...');
 
-      const params: SaveTriggeredEvaluationParams = {
-        formData,
-        categoryId,
-        projectId,
-        participantDesignation,
-        itemIdToFormIdMap,
-      };
+      const result = await supabase
+        .from('project_checklist_items')
+        .select(`
+          *,
+          required_items!inner(*)
+        `)
+        .eq('project_id', projectId)
+        .eq('required_items.category_id', categoryId)
+        .not('required_items.subcategory', 'is', null)
+        .eq('participant_designation', participantDesignation);
 
-      // Use the enhanced evaluation method with duplicate prevention
-      const logicResult = await ConditionalLogicService.evaluateLogicOnSave(params);
-      
-      const newSubcategories = logicResult.subcategories;
-      console.log('🔧 Enhanced logic evaluation result:', {
-        subcategories: newSubcategories,
-        preservedAnswersCount: Object.keys(logicResult.preservedAnswers || {}).length,
-        targetCategoryId: logicResult.targetCategoryId
-      });
-
-      // Update active subcategories immediately
-      setActiveSubcategories(newSubcategories);
-
-      // Smart conditional question management with proper duplicate prevention
-      if (newSubcategories.length > 0) {
-        // Use smart clearing that preserves relevant questions
-        await ConditionalLogicService.smartClearAdditionalQuestions(
-          projectId,
-          categoryId,
-          participantDesignation,
-          newSubcategories // Keep questions for these subcategories
-        );
-
-        // Fetch enhanced additional questions with preserved answers (FIXED: excludes initiators)
-        const { data, error } = await ConditionalLogicService.getAdditionalQuestionsBySubcategoriesWithPreservation(
-          newSubcategories,
-          categoryId,
-          projectId,
-          participantDesignation,
-          logicResult.preservedAnswers || {}
-        );
-
-        if (error) {
-          console.error('Error fetching enhanced additional questions:', error);
-          setAdditionalQuestions([]);
-        } else {
-          const typedQuestions = transformToTypedQuestions(data || []);
-          setAdditionalQuestions(typedQuestions);
-          console.log('🔧 Enhanced additional questions loaded (excluding initiators):', typedQuestions.length);
-          
-          // Log question details for debugging
-          typedQuestions.forEach(q => {
-            console.log('🔧 Additional question:', q.itemName, 'Type:', q.itemType);
-          });
-        }
-      } else {
-        // Clear all conditional questions if no subcategories are active
-        await ConditionalLogicService.smartClearAdditionalQuestions(
-          projectId,
-          categoryId,
-          participantDesignation,
-          [] // Clear all
-        );
-        setAdditionalQuestions([]);
-      }
-
-      return logicResult;
-    } catch (error) {
-      console.error('Error in enhanced save-triggered conditional logic evaluation:', error);
-      setAdditionalQuestions([]);
-      setActiveSubcategories([]);
-      return { subcategories: [], preservedAnswers: {} };
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, categoryId, participantDesignation]);
-
-  /**
-   * Load existing additional questions without triggering evaluation (FIXED: excludes initiators)
-   */
-  const loadExistingAdditionalQuestions = useCallback(async (subcategories?: string[]) => {
-    if (!projectId || !categoryId) {
-      setAdditionalQuestions([]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // If no subcategories provided, get current active ones
-      const targetSubcategories = subcategories || await ConditionalLogicService.getCurrentActiveSubcategories(
-        projectId,
-        categoryId,
-        participantDesignation
-      );
-
-      if (targetSubcategories.length === 0) {
-        setAdditionalQuestions([]);
-        setActiveSubcategories([]);
+      if (result.error) {
+        console.error('Error loading existing additional questions:', result.error);
+        setError(result.error.message);
         return;
       }
 
-      // Use the FIXED method that excludes initiator questions
-      const { data, error } = await ConditionalLogicService.getAdditionalQuestionsBySubcategoriesWithPreservation(
-        targetSubcategories,
-        categoryId,
-        projectId,
-        participantDesignation
-      );
+      // Map to TypedChecklistItem with proper structure
+      const typedItems: TypedChecklistItem[] = result.data?.map(item => 
+        ChecklistItemService.mapToTypedChecklistItem(item)
+      ) || [];
 
-      if (error) {
-        console.error('Error loading existing additional questions:', error);
-        setAdditionalQuestions([]);
-      } else {
-        const typedQuestions = transformToTypedQuestions(data || []);
-        setAdditionalQuestions(typedQuestions);
-        setActiveSubcategories(targetSubcategories);
-        console.log('🔧 Existing additional questions loaded (excluding initiators):', typedQuestions.length);
-      }
-    } catch (error) {
-      console.error('Error loading existing additional questions:', error);
-      setAdditionalQuestions([]);
-      setActiveSubcategories([]);
+      console.log('📝 Loaded existing additional questions:', typedItems.length);
+      setAdditionalQuestions(typedItems);
+
+      // Extract active subcategories
+      const subcategories = new Set<string>();
+      typedItems.forEach(item => {
+        if (item.subcategory) subcategories.add(item.subcategory);
+        if (item.subcategory2) subcategories.add(item.subcategory2);
+        if (item.subcategory3) subcategories.add(item.subcategory3);
+        if (item.subcategory4) subcategories.add(item.subcategory4);
+        if (item.subcategory5) subcategories.add(item.subcategory5);
+      });
+
+      setActiveSubcategories(Array.from(subcategories));
+      setError(null);
+    } catch (err) {
+      console.error('Unexpected error loading additional questions:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   }, [projectId, categoryId, participantDesignation]);
 
-  /**
-   * Helper method to transform data to TypedChecklistItem format
-   */
-  const transformToTypedQuestions = useCallback((data: any[]): TypedChecklistItem[] => {
-    const typedQuestions: TypedChecklistItem[] = data.map(item => {
-      const requiredItem = item.required_items as any;
-      return {
-        id: item.id,
-        projectId: item.project_id,
-        itemId: item.item_id,
-        participantDesignation: item.participant_designation,
-        status: item.status,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        itemName: requiredItem?.item_name || '',
-        itemType: requiredItem?.item_type || 'text',
-        scope: requiredItem?.scope || 'PROJECT',
-        categoryId: requiredItem?.category_id,
-        priority: requiredItem?.priority || 0,
-        displayValue: ChecklistItemService.getDisplayValue({
-          typedValue: {
-            textValue: item.text_value,
-            numericValue: item.numeric_value,
-            dateValue: item.date_value,
-            booleanValue: item.boolean_value,
-            jsonValue: item.json_value,
-            documentReferenceId: item.document_reference_id,
-          },
-          itemType: requiredItem?.item_type || 'text',
-        } as TypedChecklistItem),
-        typedValue: {
-          textValue: item.text_value,
-          numericValue: item.numeric_value,
-          dateValue: item.date_value,
-          booleanValue: item.boolean_value,
-          jsonValue: item.json_value,
-          documentReferenceId: item.document_reference_id,
-        },
-      };
-    });
+  const evaluateOnSave = useCallback(
+    async (
+      formData: Record<string, any>,
+      itemIdToFormIdMap: Record<string, string>
+    ): Promise<ConditionalLogicResult> => {
+      console.log('Evaluating conditional logic...');
+      const unlockedSubcategories: string[] = [];
+      const preservedAnswers: Record<string, any> = {};
+  
+      try {
+        // Fetch all required items for the project and category
+        const { data: allItems, error: itemsError } = await supabase
+          .from('required_items')
+          .select('*')
+          .eq('category_id', categoryId);
+  
+        if (itemsError) {
+          console.error('Error fetching required items:', itemsError);
+          setError(itemsError.message);
+          return { subcategories: [], preservedAnswers: {} };
+        }
+  
+        // Filter items that have conditional logic (validation rules)
+        const conditionalItems = allItems?.filter(item => item.validation_rules) || [];
+  
+        for (const item of conditionalItems) {
+          try {
+            const validationRules = item.validation_rules;
+  
+            if (validationRules && typeof validationRules === 'object') {
+              for (const subcategory in validationRules) {
+                if (validationRules.hasOwnProperty(subcategory)) {
+                  const conditions = validationRules[subcategory];
+  
+                  if (Array.isArray(conditions)) {
+                    let allConditionsMet = true;
+  
+                    for (const condition of conditions) {
+                      const formId = itemIdToFormIdMap[item.id];
+                      const inputValue = formData[formId];
+  
+                      if (inputValue === undefined) {
+                        allConditionsMet = false;
+                        break;
+                      }
+  
+                      // Evaluate the condition based on its type
+                      let conditionMet = false;
+                      if (condition.type === 'equals') {
+                        conditionMet = inputValue == condition.value;
+                      } else if (condition.type === 'notEquals') {
+                        conditionMet = inputValue != condition.value;
+                      } else if (condition.type === 'greaterThan') {
+                        conditionMet = Number(inputValue) > Number(condition.value);
+                      } else if (condition.type === 'lessThan') {
+                        conditionMet = Number(inputValue) < Number(condition.value);
+                      } else if (condition.type === 'contains') {
+                        if (Array.isArray(inputValue)) {
+                          conditionMet = inputValue.includes(condition.value);
+                        } else if (typeof inputValue === 'string') {
+                          conditionMet = inputValue.includes(condition.value);
+                        }
+                      } else if (condition.type === 'notContains') {
+                        if (Array.isArray(inputValue)) {
+                          conditionMet = !inputValue.includes(condition.value);
+                        } else if (typeof inputValue === 'string') {
+                          conditionMet = !inputValue.includes(condition.value);
+                        }
+                      }
+  
+                      if (!conditionMet) {
+                        allConditionsMet = false;
+                        break;
+                      }
+                    }
+  
+                    if (allConditionsMet && !unlockedSubcategories.includes(subcategory)) {
+                      unlockedSubcategories.push(subcategory);
+  
+                      // Preserve existing answers for the subcategory
+                      const { data: subcategoryItems, error: subcategoryItemsError } = await supabase
+                        .from('required_items')
+                        .select('id')
+                        .eq('category_id', categoryId)
+                        .eq('subcategory', subcategory);
+  
+                      if (subcategoryItemsError) {
+                        console.error('Error fetching subcategory items:', subcategoryItemsError);
+                        continue;
+                      }
+  
+                      subcategoryItems?.forEach(subItem => {
+                        const formId = itemIdToFormIdMap[subItem.id];
+                        if (formData.hasOwnProperty(formId)) {
+                          preservedAnswers[formId] = formData[formId];
+                        }
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error(`Error evaluating conditional logic for item ${item.id}:`, e);
+          }
+        }
+      } catch (error) {
+        console.error('Error during conditional logic evaluation:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+      }
+  
+      console.log('Unlocked subcategories:', unlockedSubcategories);
+      console.log('Preserved answers:', preservedAnswers);
+      return { subcategories: unlockedSubcategories, preservedAnswers };
+    },
+    [categoryId]
+  );
 
-    // Sort by priority for consistent ordering
-    return typedQuestions.sort((a, b) => (a.priority || 0) - (b.priority || 0));
-  }, []);
+  useEffect(() => {
+    if (projectId && categoryId) {
+      loadExistingAdditionalQuestions();
+    }
+  }, [projectId, categoryId, loadExistingAdditionalQuestions]);
 
   return {
     additionalQuestions,
     loading,
+    error,
     activeSubcategories,
     evaluateOnSave,
     loadExistingAdditionalQuestions,
