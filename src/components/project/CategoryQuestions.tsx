@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -98,12 +97,19 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
     };
   }, [items, additionalQuestions]);
 
-  // Initialize form data with existing values using checklist item IDs
+  // Initialize form data with existing values using checklist item IDs - ENHANCED for proper data types
   useEffect(() => {
     const initialMainData: Record<string, any> = {};
     mainQuestions.forEach(item => {
-      if (item.displayValue !== null && item.displayValue !== undefined && item.displayValue !== '') {
-        initialMainData[item.id] = item.displayValue;
+      const displayValue = item.displayValue;
+      if (displayValue !== null && displayValue !== undefined && displayValue !== '') {
+        console.log(`Initializing main form data for ${item.itemName}:`, { 
+          id: item.id, 
+          value: displayValue, 
+          type: typeof displayValue,
+          itemType: item.itemType 
+        });
+        initialMainData[item.id] = displayValue;
       }
     });
     setMainFormData(initialMainData);
@@ -113,8 +119,15 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   useEffect(() => {
     const initialAdditionalData: Record<string, any> = {};
     additionalQuestions.forEach(item => {
-      if (item.displayValue !== null && item.displayValue !== undefined && item.displayValue !== '') {
-        initialAdditionalData[item.id] = item.displayValue;
+      const displayValue = item.displayValue;
+      if (displayValue !== null && displayValue !== undefined && displayValue !== '') {
+        console.log(`Initializing additional form data for ${item.itemName}:`, { 
+          id: item.id, 
+          value: displayValue, 
+          type: typeof displayValue,
+          itemType: item.itemType 
+        });
+        initialAdditionalData[item.id] = displayValue;
       }
     });
     setAdditionalFormData(initialAdditionalData);
@@ -122,7 +135,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, [additionalQuestions]);
 
   const handleMainInputChange = useCallback((itemId: string, value: any) => {
-    console.log('Main input change:', { itemId, value });
+    console.log('Main input change:', { itemId, value, type: typeof value });
     setMainFormData(prev => ({
       ...prev,
       [itemId]: value,
@@ -132,7 +145,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
   }, []);
 
   const handleAdditionalInputChange = useCallback((itemId: string, value: any) => {
-    console.log('Additional input change:', { itemId, value });
+    console.log('Additional input change:', { itemId, value, type: typeof value });
     setAdditionalFormData(prev => ({
       ...prev,
       [itemId]: value,
@@ -168,11 +181,20 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           continue;
         }
 
-        console.log(`Saving item ${checklistItemId} (${item.itemName}):`, inputValue);
+        console.log(`Saving item ${checklistItemId} (${item.itemName}):`, { 
+          value: inputValue, 
+          type: typeof inputValue,
+          itemType: item.itemType 
+        });
         
         try {
           const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-          console.log(`Converted value for ${checklistItemId}:`, typedValue);
+          console.log(`Converted value for ${checklistItemId}:`, { 
+            original: inputValue, 
+            converted: typedValue,
+            originalType: typeof inputValue,
+            convertedType: typeof typedValue
+          });
           
           const success = await updateItem(checklistItemId, typedValue, 'submitted');
           if (success) {
@@ -248,11 +270,20 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           continue;
         }
 
-        console.log(`Saving additional item ${checklistItemId} (${item.itemName}):`, inputValue);
+        console.log(`Saving additional item ${checklistItemId} (${item.itemName}):`, { 
+          value: inputValue, 
+          type: typeof inputValue,
+          itemType: item.itemType 
+        });
         
         try {
           const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
-          console.log(`Converted additional value for ${checklistItemId}:`, typedValue);
+          console.log(`Converted additional value for ${checklistItemId}:`, { 
+            original: inputValue, 
+            converted: typedValue,
+            originalType: typeof inputValue,
+            convertedType: typeof typedValue
+          });
           savePromises.push(updateItem(checklistItemId, typedValue, 'submitted'));
         } catch (validationError) {
           console.error(`Validation error for additional item ${checklistItemId}:`, validationError);

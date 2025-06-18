@@ -274,20 +274,27 @@ export class ChecklistItemService {
     }
   }
 
+  /**
+   * Enhanced validation and conversion that detects boolean values in dropdown options
+   */
   static validateAndConvertValue(itemType: Database['public']['Enums']['item_type'], inputValue: any): TypedChecklistItemValue {
     if (inputValue === null || inputValue === undefined || inputValue === '') {
       return null;
     }
 
+    console.log(`Enhanced validation for ${itemType} with value:`, inputValue);
+
     switch (itemType) {
       case 'text':
         return String(inputValue);
+        
       case 'number':
         const numValue = Number(inputValue);
         if (isNaN(numValue)) {
           throw new Error('Invalid number format');
         }
         return numValue;
+        
       case 'date':
         if (inputValue instanceof Date) {
           return inputValue;
@@ -297,57 +304,132 @@ export class ChecklistItemService {
           throw new Error('Invalid date format');
         }
         return dateValue;
+        
       case 'single_choice_dropdown':
-        return String(inputValue);
+        // Enhanced logic to detect boolean values in dropdowns
+        const stringValue = String(inputValue);
+        
+        // Check if the value represents a boolean
+        if (stringValue.toLowerCase() === 'true' || stringValue.toLowerCase() === 'yes') {
+          console.log('Detected boolean TRUE value in dropdown');
+          return true;
+        }
+        if (stringValue.toLowerCase() === 'false' || stringValue.toLowerCase() === 'no') {
+          console.log('Detected boolean FALSE value in dropdown');
+          return false;
+        }
+        
+        // Check if it's a numeric value
+        const numericValue = Number(stringValue);
+        if (!isNaN(numericValue) && stringValue.trim() !== '') {
+          console.log('Detected numeric value in dropdown');
+          return numericValue;
+        }
+        
+        // Check if it's a date
+        const potentialDate = new Date(stringValue);
+        if (!isNaN(potentialDate.getTime()) && stringValue.includes('-')) {
+          console.log('Detected date value in dropdown');
+          return potentialDate;
+        }
+        
+        // Default to string
+        return stringValue;
+        
       case 'multiple_choice_checkbox':
         if (Array.isArray(inputValue)) {
           return inputValue;
         }
         return [inputValue];
+        
       case 'document':
         return String(inputValue);
+        
       case 'repeatable_group':
         return inputValue;
+        
       default:
         return inputValue;
     }
   }
 
+  /**
+   * Enhanced conversion that routes values to correct database columns
+   */
   static convertToTypedValues(value: TypedChecklistItemValue): TypedValueResult {
     if (value === null || value === undefined) {
       return {};
     }
 
-    if (typeof value === 'string') {
-      return { text_value: value };
-    }
-    
-    if (typeof value === 'number') {
-      return { numeric_value: value };
-    }
-    
+    console.log('Converting value to typed columns:', { value, type: typeof value });
+
+    // Route based on actual JavaScript type, not string content
     if (typeof value === 'boolean') {
+      console.log('Routing to boolean_value column');
       return { boolean_value: value };
     }
     
+    if (typeof value === 'number') {
+      console.log('Routing to numeric_value column');
+      return { numeric_value: value };
+    }
+    
     if (value instanceof Date) {
+      console.log('Routing to date_value column');
       return { date_value: value };
     }
     
-    if (Array.isArray(value) || typeof value === 'object') {
+    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      console.log('Routing to json_value column');
       return { json_value: value };
     }
 
+    if (typeof value === 'string') {
+      console.log('Routing to text_value column');
+      return { text_value: value };
+    }
+
+    // Fallback to text
+    console.log('Fallback routing to text_value column');
     return { text_value: String(value) };
   }
 
+  /**
+   * Enhanced display value logic that reads from correct columns
+   */
   static getDisplayValue(item: TypedChecklistItem): any {
-    if (item.text_value) return item.text_value;
-    if (item.numeric_value !== null && item.numeric_value !== undefined) return item.numeric_value;
-    if (item.date_value) return item.date_value;
-    if (item.boolean_value !== null && item.boolean_value !== undefined) return item.boolean_value;
-    if (item.json_value) return item.json_value;
-    if (item.value) return item.value;
+    // Check boolean value first and convert to proper display format
+    if (item.boolean_value !== null && item.boolean_value !== undefined) {
+      console.log('Reading boolean value:', item.boolean_value);
+      return item.boolean_value;
+    }
+    
+    if (item.numeric_value !== null && item.numeric_value !== undefined) {
+      console.log('Reading numeric value:', item.numeric_value);
+      return item.numeric_value;
+    }
+    
+    if (item.date_value) {
+      console.log('Reading date value:', item.date_value);
+      return item.date_value;
+    }
+    
+    if (item.json_value) {
+      console.log('Reading JSON value:', item.json_value);
+      return item.json_value;
+    }
+    
+    if (item.text_value) {
+      console.log('Reading text value:', item.text_value);
+      return item.text_value;
+    }
+    
+    // Legacy support for the old 'value' column
+    if (item.value) {
+      console.log('Reading legacy value:', item.value);
+      return item.value;
+    }
+    
     return '';
   }
 
