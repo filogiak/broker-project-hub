@@ -62,7 +62,7 @@ const DocumentUploadQuestion = ({
           fileSize: data.file_size || 0,
           mimeType: data.mime_type || '',
           filePath: data.file_path,
-          status: data.status || 'pending',
+          status: (data.status || 'pending') as 'pending' | 'approved' | 'rejected',
           uploadedAt: data.created_at
         });
       }

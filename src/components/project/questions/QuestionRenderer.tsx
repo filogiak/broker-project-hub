@@ -6,6 +6,7 @@ import NumberQuestion from './NumberQuestion';
 import DateQuestion from './DateQuestion';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import MultipleChoiceQuestion from './MultipleChoiceQuestion';
+import RepeatableGroupRenderer from './RepeatableGroupRenderer';
 
 interface QuestionItem {
   id: string;
@@ -14,6 +15,13 @@ interface QuestionItem {
   itemType: string;
   displayValue?: any;
   priority?: number;
+  // Add repeatable group specific fields
+  repeatableGroupTitle?: string;
+  repeatableGroupSubtitle?: string;
+  repeatableGroupTopButtonText?: string;
+  repeatableGroupStartButtonText?: string;
+  repeatableGroupTargetTable?: string;
+  subcategory?: string;
 }
 
 interface QuestionRendererProps {
@@ -82,6 +90,14 @@ const QuestionRenderer = React.memo(({
           onChange={handleChange}
           options={options.map(opt => ({ value: opt.value, label: opt.label }))}
           required
+        />
+      );
+
+    case 'repeatable_group':
+      return (
+        <RepeatableGroupRenderer
+          item={item}
+          onChange={handleChange}
         />
       );
 

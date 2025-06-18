@@ -373,52 +373,74 @@ export type Database = {
           },
         ]
       }
-      project_debts: {
+      project_debt_items: {
         Row: {
-          account_number: string | null
+          boolean_value: boolean | null
           created_at: string
-          creditor_name: string | null
-          current_balance: number | null
-          debt_type: string
+          date_value: string | null
+          document_reference_id: string | null
           group_index: number
           id: string
-          is_paid_off: boolean | null
-          monthly_payment: number | null
-          participant_designation: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value: Json | null
+          numeric_value: number | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
+          status: Database["public"]["Enums"]["checklist_status"] | null
+          text_value: string | null
           updated_at: string
+          value: string | null
         }
         Insert: {
-          account_number?: string | null
+          boolean_value?: boolean | null
           created_at?: string
-          creditor_name?: string | null
-          current_balance?: number | null
-          debt_type: string
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          is_paid_off?: boolean | null
-          monthly_payment?: number | null
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Update: {
-          account_number?: string | null
+          boolean_value?: boolean | null
           created_at?: string
-          creditor_name?: string | null
-          current_balance?: number | null
-          debt_type?: string
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          is_paid_off?: boolean | null
-          monthly_payment?: number | null
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id?: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "project_debts_project_id_fkey"
+            foreignKeyName: "project_debt_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_debt_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -426,49 +448,74 @@ export type Database = {
           },
         ]
       }
-      project_dependents: {
+      project_dependent_items: {
         Row: {
+          boolean_value: boolean | null
           created_at: string
-          date_of_birth: string | null
-          dependent_name: string
-          dependent_on_taxes: boolean | null
+          date_value: string | null
+          document_reference_id: string | null
           group_index: number
           id: string
-          participant_designation: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value: Json | null
+          numeric_value: number | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
-          relationship: string | null
-          social_security_number: string | null
+          status: Database["public"]["Enums"]["checklist_status"] | null
+          text_value: string | null
           updated_at: string
+          value: string | null
         }
         Insert: {
+          boolean_value?: boolean | null
           created_at?: string
-          date_of_birth?: string | null
-          dependent_name: string
-          dependent_on_taxes?: boolean | null
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
-          relationship?: string | null
-          social_security_number?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Update: {
+          boolean_value?: boolean | null
           created_at?: string
-          date_of_birth?: string | null
-          dependent_name?: string
-          dependent_on_taxes?: boolean | null
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id?: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
-          relationship?: string | null
-          social_security_number?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "project_dependents_project_id_fkey"
+            foreignKeyName: "project_dependent_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependent_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -666,55 +713,74 @@ export type Database = {
           },
         ]
       }
-      project_secondary_incomes: {
+      project_secondary_income_items: {
         Row: {
+          boolean_value: boolean | null
           created_at: string
-          documentation_provided: boolean | null
-          employer_name: string | null
-          end_date: string | null
+          date_value: string | null
+          document_reference_id: string | null
           group_index: number
           id: string
-          income_type: string | null
-          is_current: boolean | null
-          monthly_amount: number | null
-          participant_designation: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value: Json | null
+          numeric_value: number | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
-          start_date: string | null
+          status: Database["public"]["Enums"]["checklist_status"] | null
+          text_value: string | null
           updated_at: string
+          value: string | null
         }
         Insert: {
+          boolean_value?: boolean | null
           created_at?: string
-          documentation_provided?: boolean | null
-          employer_name?: string | null
-          end_date?: string | null
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          income_type?: string | null
-          is_current?: boolean | null
-          monthly_amount?: number | null
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id: string
-          start_date?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Update: {
+          boolean_value?: boolean | null
           created_at?: string
-          documentation_provided?: boolean | null
-          employer_name?: string | null
-          end_date?: string | null
+          date_value?: string | null
+          document_reference_id?: string | null
           group_index?: number
           id?: string
-          income_type?: string | null
-          is_current?: boolean | null
-          monthly_amount?: number | null
-          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          item_id?: string
+          json_value?: Json | null
+          numeric_value?: number | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
           project_id?: string
-          start_date?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"] | null
+          text_value?: string | null
           updated_at?: string
+          value?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "project_secondary_incomes_project_id_fkey"
+            foreignKeyName: "project_secondary_income_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "required_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_secondary_income_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -861,6 +927,13 @@ export type Database = {
           project_types_applicable:
             | Database["public"]["Enums"]["project_type"][]
             | null
+          repeatable_group_start_button_text: string | null
+          repeatable_group_subtitle: string | null
+          repeatable_group_target_table:
+            | Database["public"]["Enums"]["repeatable_group_target_table"]
+            | null
+          repeatable_group_title: string | null
+          repeatable_group_top_button_text: string | null
           scope: Database["public"]["Enums"]["item_scope"]
           subcategory: string | null
           subcategory_1_initiator: boolean | null
@@ -887,6 +960,13 @@ export type Database = {
           project_types_applicable?:
             | Database["public"]["Enums"]["project_type"][]
             | null
+          repeatable_group_start_button_text?: string | null
+          repeatable_group_subtitle?: string | null
+          repeatable_group_target_table?:
+            | Database["public"]["Enums"]["repeatable_group_target_table"]
+            | null
+          repeatable_group_title?: string | null
+          repeatable_group_top_button_text?: string | null
           scope?: Database["public"]["Enums"]["item_scope"]
           subcategory?: string | null
           subcategory_1_initiator?: boolean | null
@@ -913,6 +993,13 @@ export type Database = {
           project_types_applicable?:
             | Database["public"]["Enums"]["project_type"][]
             | null
+          repeatable_group_start_button_text?: string | null
+          repeatable_group_subtitle?: string | null
+          repeatable_group_target_table?:
+            | Database["public"]["Enums"]["repeatable_group_target_table"]
+            | null
+          repeatable_group_title?: string | null
+          repeatable_group_top_button_text?: string | null
           scope?: Database["public"]["Enums"]["item_scope"]
           subcategory?: string | null
           subcategory_1_initiator?: boolean | null
@@ -1115,6 +1202,10 @@ export type Database = {
         | "construction_loan"
         | "home_equity_loan"
         | "reverse_mortgage"
+      repeatable_group_target_table:
+        | "project_secondary_incomes"
+        | "project_dependents"
+        | "project_debts"
       user_role:
         | "superadmin"
         | "brokerage_owner"
@@ -1271,6 +1362,11 @@ export const Constants = {
         "construction_loan",
         "home_equity_loan",
         "reverse_mortgage",
+      ],
+      repeatable_group_target_table: [
+        "project_secondary_incomes",
+        "project_dependents",
+        "project_debts",
       ],
       user_role: [
         "superadmin",
