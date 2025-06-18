@@ -36,9 +36,14 @@ export class SubcategoryTargetTableService {
   }
 
   /**
-   * Auto-assign target table based on subcategory initiator
+   * Auto-assign target table based on subcategory initiator (ONLY for repeatable groups)
    */
   static async autoAssignTargetTable(itemData: Partial<RequiredItem>): Promise<RepeatableGroupTargetTable | undefined> {
+    // REVERTED: Only apply to repeatable group items
+    if (itemData.item_type !== 'repeatable_group') {
+      return undefined;
+    }
+
     // If target table is already set, don't override it
     if (itemData.repeatable_group_target_table) {
       console.log('🎯 Target table already set:', itemData.repeatable_group_target_table);
@@ -55,7 +60,7 @@ export class SubcategoryTargetTableService {
     if (itemData.subcategory) {
       const targetTable = await this.getTargetTableForSubcategory(itemData.subcategory);
       if (targetTable) {
-        console.log('🎯 Auto-assigning target table', targetTable, 'to item with subcategory', itemData.subcategory, 'and item_type', itemData.item_type);
+        console.log('🎯 Auto-assigning target table', targetTable, 'to repeatable group with subcategory', itemData.subcategory);
         return targetTable;
       }
     }

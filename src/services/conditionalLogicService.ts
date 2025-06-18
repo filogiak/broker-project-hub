@@ -77,13 +77,13 @@ export class ConditionalLogicService {
   }
 
   /**
-   * Enhanced save-triggered evaluation with better preservation logic and conditional question creation
+   * Enhanced save-triggered evaluation with proper repeatable group exclusion
    */
   static async evaluateLogicOnSave(params: SaveTriggeredEvaluationParams): Promise<ConditionalLogicResult> {
     try {
       const { formData, categoryId, projectId, participantDesignation, itemIdToFormIdMap } = params;
       
-      console.log('🔧 Starting enhanced conditional logic evaluation for category:', categoryId);
+      console.log('🔧 Starting conditional logic evaluation (excluding repeatable groups)');
       
       // Get current active subcategories before evaluation
       const currentActiveSubcategories = await this.getCurrentActiveSubcategories(
@@ -131,9 +131,9 @@ export class ConditionalLogicService {
         subcategoriesChanged
       );
 
-      // Create conditional questions for newly activated subcategories (with proper duplicate prevention)
+      // FIXED: Create conditional questions EXCLUDING repeatable group children
       if (uniqueNewSubcategories.length > 0) {
-        await this.createConditionalQuestionsWithDuplicatePrevention(
+        await this.createConditionalQuestionsExcludingRepeatableGroups(
           projectId,
           categoryId,
           participantDesignation,
@@ -147,31 +147,32 @@ export class ConditionalLogicService {
         preservedAnswers: preservationResult.existingAnswers,
       };
     } catch (error) {
-      console.error('Error in enhanced conditional logic evaluation:', error);
+      console.error('Error in conditional logic evaluation:', error);
       return { subcategories: [], preservedAnswers: {} };
     }
   }
 
   /**
-   * Enhanced conditional question creation with proper duplicate prevention
+   * FIXED: Create conditional questions while excluding repeatable group children
    */
-  static async createConditionalQuestionsWithDuplicatePrevention(
+  static async createConditionalQuestionsExcludingRepeatableGroups(
     projectId: string,
     categoryId: string,
     participantDesignation?: Database['public']['Enums']['participant_designation'],
     activeSubcategories: string[] = []
   ) {
     try {
-      console.log('🔧 Creating conditional questions with duplicate prevention for subcategories:', activeSubcategories);
+      console.log('🔧 Creating conditional questions (excluding repeatable group children)');
       
-      // Get all required items that match the active subcategories and are NOT initiators
+      // CRITICAL FIX: Exclude child questions of repeatable groups
       const { data: conditionalItems, error } = await supabase
         .from('required_items')
         .select('*')
         .eq('category_id', categoryId)
         .in('subcategory', activeSubcategories)
         .eq('subcategory_1_initiator', false)
-        .eq('subcategory_2_initiator', false);
+        .eq('subcategory_2_initiator', false)
+        .neq('item_type', 'repeatable_group'); // Exclude repeatable groups themselves
 
       if (error) {
         console.error('Error fetching conditional items:', error);
@@ -183,14 +184,35 @@ export class ConditionalLogicService {
         return;
       }
 
-      console.log('🔧 Found conditional items to potentially create:', conditionalItems.length);
+      // ADDITIONAL FILTER: Exclude items that belong to repeatable group subcategories
+      // We need to check if the subcategory has any repeatable group initiators
+      const { data: repeatableGroupInitiators } = await supabase
+        .from('required_items')
+        .select('subcategory')
+        .eq('item_type', 'repeatable_group')
+        .in('subcategory', activeSubcategories);
+
+      const repeatableGroupSubcategories = new Set(
+        repeatableGroupInitiators?.map(item => item.subcategory).filter(Boolean) || []
+      );
+
+      // Filter out items from repeatable group subcategories
+      const nonRepeatableGroupItems = conditionalItems.filter(item => 
+        !repeatableGroupSubcategories.has(item.subcategory)
+      );
+
+      console.log('🔧 Filtered conditional items:', {
+        total: conditionalItems.length,
+        afterRepeatableGroupFilter: nonRepeatableGroupItems.length,
+        excludedSubcategories: Array.from(repeatableGroupSubcategories)
+      });
 
       // Check which items already exist to prevent duplicates
       let existingQuery = supabase
         .from('project_checklist_items')
         .select('item_id')
         .eq('project_id', projectId)
-        .in('item_id', conditionalItems.map(item => item.id));
+        .in('item_id', nonRepeatableGroupItems.map(item => item.id));
 
       if (participantDesignation) {
         existingQuery = existingQuery.eq('participant_designation', participantDesignation);
@@ -204,10 +226,9 @@ export class ConditionalLogicService {
       }
 
       const existingItemIds = new Set(existingItems?.map(item => item.item_id) || []);
-      console.log('🔧 Existing item IDs:', Array.from(existingItemIds));
-
+      
       // Filter out items that already exist
-      const itemsToCreate = conditionalItems.filter(item => !existingItemIds.has(item.id));
+      const itemsToCreate = nonRepeatableGroupItems.filter(item => !existingItemIds.has(item.id));
       console.log('🔧 Items to create after duplicate check:', itemsToCreate.length);
 
       // Create checklist items for each new conditional question
@@ -240,14 +261,14 @@ export class ConditionalLogicService {
         }
       }
 
-      console.log('🔧 Finished creating conditional questions with duplicate prevention');
+      console.log('🔧 Finished creating conditional questions (excluding repeatable groups)');
     } catch (error) {
-      console.error('Error in createConditionalQuestionsWithDuplicatePrevention:', error);
+      console.error('Error in createConditionalQuestionsExcludingRepeatableGroups:', error);
     }
   }
 
   /**
-   * FIXED: Get additional questions with proper exclusion of initiator questions
+   * FIXED: Get additional questions with proper exclusion of repeatable group children
    */
   static async getAdditionalQuestionsBySubcategoriesWithPreservation(
     subcategories: string[],
@@ -260,7 +281,7 @@ export class ConditionalLogicService {
       return { data: [], error: null };
     }
 
-    console.log('🔧 Fetching additional questions for subcategories:', subcategories);
+    console.log('🔧 Fetching additional questions (excluding repeatable group children)');
 
     let query = supabase
       .from('project_checklist_items')
@@ -280,9 +301,10 @@ export class ConditionalLogicService {
       .in('required_items.subcategory', subcategories)
       .eq('required_items.category_id', categoryId)
       .eq('project_id', projectId)
-      // CRITICAL FIX: Exclude initiator questions from additional questions
+      // CRITICAL FIX: Exclude initiator questions and repeatable groups
       .eq('required_items.subcategory_1_initiator', false)
-      .eq('required_items.subcategory_2_initiator', false);
+      .eq('required_items.subcategory_2_initiator', false)
+      .neq('required_items.item_type', 'repeatable_group');
 
     if (participantDesignation) {
       query = query.or(`participant_designation.eq.${participantDesignation},participant_designation.is.null`);
@@ -296,7 +318,7 @@ export class ConditionalLogicService {
       preservedAnswersCount: Object.keys(preservedAnswers).length
     });
 
-    // Integrate preserved answers into the result
+    // Apply preserved answers if any
     if (result.data && Object.keys(preservedAnswers).length > 0) {
       result.data.forEach(item => {
         if (preservedAnswers[item.id]) {

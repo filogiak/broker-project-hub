@@ -41,6 +41,13 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
     );
   }
 
+  console.log('🔧 MainQuestionsRenderer: Rendering items:', categoryItems.map(item => ({
+    name: item.itemName,
+    type: item.itemType,
+    subcategory: item.subcategory,
+    isRepeatable: item.itemType === 'repeatable_group'
+  })));
+
   return (
     <div className="space-y-6">
       {/* Save status indicator */}
@@ -78,14 +85,19 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
       <div className="bg-card p-6 rounded-lg border">
         <div className="space-y-8">
           {categoryItems.map((item, index) => {
-            const currentValue = formData[item.id] ?? item.displayValue ?? '';
+            // For repeatable groups, don't use form data (they manage their own state)
+            const currentValue = item.itemType === 'repeatable_group' 
+              ? undefined 
+              : (formData[item.id] ?? item.displayValue ?? '');
             
             return (
               <div key={`main-${item.id}`} className="space-y-3">
                 <div className="flex items-start justify-between">
                   <Label className="text-base font-medium leading-relaxed">
                     {index + 1}. {item.itemName}
-                    <span className="text-red-500 ml-1">*</span>
+                    {item.itemType !== 'repeatable_group' && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
                   </Label>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                     Priority: {item.priority || 0}

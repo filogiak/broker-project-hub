@@ -349,23 +349,51 @@ export class ChecklistItemService {
   }
 
   /**
-   * Question classification helper functions
+   * FIXED: Enhanced question classification that properly handles repeatable groups
    */
   static isMainQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Main questions have NULL subcategory OR are initiator questions
-    return (
-      item.subcategory === null || 
-      item.subcategory1Initiator === true || 
-      item.subcategory2Initiator === true
-    );
+    // Main questions are those that should appear in the main questions tab
+    // This includes:
+    // 1. Questions without subcategories (core questions)
+    // 2. Repeatable group questions (which act as controllers)
+    // 3. Initiator questions that trigger conditional logic
+    
+    const hasNoSubcategory = !item.subcategory;
+    const isRepeatableGroup = item.itemType === 'repeatable_group';
+    const isInitiator = item.subcategory1Initiator || item.subcategory2Initiator;
+    
+    const result = hasNoSubcategory || isRepeatableGroup || isInitiator;
+    
+    console.log(`🔧 ChecklistItemService: isMainQuestion for ${item.itemName}:`, {
+      hasNoSubcategory,
+      isRepeatableGroup,
+      isInitiator,
+      result
+    });
+    
+    return result;
   }
 
-  static isConditionalQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Conditional questions have a non-null subcategory AND are not initiators
-    return (
-      item.subcategory !== null && 
-      item.subcategory1Initiator !== true && 
-      item.subcategory2Initiator !== true
-    );
+  /**
+   * Check if an item is a conditional/additional question
+   */
+  static isAdditionalQuestion(item: TypedChecklistItem): boolean {
+    // Additional questions are those triggered by conditional logic
+    // These should NOT include repeatable groups or their child questions
+    
+    const hasSubcategory = !!item.subcategory;
+    const isNotRepeatableGroup = item.itemType !== 'repeatable_group';
+    const isNotInitiator = !item.subcategory1Initiator && !item.subcategory2Initiator;
+    
+    const result = hasSubcategory && isNotRepeatableGroup && isNotInitiator;
+    
+    console.log(`🔧 ChecklistItemService: isAdditionalQuestion for ${item.itemName}:`, {
+      hasSubcategory,
+      isNotRepeatableGroup,
+      isNotInitiator,
+      result
+    });
+    
+    return result;
   }
 }
