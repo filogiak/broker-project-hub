@@ -11,8 +11,21 @@ type ParticipantDesignation = Database['public']['Enums']['participant_designati
 
 export interface GenerationResult {
   itemsCreated: number;
+  itemsSkipped: number;
   errors: string[];
   warnings: string[];
+  debugInfo?: {
+    totalItemsInDatabase: number;
+    itemsAfterProjectTypeFilter: number;
+    itemsAfterSubcategoryFilter: number;
+    itemsPassedAllFilters: number;
+  };
+}
+
+export interface GenerationStatus {
+  isGenerated: boolean;
+  generatedAt: string | null;
+  itemCount: number;
 }
 
 export class FormGenerationService {
@@ -42,6 +55,7 @@ export class FormGenerationService {
         console.log('🔧 Checklist already generated, skipping...');
         return {
           itemsCreated: 0,
+          itemsSkipped: 0,
           errors: [],
           warnings: ['Checklist already generated. Use force regenerate to recreate.']
         };
@@ -133,6 +147,7 @@ export class FormGenerationService {
     console.log('🔧 Creating checklist items...');
     
     let itemsCreated = 0;
+    let itemsSkipped = 0;
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -149,7 +164,9 @@ export class FormGenerationService {
             });
 
           if (error) {
-            if (!error.message.includes('duplicate key')) {
+            if (error.message.includes('duplicate key')) {
+              itemsSkipped++;
+            } else {
               errors.push(`Failed to create item ${item.item_name}: ${error.message}`);
             }
           } else {
@@ -170,7 +187,9 @@ export class FormGenerationService {
               });
 
             if (error) {
-              if (!error.message.includes('duplicate key')) {
+              if (error.message.includes('duplicate key')) {
+                itemsSkipped++;
+              } else {
                 errors.push(`Failed to create participant item ${item.item_name} for ${designation}: ${error.message}`);
               }
             } else {
@@ -185,7 +204,42 @@ export class FormGenerationService {
       }
     }
 
-    return { itemsCreated, errors, warnings };
+    return { itemsCreated, itemsSkipped, errors, warnings };
+  }
+
+  /**
+   * Get generation status for a project
+   */
+  static async getGenerationStatus(projectId: string): Promise<GenerationStatus> {
+    try {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('checklist_generated_at')
+        .eq('id', projectId)
+        .single();
+
+      if (projectError) {
+        throw new Error(`Failed to fetch project: ${projectError.message}`);
+      }
+
+      const { data: items, error: itemsError } = await supabase
+        .from('project_checklist_items')
+        .select('id')
+        .eq('project_id', projectId);
+
+      if (itemsError) {
+        throw new Error(`Failed to fetch items: ${itemsError.message}`);
+      }
+
+      return {
+        isGenerated: !!project.checklist_generated_at,
+        generatedAt: project.checklist_generated_at,
+        itemCount: items?.length || 0
+      };
+    } catch (error) {
+      console.error('Error getting generation status:', error);
+      throw error;
+    }
   }
 
   /**

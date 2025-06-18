@@ -268,6 +268,23 @@ export class ConditionalLogicService {
   }
 
   /**
+   * Added the missing method that was being called
+   */
+  static async createConditionalQuestionsWithDuplicatePrevention(
+    projectId: string,
+    categoryId: string,
+    participantDesignation?: Database['public']['Enums']['participant_designation'],
+    activeSubcategories: string[] = []
+  ) {
+    return await this.createConditionalQuestionsExcludingRepeatableGroups(
+      projectId,
+      categoryId,
+      participantDesignation,
+      activeSubcategories
+    );
+  }
+
+  /**
    * FIXED: Get additional questions with proper exclusion of repeatable group children
    */
   static async getAdditionalQuestionsBySubcategoriesWithPreservation(

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import QuestionRenderer from './QuestionRenderer';
+import SimpleRepeatableGroupRenderer from './SimpleRepeatableGroupRenderer';
 import type { TypedChecklistItem } from '@/services/checklistItemService';
 
 interface MainQuestionsRendererProps {
@@ -85,19 +86,54 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
       <div className="bg-card p-6 rounded-lg border">
         <div className="space-y-8">
           {categoryItems.map((item, index) => {
-            // For repeatable groups, don't use form data (they manage their own state)
-            const currentValue = item.itemType === 'repeatable_group' 
-              ? undefined 
-              : (formData[item.id] ?? item.displayValue ?? '');
+            console.log(`🔧 Rendering item ${index + 1}:`, {
+              name: item.itemName,
+              type: item.itemType,
+              isRepeatable: item.itemType === 'repeatable_group'
+            });
+
+            // FIXED: Handle repeatable groups with proper renderer
+            if (item.itemType === 'repeatable_group') {
+              return (
+                <div key={`repeatable-${item.id}`} className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <Label className="text-base font-medium leading-relaxed">
+                      {index + 1}. {item.itemName}
+                    </Label>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                      Repeatable Group
+                    </span>
+                  </div>
+                  <div className="ml-0">
+                    <SimpleRepeatableGroupRenderer
+                      item={{
+                        id: item.id,
+                        itemId: item.itemId,
+                        itemName: item.itemName,
+                        itemType: item.itemType,
+                        repeatableGroupTitle: item.repeatableGroupTitle,
+                        repeatableGroupSubtitle: item.repeatableGroupSubtitle,
+                        repeatableGroupTopButtonText: item.repeatableGroupTopButtonText,
+                        repeatableGroupStartButtonText: item.repeatableGroupStartButtonText,
+                        repeatableGroupTargetTable: item.repeatableGroupTargetTable,
+                        subcategory: item.subcategory,
+                      }}
+                      onChange={onInputChange}
+                    />
+                  </div>
+                </div>
+              );
+            }
+
+            // For regular questions, use the normal renderer
+            const currentValue = formData[item.id] ?? item.displayValue ?? '';
             
             return (
               <div key={`main-${item.id}`} className="space-y-3">
                 <div className="flex items-start justify-between">
                   <Label className="text-base font-medium leading-relaxed">
                     {index + 1}. {item.itemName}
-                    {item.itemType !== 'repeatable_group' && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
+                    <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                     Priority: {item.priority || 0}
