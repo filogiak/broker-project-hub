@@ -96,7 +96,7 @@ export class SimpleRepeatableGroupService {
         project_id: projectId,
         item_id: question.id,
         group_index: groupIndex,
-        status: 'pending'
+        status: 'pending' as const
       };
 
       switch (targetTable) {
@@ -141,7 +141,7 @@ export class SimpleRepeatableGroupService {
     itemType: string
   ) {
     // Prepare value data (same logic as project_checklist_items)
-    let valueData: any = { status: 'submitted' };
+    let valueData: any = { status: 'submitted' as const };
 
     switch (itemType) {
       case 'number':
