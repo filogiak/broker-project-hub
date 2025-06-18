@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,6 +17,7 @@ interface QuestionFormProps {
 }
 
 interface FormData {
+  answer_id: string;
   item_name: string;
   item_type: string;
   category_id: string;
@@ -30,7 +31,6 @@ interface FormData {
   subcategory_3_initiator: boolean;
   subcategory_4_initiator: boolean;
   subcategory_5_initiator: boolean;
-  validation_rules: any;
   display_order: number;
   help_text: string;
   placeholder_text: string;
@@ -45,6 +45,7 @@ interface FormData {
 
 const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
   const [formData, setFormData] = useState<FormData>({
+    answer_id: question?.answer_id || '',
     item_name: question?.item_name || '',
     item_type: question?.item_type || 'text',
     category_id: question?.category_id || '',
@@ -58,7 +59,6 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
     subcategory_3_initiator: question?.subcategory_3_initiator || false,
     subcategory_4_initiator: question?.subcategory_4_initiator || false,
     subcategory_5_initiator: question?.subcategory_5_initiator || false,
-    validation_rules: question?.validation_rules || null,
     display_order: question?.display_order || 0,
     help_text: question?.help_text || '',
     placeholder_text: question?.placeholder_text || '',
@@ -71,10 +71,26 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
     repeatable_group_target_table: question?.repeatable_group_target_table || null,
   });
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Load categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesData = await questionService.getItemsCategories();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        toast.error('Failed to load categories');
+      }
+    };
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     if (question) {
       setFormData({
+        answer_id: question.answer_id || '',
         item_name: question.item_name || '',
         item_type: question.item_type || 'text',
         category_id: question.category_id || '',
@@ -88,7 +104,6 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
         subcategory_3_initiator: question.subcategory_3_initiator || false,
         subcategory_4_initiator: question.subcategory_4_initiator || false,
         subcategory_5_initiator: question.subcategory_5_initiator || false,
-        validation_rules: question.validation_rules || null,
         display_order: question.display_order || 0,
         help_text: question.help_text || '',
         placeholder_text: question.placeholder_text || '',
@@ -111,6 +126,16 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
       return;
     }
 
+    if (!formData.answer_id.trim()) {
+      toast.error('Answer ID is required');
+      return;
+    }
+
+    if (!formData.category_id) {
+      toast.error('Category is required');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -130,8 +155,6 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
         repeatable_group_top_button_text: formData.repeatable_group_top_button_text?.trim() || null,
         repeatable_group_start_button_text: formData.repeatable_group_start_button_text?.trim() || null,
         repeatable_group_target_table: formData.repeatable_group_target_table || null,
-        // Convert validation_rules to proper JSONB format
-        validation_rules: formData.validation_rules as any,
       };
 
       if (question) {
@@ -161,6 +184,17 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
           {/* Basic Question Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="answer_id">Answer ID *</Label>
+              <Input
+                id="answer_id"
+                value={formData.answer_id}
+                onChange={(e) => setFormData({ ...formData, answer_id: e.target.value })}
+                placeholder="Enter answer ID"
+                required
+              />
+            </div>
+
+            <div>
               <Label htmlFor="item_name">Question Name *</Label>
               <Input
                 id="item_name"
@@ -170,7 +204,9 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 required
               />
             </div>
-            
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="item_type">Question Type *</Label>
               <Select
@@ -188,6 +224,25 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                   <SelectItem value="multiple_choice_checkbox">Multiple Choice (Checkbox)</SelectItem>
                   <SelectItem value="document">Document Upload</SelectItem>
                   <SelectItem value="repeatable_group">Repeatable Group</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="category_id">Category *</Label>
+              <Select
+                value={formData.category_id}
+                onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -265,17 +320,6 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="category_id">Category ID *</Label>
-              <Input
-                id="category_id"
-                value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                placeholder="Enter category ID"
-                required
-              />
-            </div>
-
-            <div>
               <Label htmlFor="display_order">Display Order</Label>
               <Input
                 type="number"
@@ -284,6 +328,23 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, display_order: Number(e.target.value) })}
                 placeholder="Enter display order"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="participant_designation">Participant Designation</Label>
+              <Select
+                value={formData.participant_designation}
+                onValueChange={(value) => setFormData({ ...formData, participant_designation: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select designation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="solo_applicant">Solo Applicant</SelectItem>
+                  <SelectItem value="applicant_one">Applicant One</SelectItem>
+                  <SelectItem value="applicant_two">Applicant Two</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -309,32 +370,13 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="participant_designation">Participant Designation</Label>
-              <Select
-                value={formData.participant_designation}
-                onValueChange={(value) => setFormData({ ...formData, participant_designation: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select designation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="solo_applicant">Solo Applicant</SelectItem>
-                  <SelectItem value="applicant_one">Applicant One</SelectItem>
-                  <SelectItem value="applicant_two">Applicant Two</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="required">Required</Label>
-              <Checkbox
-                id="required"
-                checked={formData.required}
-                onCheckedChange={(checked) => setFormData({ ...formData, required: !!checked })}
-              />
-            </div>
+          <div>
+            <Label htmlFor="required">Required</Label>
+            <Checkbox
+              id="required"
+              checked={formData.required}
+              onCheckedChange={(checked) => setFormData({ ...formData, required: !!checked })}
+            />
           </div>
 
           {/* Subcategory Fields */}
@@ -347,12 +389,14 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
                 placeholder="Enter subcategory"
               />
-              <Checkbox
-                id="subcategory_1_initiator"
-                checked={formData.subcategory_1_initiator}
-                onCheckedChange={(checked) => setFormData({ ...formData, subcategory_1_initiator: !!checked })}
-              />
-              <Label htmlFor="subcategory_1_initiator">Initiator</Label>
+              <div className="flex items-center mt-2">
+                <Checkbox
+                  id="subcategory_1_initiator"
+                  checked={formData.subcategory_1_initiator}
+                  onCheckedChange={(checked) => setFormData({ ...formData, subcategory_1_initiator: !!checked })}
+                />
+                <Label htmlFor="subcategory_1_initiator" className="ml-2">Initiator</Label>
+              </div>
             </div>
 
             <div>
@@ -363,12 +407,14 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, subcategory_2: e.target.value })}
                 placeholder="Enter subcategory 2"
               />
-              <Checkbox
-                id="subcategory_2_initiator"
-                checked={formData.subcategory_2_initiator}
-                onCheckedChange={(checked) => setFormData({ ...formData, subcategory_2_initiator: !!checked })}
-              />
-              <Label htmlFor="subcategory_2_initiator">Initiator</Label>
+              <div className="flex items-center mt-2">
+                <Checkbox
+                  id="subcategory_2_initiator"
+                  checked={formData.subcategory_2_initiator}
+                  onCheckedChange={(checked) => setFormData({ ...formData, subcategory_2_initiator: !!checked })}
+                />
+                <Label htmlFor="subcategory_2_initiator" className="ml-2">Initiator</Label>
+              </div>
             </div>
 
             <div>
@@ -379,12 +425,14 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, subcategory_3: e.target.value })}
                 placeholder="Enter subcategory 3"
               />
-              <Checkbox
-                id="subcategory_3_initiator"
-                checked={formData.subcategory_3_initiator}
-                onCheckedChange={(checked) => setFormData({ ...formData, subcategory_3_initiator: !!checked })}
-              />
-              <Label htmlFor="subcategory_3_initiator">Initiator</Label>
+              <div className="flex items-center mt-2">
+                <Checkbox
+                  id="subcategory_3_initiator"
+                  checked={formData.subcategory_3_initiator}
+                  onCheckedChange={(checked) => setFormData({ ...formData, subcategory_3_initiator: !!checked })}
+                />
+                <Label htmlFor="subcategory_3_initiator" className="ml-2">Initiator</Label>
+              </div>
             </div>
 
             <div>
@@ -395,12 +443,14 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, subcategory_4: e.target.value })}
                 placeholder="Enter subcategory 4"
               />
-              <Checkbox
-                id="subcategory_4_initiator"
-                checked={formData.subcategory_4_initiator}
-                onCheckedChange={(checked) => setFormData({ ...formData, subcategory_4_initiator: !!checked })}
-              />
-              <Label htmlFor="subcategory_4_initiator">Initiator</Label>
+              <div className="flex items-center mt-2">
+                <Checkbox
+                  id="subcategory_4_initiator"
+                  checked={formData.subcategory_4_initiator}
+                  onCheckedChange={(checked) => setFormData({ ...formData, subcategory_4_initiator: !!checked })}
+                />
+                <Label htmlFor="subcategory_4_initiator" className="ml-2">Initiator</Label>
+              </div>
             </div>
 
             <div>
@@ -411,23 +461,15 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
                 onChange={(e) => setFormData({ ...formData, subcategory_5: e.target.value })}
                 placeholder="Enter subcategory 5"
               />
-              <Checkbox
-                id="subcategory_5_initiator"
-                checked={formData.subcategory_5_initiator}
-                onCheckedChange={(checked) => setFormData({ ...formData, subcategory_5_initiator: !!checked })}
-              />
-              <Label htmlFor="subcategory_5_initiator">Initiator</Label>
+              <div className="flex items-center mt-2">
+                <Checkbox
+                  id="subcategory_5_initiator"
+                  checked={formData.subcategory_5_initiator}
+                  onCheckedChange={(checked) => setFormData({ ...formData, subcategory_5_initiator: !!checked })}
+                />
+                <Label htmlFor="subcategory_5_initiator" className="ml-2">Initiator</Label>
+              </div>
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="validation_rules">Validation Rules</Label>
-            <Textarea
-              id="validation_rules"
-              value={formData.validation_rules}
-              onChange={(e) => setFormData({ ...formData, validation_rules: e.target.value })}
-              placeholder="Enter validation rules (JSON format)"
-            />
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -440,7 +482,7 @@ const QuestionForm = ({ question, onSave, onCancel }: QuestionFormProps) => {
           </div>
         </form>
 
-        {/* Question Options Manager - Fix prop name */}
+        {/* Question Options Manager */}
         {question && (formData.item_type === 'single_choice_dropdown' || formData.item_type === 'multiple_choice_checkbox') && (
           <div className="mt-8">
             <QuestionOptionManager question={question} />
