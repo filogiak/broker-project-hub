@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { ConditionalLogicService, type SaveTriggeredEvaluationParams } from '@/services/conditionalLogicService';
 import { ChecklistItemService, TypedChecklistItem } from '@/services/checklistItemService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -28,42 +28,43 @@ export const useConditionalLogic = (
       setLoading(true);
       console.log('🔄 Loading existing additional questions...');
 
-      const result = await supabase
-        .from('project_checklist_items')
-        .select(`
-          *,
-          required_items!inner(*)
-        `)
-        .eq('project_id', projectId)
-        .eq('required_items.category_id', categoryId)
-        .not('required_items.subcategory', 'is', null)
-        .eq('participant_designation', participantDesignation);
+      // Get current active subcategories first
+      const currentSubcategories = await ConditionalLogicService.getCurrentActiveSubcategories(
+        projectId,
+        categoryId,
+        participantDesignation
+      );
 
-      if (result.error) {
-        console.error('Error loading existing additional questions:', result.error);
-        setError(result.error.message);
-        return;
+      console.log('📝 Current active subcategories:', currentSubcategories);
+      setActiveSubcategories(currentSubcategories);
+
+      // Load additional questions for active subcategories
+      if (currentSubcategories.length > 0) {
+        const result = await ConditionalLogicService.getAdditionalQuestionsBySubcategoriesWithPreservation(
+          currentSubcategories,
+          categoryId,
+          projectId,
+          participantDesignation,
+          {}
+        );
+
+        if (result.error) {
+          console.error('Error loading additional questions:', result.error);
+          setError(result.error.message);
+          return;
+        }
+
+        // Map to TypedChecklistItem with proper structure
+        const typedItems: TypedChecklistItem[] = result.data?.map(item => 
+          ChecklistItemService.mapToTypedChecklistItem(item)
+        ) || [];
+
+        console.log('📝 Loaded existing additional questions:', typedItems.length);
+        setAdditionalQuestions(typedItems);
+      } else {
+        setAdditionalQuestions([]);
       }
 
-      // Map to TypedChecklistItem with proper structure
-      const typedItems: TypedChecklistItem[] = result.data?.map(item => 
-        ChecklistItemService.mapToTypedChecklistItem(item)
-      ) || [];
-
-      console.log('📝 Loaded existing additional questions:', typedItems.length);
-      setAdditionalQuestions(typedItems);
-
-      // Extract active subcategories
-      const subcategories = new Set<string>();
-      typedItems.forEach(item => {
-        if (item.subcategory) subcategories.add(item.subcategory);
-        if (item.subcategory2) subcategories.add(item.subcategory2);
-        if (item.subcategory3) subcategories.add(item.subcategory3);
-        if (item.subcategory4) subcategories.add(item.subcategory4);
-        if (item.subcategory5) subcategories.add(item.subcategory5);
-      });
-
-      setActiveSubcategories(Array.from(subcategories));
       setError(null);
     } catch (err) {
       console.error('Unexpected error loading additional questions:', err);
@@ -80,194 +81,40 @@ export const useConditionalLogic = (
     ): Promise<ConditionalLogicResult> => {
       console.log('🔍 Evaluating conditional logic with formDataByItemId:', formDataByItemId);
       
-      const unlockedSubcategories: string[] = [];
-      const preservedAnswers: Record<string, any> = {};
-  
       try {
-        // Fetch all required items for the project and category
-        const { data: allItems, error: itemsError } = await supabase
-          .from('required_items')
-          .select('*')
-          .eq('category_id', categoryId);
-  
-        if (itemsError) {
-          console.error('Error fetching required items:', itemsError);
-          setError(itemsError.message);
-          return { subcategories: [], preservedAnswers: {} };
-        }
+        // Create the proper item ID to form ID mapping (reverse of what we have)
+        const itemIdToFormIdMap: Record<string, string> = {};
+        Object.entries(itemIdToChecklistItemIdMap).forEach(([itemId, checklistItemId]) => {
+          itemIdToFormIdMap[itemId] = checklistItemId;
+        });
 
-        if (!allItems || allItems.length === 0) {
-          console.log('No items found for category');
-          return { subcategories: [], preservedAnswers: {} };
-        }
-  
-        // Filter items that have conditional logic (validation rules)
-        const conditionalItems = allItems.filter(item => 
-          item.validation_rules && 
-          typeof item.validation_rules === 'object' && 
-          item.validation_rules !== null
-        );
+        const params: SaveTriggeredEvaluationParams = {
+          formData: formDataByItemId,
+          categoryId,
+          projectId,
+          participantDesignation,
+          itemIdToFormIdMap
+        };
+
+        const result = await ConditionalLogicService.evaluateLogicOnSave(params);
         
-        console.log(`Found ${conditionalItems.length} conditional items out of ${allItems.length} total items`);
-  
-        for (const item of conditionalItems) {
-          try {
-            const validationRules = item.validation_rules as Record<string, any>;
-            console.log(`🔧 Evaluating rules for item ${item.item_name} (ID: ${item.id}):`, validationRules);
-  
-            for (const subcategory in validationRules) {
-              if (validationRules.hasOwnProperty(subcategory)) {
-                const conditions = validationRules[subcategory];
-                console.log(`📋 Checking subcategory ${subcategory} with conditions:`, conditions);
-  
-                if (Array.isArray(conditions)) {
-                  let allConditionsMet = true;
-  
-                  for (const condition of conditions) {
-                    // Use item.id (the required_items ID) to look up the input value
-                    const inputValue = formDataByItemId[item.id];
-                    console.log(`🔍 Condition check - Item ID: ${item.id}, Input Value: "${inputValue}", Condition:`, condition);
+        console.log('🎉 Conditional logic evaluation result:', result);
+        
+        // Update active subcategories
+        setActiveSubcategories(result.subcategories);
+        
+        // Reload additional questions to get newly created ones
+        await loadExistingAdditionalQuestions();
 
-                    if (inputValue === undefined || inputValue === null || inputValue === '') {
-                      console.log(`❌ No input value for item ${item.id}, condition not met`);
-                      allConditionsMet = false;
-                      break;
-                    }
-
-                    // Add null check for condition object
-                    if (!condition || typeof condition !== 'object') {
-                      console.log(`❌ Invalid condition object for item ${item.id}`);
-                      allConditionsMet = false;
-                      break;
-                    }
-  
-                    // Evaluate the condition based on its type
-                    let conditionMet = false;
-                    if (condition.type === 'equals') {
-                      conditionMet = String(inputValue) === String(condition.value);
-                    } else if (condition.type === 'notEquals') {
-                      conditionMet = String(inputValue) !== String(condition.value);
-                    } else if (condition.type === 'greaterThan') {
-                      conditionMet = Number(inputValue) > Number(condition.value);
-                    } else if (condition.type === 'lessThan') {
-                      conditionMet = Number(inputValue) < Number(condition.value);
-                    } else if (condition.type === 'contains') {
-                      if (Array.isArray(inputValue)) {
-                        conditionMet = inputValue.includes(condition.value);
-                      } else if (typeof inputValue === 'string') {
-                        conditionMet = inputValue.includes(condition.value);
-                      }
-                    } else if (condition.type === 'notContains') {
-                      if (Array.isArray(inputValue)) {
-                        conditionMet = !inputValue.includes(condition.value);
-                      } else if (typeof inputValue === 'string') {
-                        conditionMet = !inputValue.includes(condition.value);
-                      }
-                    }
-                    
-                    console.log(`📊 Condition result: ${conditionMet ? '✅' : '❌'} (${condition.type}: "${inputValue}" vs "${condition.value}")`);
-  
-                    if (!conditionMet) {
-                      allConditionsMet = false;
-                      break;
-                    }
-                  }
-  
-                  if (allConditionsMet && !unlockedSubcategories.includes(subcategory)) {
-                    console.log(`🎉 All conditions met for subcategory: ${subcategory}`);
-                    unlockedSubcategories.push(subcategory);
-  
-                    // Create new checklist items for this subcategory
-                    await createSubcategoryItems(projectId, categoryId, subcategory, participantDesignation);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error(`Error evaluating conditional logic for item ${item.id}:`, e);
-          }
-        }
+        return result;
       } catch (error) {
         console.error('Error during conditional logic evaluation:', error);
         setError(error instanceof Error ? error.message : 'Unknown error');
+        return { subcategories: [], preservedAnswers: {} };
       }
-  
-      console.log('🏁 Final unlocked subcategories:', unlockedSubcategories);
-      return { subcategories: unlockedSubcategories, preservedAnswers };
     },
-    [categoryId, projectId, participantDesignation]
+    [categoryId, projectId, participantDesignation, loadExistingAdditionalQuestions]
   );
-
-  // Helper method to create subcategory items
-  const createSubcategoryItems = async (
-    projectId: string,
-    categoryId: string,
-    subcategory: string,
-    participantDesignation: ParticipantDesignation
-  ) => {
-    try {
-      console.log(`🔧 Creating items for subcategory: ${subcategory}`);
-      
-      // Get all items for this subcategory
-      const { data: subcategoryItems, error } = await supabase
-        .from('required_items')
-        .select('*')
-        .eq('category_id', categoryId)
-        .or(`subcategory.eq.${subcategory},subcategory_2.eq.${subcategory},subcategory_3.eq.${subcategory},subcategory_4.eq.${subcategory},subcategory_5.eq.${subcategory}`);
-
-      if (error) {
-        console.error('Error fetching subcategory items:', error);
-        return;
-      }
-
-      if (!subcategoryItems || subcategoryItems.length === 0) {
-        console.log('No subcategory items found');
-        return;
-      }
-
-      console.log(`Found ${subcategoryItems.length} items for subcategory ${subcategory}`);
-
-      // Create checklist items for each required item
-      const createPromises = subcategoryItems.map(async (item) => {
-        // Check if item already exists
-        const { data: existing } = await supabase
-          .from('project_checklist_items')
-          .select('id')
-          .eq('project_id', projectId)
-          .eq('item_id', item.id)
-          .eq('participant_designation', participantDesignation)
-          .single();
-
-        if (existing) {
-          console.log(`✅ Item already exists for ${item.item_name}`);
-          return;
-        }
-
-        // Create new checklist item
-        const insertData: any = {
-          project_id: projectId,
-          item_id: item.id,
-          participant_designation: participantDesignation,
-          status: 'pending'
-        };
-
-        const { error: insertError } = await supabase
-          .from('project_checklist_items')
-          .insert(insertData);
-
-        if (insertError) {
-          console.error(`❌ Error creating checklist item for ${item.item_name}:`, insertError);
-        } else {
-          console.log(`✅ Created checklist item for ${item.item_name}`);
-        }
-      });
-
-      await Promise.all(createPromises);
-      console.log(`🎯 Completed creating items for subcategory: ${subcategory}`);
-    } catch (error) {
-      console.error('Error creating subcategory items:', error);
-    }
-  };
 
   useEffect(() => {
     if (projectId && categoryId) {

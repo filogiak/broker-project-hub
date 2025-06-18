@@ -68,7 +68,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       item.itemType === 'document' && ChecklistItemService.isMainQuestion(item)
     );
     
-    // Filter additional questions to exclude initiator questions
+    // Filter additional questions to exclude initiator questions and only include non-documents
     const additionalNonDocs = additionalQuestions.filter(item => {
       const isDocument = item.itemType === 'document';
       const isInitiator = item.subcategory1Initiator || 
@@ -152,7 +152,8 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       
       // Save main questions - each entry in mainFormData uses checklist item ID as key
       const savePromises = [];
-      const savedData: Record<string, any> = {};
+      const savedDataByRequiredItemId: Record<string, any> = {};
+      const itemIdToChecklistItemIdMap: Record<string, string> = {};
       
       for (const [checklistItemId, inputValue] of Object.entries(mainFormData)) {
         if (inputValue === undefined || inputValue === '' || inputValue === null) {
@@ -176,7 +177,8 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
           const success = await updateItem(checklistItemId, typedValue, 'submitted');
           if (success) {
             // Store the saved data using itemId (required_items.id) for conditional logic
-            savedData[item.itemId] = typedValue;
+            savedDataByRequiredItemId[item.itemId] = typedValue;
+            itemIdToChecklistItemIdMap[item.itemId] = checklistItemId;
             savePromises.push(Promise.resolve(true));
           }
         } catch (validationError) {
@@ -186,14 +188,15 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       }
 
       console.log(`Attempted to save ${Object.keys(mainFormData).length} items`);
-      console.log('Saved data for conditional logic:', savedData);
+      console.log('Saved data for conditional logic (by required item ID):', savedDataByRequiredItemId);
+      console.log('Item ID to checklist item ID mapping:', itemIdToChecklistItemIdMap);
 
       // Wait for all saves to complete
       await Promise.all(savePromises);
 
-      // Evaluate conditional logic after saving - use itemId (required_items.id)
-      console.log('Evaluating conditional logic with saved data:', savedData);
-      const { subcategories } = await evaluateOnSave(savedData, {});
+      // Evaluate conditional logic after saving - pass data keyed by checklist item ID but map to required item IDs internally
+      console.log('Evaluating conditional logic with saved data:', mainFormData);
+      const { subcategories } = await evaluateOnSave(mainFormData, itemIdToChecklistItemIdMap);
       
       if (subcategories.length > 0) {
         console.log('Conditional logic triggered new subcategories:', subcategories);
