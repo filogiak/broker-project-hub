@@ -78,8 +78,7 @@ export const useConditionalLogic = (
       formDataByItemId: Record<string, any>,
       itemIdToChecklistItemIdMap: Record<string, string>
     ): Promise<ConditionalLogicResult> => {
-      console.log('Evaluating conditional logic with formDataByItemId:', formDataByItemId);
-      console.log('Using mapping:', itemIdToChecklistItemIdMap);
+      console.log('🔍 Evaluating conditional logic with formDataByItemId:', formDataByItemId);
       
       const unlockedSubcategories: string[] = [];
       const preservedAnswers: Record<string, any> = {};
@@ -97,7 +96,7 @@ export const useConditionalLogic = (
           return { subcategories: [], preservedAnswers: {} };
         }
 
-        if (!allItems) {
+        if (!allItems || allItems.length === 0) {
           console.log('No items found for category');
           return { subcategories: [], preservedAnswers: {} };
         }
@@ -109,17 +108,17 @@ export const useConditionalLogic = (
           item.validation_rules !== null
         );
         
-        console.log('Found conditional items:', conditionalItems.length);
+        console.log(`Found ${conditionalItems.length} conditional items out of ${allItems.length} total items`);
   
         for (const item of conditionalItems) {
           try {
             const validationRules = item.validation_rules as Record<string, any>;
-            console.log(`Evaluating rules for item ${item.item_name}:`, validationRules);
+            console.log(`🔧 Evaluating rules for item ${item.item_name} (ID: ${item.id}):`, validationRules);
   
             for (const subcategory in validationRules) {
               if (validationRules.hasOwnProperty(subcategory)) {
                 const conditions = validationRules[subcategory];
-                console.log(`Checking subcategory ${subcategory} with conditions:`, conditions);
+                console.log(`📋 Checking subcategory ${subcategory} with conditions:`, conditions);
   
                 if (Array.isArray(conditions)) {
                   let allConditionsMet = true;
@@ -127,17 +126,17 @@ export const useConditionalLogic = (
                   for (const condition of conditions) {
                     // Use item.id (the required_items ID) to look up the input value
                     const inputValue = formDataByItemId[item.id];
-                    console.log(`Condition check - Item ID: ${item.id}, Input Value: ${inputValue}, Condition:`, condition);
+                    console.log(`🔍 Condition check - Item ID: ${item.id}, Input Value: "${inputValue}", Condition:`, condition);
 
                     if (inputValue === undefined || inputValue === null || inputValue === '') {
-                      console.log(`No input value for item ${item.id}, condition not met`);
+                      console.log(`❌ No input value for item ${item.id}, condition not met`);
                       allConditionsMet = false;
                       break;
                     }
 
                     // Add null check for condition object
                     if (!condition || typeof condition !== 'object') {
-                      console.log(`Invalid condition object for item ${item.id}`);
+                      console.log(`❌ Invalid condition object for item ${item.id}`);
                       allConditionsMet = false;
                       break;
                     }
@@ -145,9 +144,9 @@ export const useConditionalLogic = (
                     // Evaluate the condition based on its type
                     let conditionMet = false;
                     if (condition.type === 'equals') {
-                      conditionMet = inputValue == condition.value;
+                      conditionMet = String(inputValue) === String(condition.value);
                     } else if (condition.type === 'notEquals') {
-                      conditionMet = inputValue != condition.value;
+                      conditionMet = String(inputValue) !== String(condition.value);
                     } else if (condition.type === 'greaterThan') {
                       conditionMet = Number(inputValue) > Number(condition.value);
                     } else if (condition.type === 'lessThan') {
@@ -166,7 +165,7 @@ export const useConditionalLogic = (
                       }
                     }
                     
-                    console.log(`Condition result: ${conditionMet}`);
+                    console.log(`📊 Condition result: ${conditionMet ? '✅' : '❌'} (${condition.type}: "${inputValue}" vs "${condition.value}")`);
   
                     if (!conditionMet) {
                       allConditionsMet = false;
@@ -175,7 +174,7 @@ export const useConditionalLogic = (
                   }
   
                   if (allConditionsMet && !unlockedSubcategories.includes(subcategory)) {
-                    console.log(`✅ All conditions met for subcategory: ${subcategory}`);
+                    console.log(`🎉 All conditions met for subcategory: ${subcategory}`);
                     unlockedSubcategories.push(subcategory);
   
                     // Create new checklist items for this subcategory
@@ -193,7 +192,7 @@ export const useConditionalLogic = (
         setError(error instanceof Error ? error.message : 'Unknown error');
       }
   
-      console.log('Final unlocked subcategories:', unlockedSubcategories);
+      console.log('🏁 Final unlocked subcategories:', unlockedSubcategories);
       return { subcategories: unlockedSubcategories, preservedAnswers };
     },
     [categoryId, projectId, participantDesignation]
@@ -207,7 +206,7 @@ export const useConditionalLogic = (
     participantDesignation: ParticipantDesignation
   ) => {
     try {
-      console.log(`Creating items for subcategory: ${subcategory}`);
+      console.log(`🔧 Creating items for subcategory: ${subcategory}`);
       
       // Get all items for this subcategory
       const { data: subcategoryItems, error } = await supabase
@@ -221,10 +220,12 @@ export const useConditionalLogic = (
         return;
       }
 
-      if (!subcategoryItems) {
+      if (!subcategoryItems || subcategoryItems.length === 0) {
         console.log('No subcategory items found');
         return;
       }
+
+      console.log(`Found ${subcategoryItems.length} items for subcategory ${subcategory}`);
 
       // Create checklist items for each required item
       const createPromises = subcategoryItems.map(async (item) => {
@@ -238,7 +239,7 @@ export const useConditionalLogic = (
           .single();
 
         if (existing) {
-          console.log(`Item already exists for ${item.item_name}`);
+          console.log(`✅ Item already exists for ${item.item_name}`);
           return;
         }
 
@@ -255,13 +256,14 @@ export const useConditionalLogic = (
           .insert(insertData);
 
         if (insertError) {
-          console.error(`Error creating checklist item for ${item.item_name}:`, insertError);
+          console.error(`❌ Error creating checklist item for ${item.item_name}:`, insertError);
         } else {
           console.log(`✅ Created checklist item for ${item.item_name}`);
         }
       });
 
       await Promise.all(createPromises);
+      console.log(`🎯 Completed creating items for subcategory: ${subcategory}`);
     } catch (error) {
       console.error('Error creating subcategory items:', error);
     }

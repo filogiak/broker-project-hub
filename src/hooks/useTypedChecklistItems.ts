@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ChecklistItemService, TypedChecklistItem, TypedChecklistItemValue } from '@/services/checklistItemService';
 import type { Database } from '@/integrations/supabase/types';
@@ -81,6 +82,7 @@ export const useTypedChecklistItems = (
       );
 
       if (result.error) {
+        console.error('Create item error:', result.error);
         toast({
           title: "Error creating checklist item",
           description: result.error.message,
@@ -89,6 +91,7 @@ export const useTypedChecklistItems = (
         return false;
       }
 
+      console.log('Successfully created item:', result.data);
       toast({
         title: "Item created",
         description: "Checklist item has been created successfully.",
@@ -98,6 +101,7 @@ export const useTypedChecklistItems = (
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Create item exception:', err);
       toast({
         title: "Error creating checklist item",
         description: errorMessage,
@@ -113,6 +117,8 @@ export const useTypedChecklistItems = (
     status?: ChecklistStatus
   ): Promise<boolean> => {
     try {
+      console.log(`Updating item ${itemId} with value:`, value, 'status:', status);
+      
       const result = await ChecklistItemService.updateChecklistItem(
         itemId,
         value,
@@ -120,6 +126,7 @@ export const useTypedChecklistItems = (
       );
 
       if (result.error) {
+        console.error('Update item error:', result.error);
         toast({
           title: "Error updating checklist item",
           description: result.error.message,
@@ -128,15 +135,16 @@ export const useTypedChecklistItems = (
         return false;
       }
 
-      toast({
-        title: "Item updated",
-        description: "Checklist item has been updated successfully.",
-      });
+      console.log('Successfully updated item:', result.data);
+      
+      // Don't show success toast for individual updates to avoid spam
+      // The calling code will show a summary toast
       
       await fetchItems(); // Refresh the list
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Update item exception:', err);
       toast({
         title: "Error updating checklist item",
         description: errorMessage,
@@ -148,9 +156,13 @@ export const useTypedChecklistItems = (
 
   const validateAndConvertValue = (itemType: Database['public']['Enums']['item_type'], inputValue: any) => {
     try {
-      return ChecklistItemService.validateAndConvertValue(itemType, inputValue);
+      console.log(`Validating ${itemType} with value:`, inputValue);
+      const result = ChecklistItemService.validateAndConvertValue(itemType, inputValue);
+      console.log(`Validation result:`, result);
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Validation error';
+      console.error('Validation error:', err);
       toast({
         title: "Validation Error",
         description: errorMessage,

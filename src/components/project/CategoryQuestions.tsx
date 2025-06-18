@@ -150,22 +150,17 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       setSaveError(null);
       console.log('Starting save with form data:', mainFormData);
       
-      // Create item ID to checklist item ID mapping for conditional logic
-      const itemIdToChecklistItemIdMap: Record<string, string> = {};
-      mainQuestions.forEach(item => {
-        itemIdToChecklistItemIdMap[item.itemId] = item.id;
-      });
-      console.log('Item ID mapping:', itemIdToChecklistItemIdMap);
-
-      // Save main questions using checklist item IDs
+      // Save main questions - each entry in mainFormData uses checklist item ID as key
       const savePromises = [];
+      const savedData: Record<string, any> = {};
+      
       for (const [checklistItemId, inputValue] of Object.entries(mainFormData)) {
         if (inputValue === undefined || inputValue === '' || inputValue === null) {
           console.log(`Skipping empty value for item ${checklistItemId}`);
           continue;
         }
 
-        // Find the item to get its type
+        // Find the item to get its type and itemId (required_items.id)
         const item = mainQuestions.find(q => q.id === checklistItemId);
         if (!item) {
           console.error(`Item not found for checklist item ID: ${checklistItemId}`);
@@ -177,27 +172,28 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
         try {
           const typedValue = validateAndConvertValue(item.itemType as Database['public']['Enums']['item_type'], inputValue);
           console.log(`Converted value for ${checklistItemId}:`, typedValue);
-          savePromises.push(updateItem(checklistItemId, typedValue, 'submitted'));
+          
+          const success = await updateItem(checklistItemId, typedValue, 'submitted');
+          if (success) {
+            // Store the saved data using itemId (required_items.id) for conditional logic
+            savedData[item.itemId] = typedValue;
+            savePromises.push(Promise.resolve(true));
+          }
         } catch (validationError) {
           console.error(`Validation error for item ${checklistItemId}:`, validationError);
           throw validationError;
         }
       }
 
-      console.log(`Saving ${savePromises.length} items...`);
+      console.log(`Attempted to save ${Object.keys(mainFormData).length} items`);
+      console.log('Saved data for conditional logic:', savedData);
+
+      // Wait for all saves to complete
       await Promise.all(savePromises);
 
-      // Evaluate conditional logic after saving - use itemId for logic evaluation
-      const formDataByItemId: Record<string, any> = {};
-      for (const [checklistItemId, value] of Object.entries(mainFormData)) {
-        const item = mainQuestions.find(q => q.id === checklistItemId);
-        if (item) {
-          formDataByItemId[item.itemId] = value;
-        }
-      }
-      
-      console.log('Evaluating conditional logic with data by item ID:', formDataByItemId);
-      const { subcategories } = await evaluateOnSave(formDataByItemId, itemIdToChecklistItemIdMap);
+      // Evaluate conditional logic after saving - use itemId (required_items.id)
+      console.log('Evaluating conditional logic with saved data:', savedData);
+      const { subcategories } = await evaluateOnSave(savedData, {});
       
       if (subcategories.length > 0) {
         console.log('Conditional logic triggered new subcategories:', subcategories);
@@ -262,9 +258,10 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
       }
 
       console.log(`Saving ${savePromises.length} additional items...`);
-      await Promise.all(savePromises);
+      const results = await Promise.all(savePromises);
+      const successCount = results.filter(result => result).length;
       
-      toast.success('Additional answers saved successfully!', {
+      toast.success(`Additional answers saved successfully! (${successCount} items)`, {
         description: `Saved at ${new Date().toLocaleTimeString()}`,
       });
       
