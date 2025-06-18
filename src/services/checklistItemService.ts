@@ -352,12 +352,20 @@ export class ChecklistItemService {
    * Question classification helper functions
    */
   static isMainQuestion(item: TypedChecklistItem): boolean {
-    // Fixed: Main questions have NULL subcategory OR are initiator questions
-    return (
-      item.subcategory === null || 
-      item.subcategory1Initiator === true || 
-      item.subcategory2Initiator === true
-    );
+    // A question is considered "main" if it:
+    // 1. Has no subcategory (is a root question)
+    // 2. OR is marked as an initiator for any subcategory level
+    // 3. OR is a repeatable group (these should always be included as main questions)
+    
+    const hasNoSubcategory = !item.subcategory;
+    const isInitiator = item.subcategory_1_initiator || 
+                       item.subcategory_2_initiator || 
+                       item.subcategory_3_initiator || 
+                       item.subcategory_4_initiator || 
+                       item.subcategory_5_initiator;
+    const isRepeatableGroup = item.itemType === 'repeatable_group';
+    
+    return hasNoSubcategory || isInitiator || isRepeatableGroup;
   }
 
   static isConditionalQuestion(item: TypedChecklistItem): boolean {

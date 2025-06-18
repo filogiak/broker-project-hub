@@ -1,12 +1,12 @@
 
-import React, { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Save, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Save, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import DocumentUploadQuestion from './DocumentUploadQuestion';
-import ConditionalLogicLoader from '../ConditionalLogicLoader';
-import { TypedChecklistItem } from '@/services/checklistItemService';
+import { useParams } from 'react-router-dom';
+import type { TypedChecklistItem } from '@/services/checklistItemService';
 
 interface DocumentsRendererProps {
   documentItems: TypedChecklistItem[];
@@ -21,10 +21,10 @@ interface DocumentsRendererProps {
   onAdditionalInputChange: (itemId: string, value: any) => void;
   onSave: () => void;
   onSaveAdditional: () => void;
-  logicLoading?: boolean;
+  logicLoading: boolean;
 }
 
-const DocumentsRenderer = ({
+const DocumentsRenderer: React.FC<DocumentsRendererProps> = ({
   documentItems,
   additionalDocuments,
   formData,
@@ -37,202 +37,169 @@ const DocumentsRenderer = ({
   onAdditionalInputChange,
   onSave,
   onSaveAdditional,
-  logicLoading = false
-}: DocumentsRendererProps) => {
-  
-  const mainDocumentItems = useMemo(() => {
-    return documentItems.filter(item => item.itemType === 'document');
-  }, [documentItems]);
+  logicLoading,
+}) => {
+  const { projectId } = useParams();
 
-  const additionalDocumentItems = useMemo(() => {
-    return additionalDocuments.filter(item => item.itemType === 'document');
-  }, [additionalDocuments]);
-
-  const getDocumentStatus = (item: TypedChecklistItem) => {
-    const value = formData[item.id] || additionalFormData[item.id];
-    if (!value) return 'missing';
-    // You could check the actual document status from the database here
-    return 'uploaded';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'uploaded': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'missing': return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default: return <Clock className="h-4 w-4 text-yellow-600" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'uploaded': return 'bg-green-100 text-green-800';
-      case 'missing': return 'bg-red-100 text-red-800';
-      default: return 'bg-yellow-100 text-yellow-800';
-    }
-  };
-
-  if (mainDocumentItems.length === 0 && additionalDocumentItems.length === 0) {
+  if (documentItems.length === 0 && additionalDocuments.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-muted-foreground">
-          <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
-          <h3 className="text-lg font-medium mb-2">No documents required</h3>
-          <p>This category doesn't require any document uploads at this time.</p>
-        </div>
+      <div className="bg-muted/50 p-8 rounded-lg text-center">
+        <p className="text-lg text-muted-foreground">
+          No documents required for this category yet.
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Document requirements will be automatically generated based on your answers to other questions.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Save Status */}
-      {(hasUnsavedChanges || saveError || lastSaveTime) && (
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-orange-600">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">You have unsaved changes</span>
-                  </div>
-                )}
-                {saveError && (
-                  <div className="flex items-center gap-2 text-red-600">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Error: {saveError}</span>
-                  </div>
-                )}
-                {!hasUnsavedChanges && !saveError && lastSaveTime && (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-sm">Last saved at {lastSaveTime.toLocaleTimeString()}</span>
-                  </div>
-                )}
-              </div>
-              
-              {hasUnsavedChanges && (
-                <Button
-                  onClick={onSave}
-                  disabled={saving}
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? 'Saving...' : 'Save Documents'}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      {/* Save status indicator for main documents */}
+      {documentItems.length > 0 && (hasUnsavedChanges || saveError || lastSaveTime) && (
+        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
+          <div className="flex items-center space-x-2">
+            {hasUnsavedChanges && (
+              <>
+                <AlertCircle className="h-4 w-4 text-orange-500" />
+                <span className="text-sm text-orange-700">You have unsaved document changes</span>
+              </>
+            )}
+            {!hasUnsavedChanges && lastSaveTime && (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-700">
+                  Documents last saved at {lastSaveTime.toLocaleTimeString()}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Error alert */}
+      {saveError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {saveError}. Please try saving again.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Main Documents Section */}
-      {mainDocumentItems.length > 0 && (
-        <div>
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Required Documents</h3>
-            <p className="text-muted-foreground">
-              Please upload the following documents for this category.
-            </p>
+      {documentItems.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Required Documents</h3>
+            <Button 
+              onClick={onSave} 
+              disabled={saving || !hasUnsavedChanges}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? 'Saving...' : 'Save Documents'}
+            </Button>
           </div>
 
-          <div className="space-y-6">
-            {mainDocumentItems.map((item) => {
-              const status = getDocumentStatus(item);
-              return (
-                <Card key={item.id} className="relative">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {getStatusIcon(status)}
-                        {item.itemName}
-                      </CardTitle>
-                      <Badge className={getStatusColor(status)}>
-                        {status}
-                      </Badge>
+          <div className="bg-card p-6 rounded-lg border">
+            <div className="space-y-8">
+              {documentItems.map((item, index) => {
+                const currentValue = formData[item.id] ?? item.displayValue ?? '';
+                
+                return (
+                  <div key={`doc-${item.id}`} className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Label className="text-base font-medium leading-relaxed">
+                        {index + 1}. {item.itemName}
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        Priority: {item.priority || 0}
+                      </span>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <DocumentUploadQuestion
-                      value={formData[item.id]}
-                      onChange={(value) => onInputChange(item.id, value)}
-                      required={true}
-                      itemName={item.itemName}
-                    />
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    <div className="ml-0">
+                      <DocumentUploadQuestion
+                        question={item}
+                        value={currentValue}
+                        onChange={(value) => onInputChange(item.id, value)}
+                        projectId={projectId!}
+                        participantDesignation={item.participantDesignation}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* Additional Documents Section */}
-      {additionalDocumentItems.length > 0 && (
-        <div>
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-              Additional Documents
-              <Badge variant="outline" className="text-xs">
-                {additionalDocumentItems.length}
-              </Badge>
-            </h3>
-            <p className="text-muted-foreground">
-              Based on your answers, these additional documents are required.
-            </p>
+      {additionalDocuments.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">Additional Documents</h3>
+              <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                {additionalDocuments.length}
+              </span>
+            </div>
+            <Button 
+              onClick={onSaveAdditional} 
+              disabled={saving}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? 'Saving...' : 'Save Additional Documents'}
+            </Button>
           </div>
 
-          {logicLoading ? (
-            <ConditionalLogicLoader message="Loading additional documents..." />
-          ) : (
-            <div className="space-y-6">
-              {additionalDocumentItems.map((item) => {
-                const status = getDocumentStatus(item);
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <div className="space-y-8">
+              {additionalDocuments.map((item, index) => {
+                const currentValue = additionalFormData[item.id] ?? item.displayValue ?? '';
+                
                 return (
-                  <Card key={item.id} className="relative border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          {getStatusIcon(status)}
-                          {item.itemName}
-                          <Badge variant="secondary" className="text-xs">Additional</Badge>
-                        </CardTitle>
-                        <Badge className={getStatusColor(status)}>
-                          {status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
+                  <div key={`additional-doc-${item.id}`} className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Label className="text-base font-medium leading-relaxed">
+                        {index + 1}. {item.itemName}
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                        Additional
+                      </span>
+                    </div>
+                    <div className="ml-0">
                       <DocumentUploadQuestion
-                        value={additionalFormData[item.id]}
+                        question={item}
+                        value={currentValue}
                         onChange={(value) => onAdditionalInputChange(item.id, value)}
-                        required={true}
-                        itemName={item.itemName}
+                        projectId={projectId!}
+                        participantDesignation={item.participantDesignation}
                       />
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
-
-              {additionalDocumentItems.length > 0 && (
-                <div className="flex justify-end">
-                  <Button
-                    onClick={onSaveAdditional}
-                    disabled={saving}
-                    className="flex items-center gap-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    {saving ? 'Saving...' : 'Save Additional Documents'}
-                  </Button>
-                </div>
-              )}
             </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* Loading state for conditional logic */}
+      {logicLoading && (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading additional document requirements...</p>
         </div>
       )}
     </div>
   );
 };
 
-export default DocumentsRenderer;
+export default React.memo(DocumentsRenderer);

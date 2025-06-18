@@ -1,11 +1,13 @@
 
 import React, { useCallback } from 'react';
 import { useItemOptions } from '@/hooks/useItemOptions';
+import { useParams } from 'react-router-dom';
 import TextQuestion from './TextQuestion';
 import NumberQuestion from './NumberQuestion';
 import DateQuestion from './DateQuestion';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import MultipleChoiceQuestion from './MultipleChoiceQuestion';
+import RepeatableGroupRenderer from './RepeatableGroupRenderer';
 
 interface QuestionItem {
   id: string;
@@ -14,6 +16,12 @@ interface QuestionItem {
   itemType: string;
   displayValue?: any;
   priority?: number;
+  participantDesignation?: string;
+  repeatable_group_title?: string;
+  repeatable_group_subtitle?: string;
+  repeatable_group_top_button_text?: string;
+  repeatable_group_start_button_text?: string;
+  repeatable_group_target_table?: 'project_secondary_incomes' | 'project_dependents' | 'project_debts';
 }
 
 interface QuestionRendererProps {
@@ -29,6 +37,7 @@ const QuestionRenderer = React.memo(({
   onChange, 
   isAdditional = false 
 }: QuestionRendererProps) => {
+  const { projectId } = useParams();
   const { options, loading: optionsLoading } = useItemOptions(item.itemId);
 
   const handleChange = useCallback((value: any) => {
@@ -82,6 +91,17 @@ const QuestionRenderer = React.memo(({
           onChange={handleChange}
           options={options.map(opt => ({ value: opt.value, label: opt.label }))}
           required
+        />
+      );
+
+    case 'repeatable_group':
+      return (
+        <RepeatableGroupRenderer
+          item={item}
+          currentValue={currentValue}
+          onChange={handleChange}
+          projectId={projectId!}
+          participantDesignation={item.participantDesignation}
         />
       );
 
