@@ -94,11 +94,15 @@ const QuestionRenderer = React.memo(({
       );
 
     case 'repeatable_group':
+      // Use the new simple renderer
+      const SimpleRepeatableGroupRenderer = React.lazy(() => import('./SimpleRepeatableGroupRenderer'));
       return (
-        <RepeatableGroupRenderer
-          item={item}
-          onChange={handleChange}
-        />
+        <React.Suspense fallback={<div>Loading...</div>}>
+          <SimpleRepeatableGroupRenderer
+            item={item}
+            onChange={handleChange}
+          />
+        </React.Suspense>
       );
 
     case 'document':
