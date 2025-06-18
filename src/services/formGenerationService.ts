@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -8,6 +7,15 @@ type ChecklistItem = Database['public']['Tables']['project_checklist_items']['Ro
 type ProjectType = Database['public']['Enums']['project_type'];
 type ApplicantCount = Database['public']['Enums']['applicant_count'];
 type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
+
+// Add interface for transformed required item with camelCase fields
+interface TransformedRequiredItem extends Omit<RequiredItem, 'repeatable_group_title' | 'repeatable_group_subtitle' | 'repeatable_group_start_button_text' | 'repeatable_group_top_button_text' | 'repeatable_group_target_table'> {
+  repeatableGroupTitle?: string;
+  repeatableGroupSubtitle?: string;
+  repeatableGroupStartButtonText?: string;
+  repeatableGroupTopButtonText?: string;
+  repeatableGroupTargetTable?: string;
+}
 
 export interface GenerationResult {
   itemsCreated: number;
@@ -33,6 +41,29 @@ export interface GenerationResult {
 }
 
 export class FormGenerationService {
+  /**
+   * Transform snake_case database fields to camelCase for frontend compatibility
+   */
+  private static transformRequiredItem(item: RequiredItem): TransformedRequiredItem {
+    const transformed: TransformedRequiredItem = {
+      ...item,
+      repeatableGroupTitle: item.repeatable_group_title || undefined,
+      repeatableGroupSubtitle: item.repeatable_group_subtitle || undefined,
+      repeatableGroupStartButtonText: item.repeatable_group_start_button_text || undefined,
+      repeatableGroupTopButtonText: item.repeatable_group_top_button_text || undefined,
+      repeatableGroupTargetTable: item.repeatable_group_target_table || undefined,
+    };
+
+    // Remove the snake_case properties to avoid confusion
+    delete (transformed as any).repeatable_group_title;
+    delete (transformed as any).repeatable_group_subtitle;
+    delete (transformed as any).repeatable_group_start_button_text;
+    delete (transformed as any).repeatable_group_top_button_text;
+    delete (transformed as any).repeatable_group_target_table;
+
+    return transformed;
+  }
+
   /**
    * Main entry point for generating checklist items for a project
    */
@@ -86,8 +117,11 @@ export class FormGenerationService {
 
       console.log(`📝 Total items in database: ${allItems?.length || 0}`);
 
+      // Transform items to camelCase format
+      const transformedItems = (allItems || []).map(item => this.transformRequiredItem(item));
+
       // Apply enhanced filtering rules with detailed debugging
-      const { applicableItems, debugInfo } = this.filterItemsByRulesWithDebug(allItems || [], project);
+      const { applicableItems, debugInfo } = this.filterItemsByRulesWithDebug(transformedItems, project);
       console.log(`📝 Filtered to ${applicableItems.length} applicable items`);
       console.log('🔍 Debug info:', debugInfo);
 
@@ -122,8 +156,8 @@ export class FormGenerationService {
   /**
    * Apply filtering rules with comprehensive debugging - FIXED VERSION
    */
-  private static filterItemsByRulesWithDebug(items: RequiredItem[], project: Project): {
-    applicableItems: RequiredItem[];
+  private static filterItemsByRulesWithDebug(items: TransformedRequiredItem[], project: Project): {
+    applicableItems: TransformedRequiredItem[];
     debugInfo: {
       itemsAfterProjectTypeFilter: number;
       itemsAfterSubcategoryFilter: number;
@@ -154,6 +188,7 @@ export class FormGenerationService {
       console.log(`   - Subcategory 1 Initiator: ${item.subcategory_1_initiator}`);
       console.log(`   - Subcategory 2 Initiator: ${item.subcategory_2_initiator}`);
       console.log(`   - Project Types Applicable: ${JSON.stringify(item.project_types_applicable)}`);
+      console.log(`   - Repeatable Group Target Table: ${item.repeatableGroupTargetTable || 'N/A'}`);
 
       // Rule 1: Check project_types_applicable
       if (item.project_types_applicable && 
@@ -219,7 +254,7 @@ export class FormGenerationService {
   /**
    * Apply the core filtering rules (simplified version for legacy compatibility)
    */
-  private static filterItemsByRules(items: RequiredItem[], project: Project): RequiredItem[] {
+  private static filterItemsByRules(items: TransformedRequiredItem[], project: Project): TransformedRequiredItem[] {
     const { applicableItems } = this.filterItemsByRulesWithDebug(items, project);
     return applicableItems;
   }
@@ -228,7 +263,7 @@ export class FormGenerationService {
    * Create checklist items with proper participant designations
    */
   private static async createChecklistItems(
-    items: RequiredItem[],
+    items: TransformedRequiredItem[],
     project: Project
   ): Promise<GenerationResult> {
     const result: GenerationResult = {
