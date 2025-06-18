@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Users, CreditCard, Home, Edit, Trash2 } from 'lucide-react';
+import { Plus, Users, CreditCard, Home, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useSimpleRepeatableGroups } from '@/hooks/useSimpleRepeatableGroups';
 import SimpleGroupModal from './SimpleGroupModal';
@@ -29,6 +28,32 @@ const SimpleRepeatableGroupRenderer = ({ item, onChange }: SimpleRepeatableGroup
   const { projectId } = useParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(null);
+  
+  // Check if target table is missing
+  if (!item.repeatableGroupTargetTable) {
+    console.error('❌ SimpleRepeatableGroupRenderer: Missing target table for item:', {
+      id: item.id,
+      itemName: item.itemName,
+      subcategory: item.subcategory
+    });
+    
+    return (
+      <Card className="w-full border-destructive">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <div>
+              <div className="font-medium">Configuration Error</div>
+              <div className="text-sm text-muted-foreground">
+                Target table not configured for repeatable group "{item.itemName}".
+                Please contact your administrator.
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
   const {
     groups,

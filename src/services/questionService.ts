@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { SubcategoryTargetTableService } from './subcategoryTargetTableService';
 
 type RequiredItem = Database['public']['Tables']['required_items']['Row'];
 type RequiredItemInsert = Database['public']['Tables']['required_items']['Insert'];
@@ -73,6 +74,12 @@ export const questionService = {
       subcategory_5_initiator: item.subcategory_5_initiator || false,
     };
 
+    // Auto-assign target table based on subcategory initiator
+    const autoAssignedTargetTable = await SubcategoryTargetTableService.autoAssignTargetTable(completeItem);
+    if (autoAssignedTargetTable) {
+      completeItem.repeatable_group_target_table = autoAssignedTargetTable;
+    }
+
     const { data, error } = await supabase
       .from('required_items')
       .insert(completeItem)
@@ -96,6 +103,18 @@ export const questionService = {
       subcategory_4_initiator: updates.subcategory_4_initiator !== undefined ? updates.subcategory_4_initiator : false,
       subcategory_5_initiator: updates.subcategory_5_initiator !== undefined ? updates.subcategory_5_initiator : false,
     };
+
+    // Get the current item to check its current state
+    const currentItem = await this.getRequiredItemById(id);
+    if (currentItem) {
+      const mergedItem = { ...currentItem, ...completeUpdates };
+      
+      // Auto-assign target table based on subcategory initiator
+      const autoAssignedTargetTable = await SubcategoryTargetTableService.autoAssignTargetTable(mergedItem);
+      if (autoAssignedTargetTable) {
+        completeUpdates.repeatable_group_target_table = autoAssignedTargetTable;
+      }
+    }
 
     const { data, error } = await supabase
       .from('required_items')

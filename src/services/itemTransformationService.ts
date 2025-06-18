@@ -22,8 +22,22 @@ export class ItemTransformationService {
       id: item.id,
       item_name: item.item_name,
       original_target_table: item.repeatable_group_target_table,
-      item_type: item.item_type
+      item_type: item.item_type,
+      subcategory: item.subcategory,
+      subcategory_1_initiator: item.subcategory_1_initiator
     });
+
+    let targetTable = item.repeatable_group_target_table;
+    
+    // If target table is missing for a repeatable group, log warning but continue
+    if (item.item_type === 'repeatable_group' && !targetTable) {
+      console.warn('⚠️ ItemTransformationService: Missing target table for repeatable group item:', {
+        id: item.id,
+        item_name: item.item_name,
+        subcategory: item.subcategory,
+        subcategory_1_initiator: item.subcategory_1_initiator
+      });
+    }
 
     const transformed: TransformedRequiredItem = {
       ...item,
@@ -31,7 +45,7 @@ export class ItemTransformationService {
       repeatableGroupSubtitle: item.repeatable_group_subtitle || undefined,
       repeatableGroupStartButtonText: item.repeatable_group_start_button_text || undefined,
       repeatableGroupTopButtonText: item.repeatable_group_top_button_text || undefined,
-      repeatableGroupTargetTable: item.repeatable_group_target_table || undefined,
+      repeatableGroupTargetTable: targetTable || undefined,
     };
 
     // Remove the snake_case properties to avoid confusion
@@ -98,7 +112,9 @@ export class ItemTransformationService {
     console.log('🔍 Repeatable group items found:', transformedItems.filter(item => item.item_type === 'repeatable_group').map(item => ({
       id: item.id,
       name: item.item_name,
-      targetTable: item.repeatableGroupTargetTable
+      targetTable: item.repeatableGroupTargetTable,
+      subcategory: item.subcategory,
+      isInitiator: item.subcategory_1_initiator
     })));
     
     return transformedItems;
