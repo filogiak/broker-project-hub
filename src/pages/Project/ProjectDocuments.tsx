@@ -10,15 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-// Updated categories to match actual database data
-const MOCK_CATEGORIES = [
-  { id: '1', name: 'La Casa' },
-  { id: '2', name: 'Professione' },
-  { id: '3', name: 'Redditi Secondari' },
-  { id: '4', name: 'Finanziamenti' },
-  { id: '5', name: 'Patrimonio' },
-];
+import { CategoryScopeService } from '@/services/categoryScopeService';
 
 type ViewState = 
   | { type: 'categories' }
@@ -98,6 +90,13 @@ const ProjectDocuments = () => {
         setProjectData(projectData as ProjectData);
         setCategories(categoriesData || []);
         setError(null);
+
+        // Preload category scope information for better performance
+        if (categoriesData && categoriesData.length > 0) {
+          const categoryIds = categoriesData.map(cat => cat.id);
+          await CategoryScopeService.preloadCategoryScopes(categoryIds, projectId);
+        }
+
       } catch (err) {
         console.error('Unexpected error:', err);
         setError('An unexpected error occurred');
@@ -127,24 +126,51 @@ const ProjectDocuments = () => {
     navigate(`/project/${projectId}`);
   };
 
-  const handleCategoryClick = (categoryId: string, categoryName: string) => {
+  const handleCategoryClick = async (categoryId: string, categoryName: string) => {
     if (!projectData) return;
 
-    // Check if this is "La Casa" category or if project has only one applicant
-    const isLaCasaCategory = categoryName.toLowerCase() === 'la casa';
+    console.log('🔧 Category clicked:', categoryName, 'Project applicant count:', projectData.applicant_count);
+    
     const hasMultipleApplicants = projectData.applicant_count === 'two_applicants' || projectData.applicant_count === 'three_or_more_applicants';
     
-    console.log('Category clicked:', categoryName, 'Project applicant count:', projectData.applicant_count, 'Has multiple applicants:', hasMultipleApplicants);
-    
-    if (isLaCasaCategory || !hasMultipleApplicants) {
-      // Go directly to questions
+    // For single applicant projects, always go directly to questions
+    if (!hasMultipleApplicants) {
+      console.log('📝 Single applicant project - going directly to questions');
       setViewState({
         type: 'questions',
         categoryId,
         categoryName
       });
-    } else {
-      // Show applicant selection
+      return;
+    }
+
+    // For multi-applicant projects, check if category requires participant selection
+    try {
+      const requiresParticipantSelection = await CategoryScopeService.checkCategoryRequiresParticipantSelection(
+        categoryId, 
+        projectId
+      );
+
+      console.log('🎯 Category requires participant selection:', requiresParticipantSelection);
+
+      if (requiresParticipantSelection) {
+        // Show applicant selection screen
+        setViewState({
+          type: 'applicant_selection',
+          categoryId,
+          categoryName
+        });
+      } else {
+        // Go directly to questions (project-scoped only)
+        setViewState({
+          type: 'questions',
+          categoryId,
+          categoryName
+        });
+      }
+    } catch (error) {
+      console.error('Error checking category scope:', error);
+      // Fallback to showing applicant selection (safer default)
       setViewState({
         type: 'applicant_selection',
         categoryId,
@@ -235,7 +261,7 @@ const ProjectDocuments = () => {
                 Select a category to view and manage related documents and information
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Project type: {projectData.applicant_count.replace('_', ' ')}
+                Project type: {projectData?.applicant_count.replace('_', ' ')}
               </p>
             </div>
             
