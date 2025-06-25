@@ -1,168 +1,209 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { SimpleRepeatableGroupService } from '@/services/simpleRepeatableGroupService';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-interface SimpleGroupQuestion {
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
+
+interface GroupQuestion {
   id: string;
   itemId: string;
   itemName: string;
   itemType: string;
-  currentValue?: any;
-  required?: boolean;
-  priority?: number;
+  currentValue: any;
+  typedValue: {
+    textValue?: string | null;
+    numericValue?: number | null;
+    dateValue?: string | null;
+    booleanValue?: boolean | null;
+    jsonValue?: any | null;
+    documentReferenceId?: string | null;
+  };
 }
 
 export const useSimpleGroupQuestions = (
-  projectId: string,
   targetTable: string,
   subcategory: string,
-  groupIndex: number | null
+  groupIndex: number,
+  participantDesignation?: ParticipantDesignation
 ) => {
-  const [questions, setQuestions] = useState<SimpleGroupQuestion[]>([]);
+  const { projectId } = useParams();
+  const [questions, setQuestions] = useState<GroupQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { toast } = useToast();
 
   const loadQuestions = useCallback(async () => {
-    if (!subcategory) {
+    if (!projectId || !targetTable || !subcategory) {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      
-      // Get questions for this subcategory (mirrors project_checklist_items)
+
+      // Get all questions for this subcategory
       const { data: requiredItems, error: itemsError } = await supabase
         .from('required_items')
-        .select('id, item_name, item_type, priority')
+        .select('id, item_name, item_type')
         .eq('subcategory', subcategory)
         .neq('item_type', 'repeatable_group')
         .order('priority', { ascending: true });
 
       if (itemsError) throw itemsError;
 
-      // If we have a group index, load existing answers
-      let existingAnswers: Record<string, any> = {};
-      if (groupIndex !== null && projectId && targetTable) {
-        const { data: groupData, error: groupError } = await SimpleRepeatableGroupService.loadAllGroups(projectId, targetTable);
+      // Load existing answers for this group and participant
+      const buildAnswersQuery = (baseQuery: any) => {
+        const query = baseQuery
+          .eq('project_id', projectId)
+          .eq('group_index', groupIndex);
         
-        if (groupError) throw groupError;
-        
-        // Filter for this specific group
-        const thisGroupData = groupData?.filter(item => item.group_index === groupIndex) || [];
-        
-        existingAnswers = thisGroupData.reduce((acc, item) => {
-          const value = item.text_value || 
-                       item.numeric_value || 
-                       item.boolean_value || 
-                       item.date_value || 
-                       item.json_value;
-          if (value !== null && value !== undefined) {
-            acc[item.item_id] = value;
-          }
-          return acc;
-        }, {} as Record<string, any>);
+        if (participantDesignation) {
+          return query.eq('participant_designation', participantDesignation);
+        }
+        return query.is('participant_designation', null);
+      };
+
+      let answersQuery;
+      switch (targetTable) {
+        case 'project_secondary_income_items':
+          answersQuery = buildAnswersQuery(
+            supabase
+              .from('project_secondary_income_items')
+              .select('item_id, text_value, numeric_value, boolean_value, date_value, json_value, document_reference_id')
+          );
+          break;
+
+        case 'project_dependent_items':
+          answersQuery = buildAnswersQuery(
+            supabase
+              .from('project_dependent_items')
+              .select('item_id, text_value, numeric_value, boolean_value, date_value, json_value, document_reference_id')
+          );
+          break;
+
+        case 'project_debt_items':
+          answersQuery = buildAnswersQuery(
+            supabase
+              .from('project_debt_items')
+              .select('item_id, text_value, numeric_value, boolean_value, date_value, json_value, document_reference_id')
+          );
+          break;
+
+        default:
+          throw new Error(`Unsupported table: ${targetTable}`);
       }
 
-      // Format questions with current values
-      const formattedQuestions = requiredItems?.map(item => ({
-        id: item.id,
-        itemId: item.id,
-        itemName: item.item_name,
-        itemType: item.item_type,
-        currentValue: existingAnswers[item.id],
-        required: true,
-        priority: item.priority || 0
-      })) || [];
+      const { data: existingAnswers, error: answersError } = await answersQuery;
+      if (answersError) throw answersError;
 
-      setQuestions(formattedQuestions);
+      // Create a map of existing answers
+      const answersMap = new Map();
+      existingAnswers?.forEach(answer => {
+        answersMap.set(answer.item_id, answer);
+      });
+
+      // Build questions array with existing values
+      const questionsData: GroupQuestion[] = requiredItems?.map(item => {
+        const existingAnswer = answersMap.get(item.id);
+        
+        let currentValue = '';
+        const typedValue = {
+          textValue: existingAnswer?.text_value || null,
+          numericValue: existingAnswer?.numeric_value || null,
+          dateValue: existingAnswer?.date_value || null,
+          booleanValue: existingAnswer?.boolean_value || null,
+          jsonValue: existingAnswer?.json_value || null,
+          documentReferenceId: existingAnswer?.document_reference_id || null,
+        };
+
+        // Set current value based on type
+        switch (item.item_type) {
+          case 'number':
+            currentValue = typedValue.numericValue || '';
+            break;
+          case 'date':
+            currentValue = typedValue.dateValue || '';
+            break;
+          case 'single_choice_dropdown':
+            if (typedValue.booleanValue !== null) {
+              currentValue = typedValue.booleanValue ? 'TRUE' : 'FALSE';
+            } else if (typedValue.numericValue !== null) {
+              currentValue = typedValue.numericValue.toString();
+            } else {
+              currentValue = typedValue.textValue || '';
+            }
+            break;
+          case 'multiple_choice_checkbox':
+            currentValue = Array.isArray(typedValue.jsonValue) ? typedValue.jsonValue : [];
+            break;
+          default:
+            currentValue = typedValue.textValue || '';
+        }
+
+        return {
+          id: item.id,
+          itemId: item.id,
+          itemName: item.item_name,
+          itemType: item.item_type,
+          currentValue,
+          typedValue
+        };
+      }) || [];
+
+      setQuestions(questionsData);
+      setHasUnsavedChanges(false);
 
     } catch (error) {
-      console.error('Error loading simple group questions:', error);
+      console.error('Error loading group questions:', error);
       toast({
         title: "Error loading questions",
-        description: "Failed to load questions for this group.",
+        description: "Failed to load group questions.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [subcategory, groupIndex, projectId, targetTable, toast]);
+  }, [projectId, targetTable, subcategory, groupIndex, participantDesignation, toast]);
 
-  const saveAnswer = useCallback(async (itemId: string, value: any, itemType: string) => {
-    if (!projectId || !targetTable || groupIndex === null) return;
-
-    try {
-      const { error } = await SimpleRepeatableGroupService.saveAnswer(
-        projectId,
-        targetTable,
-        itemId,
-        groupIndex,
-        value,
-        itemType
-      );
-
-      if (error) throw error;
-
-      toast({
-        title: "Answer saved",
-        description: "Your answer has been saved.",
-      });
-
-    } catch (error) {
-      console.error('Error saving answer:', error);
-      toast({
-        title: "Error saving answer",
-        description: "Failed to save your answer.",
-        variant: "destructive",
-      });
-      throw error;
+  const saveAllAnswers = async (formData: Record<string, any>) => {
+    if (!projectId) {
+      throw new Error('Project ID is required');
     }
-  }, [projectId, targetTable, groupIndex, toast]);
 
-  const saveAllAnswers = useCallback(async (formData: Record<string, any>) => {
-    if (!projectId || !targetTable || groupIndex === null) return;
-
-    try {
-      const savePromises = questions.map(async (question) => {
-        const value = formData[question.id];
-        if (value === undefined || value === '') return;
-
+    const savePromises = questions.map(async (question) => {
+      const value = formData[question.itemId];
+      if (value !== undefined && value !== '' && value !== null) {
         return SimpleRepeatableGroupService.saveAnswer(
           projectId,
           targetTable,
-          question.id,
+          question.itemId,
           groupIndex,
           value,
-          question.itemType
+          question.itemType,
+          participantDesignation
         );
-      });
-
-      const results = await Promise.all(savePromises);
-      
-      // Check for errors
-      const errors = results.filter(result => result?.error);
-      if (errors.length > 0) {
-        throw errors[0].error;
       }
+    });
 
-      toast({
-        title: "Answers saved",
-        description: "All answers have been saved successfully.",
-      });
-
-    } catch (error) {
-      console.error('Error saving all answers:', error);
-      toast({
-        title: "Error saving answers",
-        description: "Failed to save answers.",
-        variant: "destructive",
-      });
-      throw error;
+    const results = await Promise.all(savePromises.filter(Boolean));
+    
+    // Check for errors
+    const errors = results.filter(result => result?.error);
+    if (errors.length > 0) {
+      throw errors[0].error;
     }
-  }, [projectId, targetTable, groupIndex, questions, toast]);
+
+    setHasUnsavedChanges(false);
+    
+    toast({
+      title: "Answers saved",
+      description: "All group answers have been saved successfully.",
+    });
+  };
 
   useEffect(() => {
     loadQuestions();
@@ -171,7 +212,7 @@ export const useSimpleGroupQuestions = (
   return {
     questions,
     loading,
-    saveAnswer,
+    hasUnsavedChanges,
     saveAllAnswers,
     refreshQuestions: loadQuestions
   };

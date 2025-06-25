@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,9 @@ import { Plus, Users, CreditCard, Home, Edit, Trash2, AlertTriangle } from 'luci
 import { useParams } from 'react-router-dom';
 import { useSimpleRepeatableGroups } from '@/hooks/useSimpleRepeatableGroups';
 import SimpleGroupModal from './SimpleGroupModal';
+import type { Database } from '@/integrations/supabase/types';
+
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
 interface QuestionItem {
   id: string;
@@ -22,9 +26,14 @@ interface QuestionItem {
 interface SimpleRepeatableGroupRendererProps {
   item: QuestionItem;
   onChange: (value: any) => void;
+  participantDesignation?: ParticipantDesignation;
 }
 
-const SimpleRepeatableGroupRenderer = ({ item, onChange }: SimpleRepeatableGroupRendererProps) => {
+const SimpleRepeatableGroupRenderer = ({ 
+  item, 
+  onChange, 
+  participantDesignation 
+}: SimpleRepeatableGroupRendererProps) => {
   const { projectId } = useParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(null);
@@ -61,7 +70,12 @@ const SimpleRepeatableGroupRenderer = ({ item, onChange }: SimpleRepeatableGroup
     createGroup,
     deleteGroup,
     refreshGroups
-  } = useSimpleRepeatableGroups(projectId!, item.repeatableGroupTargetTable!, item.subcategory!);
+  } = useSimpleRepeatableGroups(
+    projectId!, 
+    item.repeatableGroupTargetTable!, 
+    item.subcategory!,
+    participantDesignation
+  );
 
   const getIcon = () => {
     switch (item.repeatableGroupTargetTable) {
@@ -127,6 +141,14 @@ const SimpleRepeatableGroupRenderer = ({ item, onChange }: SimpleRepeatableGroup
           {item.repeatableGroupSubtitle && (
             <p className="text-muted-foreground">
               {item.repeatableGroupSubtitle}
+            </p>
+          )}
+          {participantDesignation && (
+            <p className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full inline-block">
+              {participantDesignation === 'solo_applicant' ? 'Solo Applicant' :
+               participantDesignation === 'applicant_one' ? 'Applicant 1' :
+               participantDesignation === 'applicant_two' ? 'Applicant 2' : 
+               participantDesignation}
             </p>
           )}
         </CardHeader>
@@ -204,6 +226,7 @@ const SimpleRepeatableGroupRenderer = ({ item, onChange }: SimpleRepeatableGroup
         onClose={handleModalClose}
         item={item}
         groupIndex={editingGroupIndex}
+        participantDesignation={participantDesignation}
       />
     </div>
   );

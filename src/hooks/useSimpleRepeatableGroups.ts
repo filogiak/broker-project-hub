@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { SimpleRepeatableGroupService } from '@/services/simpleRepeatableGroupService';
+import type { Database } from '@/integrations/supabase/types';
+
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
 interface SimpleRepeatableGroup {
   groupIndex: number;
@@ -17,7 +20,8 @@ interface SimpleRepeatableGroup {
 export const useSimpleRepeatableGroups = (
   projectId: string,
   targetTable: string,
-  subcategory: string
+  subcategory: string,
+  participantDesignation?: ParticipantDesignation
 ) => {
   const [groups, setGroups] = useState<SimpleRepeatableGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,11 @@ export const useSimpleRepeatableGroups = (
     try {
       setLoading(true);
       
-      const { data, error } = await SimpleRepeatableGroupService.loadAllGroups(projectId, targetTable);
+      const { data, error } = await SimpleRepeatableGroupService.loadAllGroups(
+        projectId, 
+        targetTable, 
+        participantDesignation
+      );
       
       if (error) throw error;
 
@@ -81,16 +89,17 @@ export const useSimpleRepeatableGroups = (
     } finally {
       setLoading(false);
     }
-  }, [projectId, targetTable, toast]);
+  }, [projectId, targetTable, participantDesignation, toast]);
 
   const createGroup = async () => {
     try {
-      console.log('Creating new group');
+      console.log('Creating new group for participant:', participantDesignation);
       
       const groupIndex = await SimpleRepeatableGroupService.createNewGroup(
         projectId, 
         targetTable, 
-        subcategory
+        subcategory,
+        participantDesignation
       );
       
       toast({
@@ -113,12 +122,13 @@ export const useSimpleRepeatableGroups = (
 
   const deleteGroup = async (groupIndex: number) => {
     try {
-      console.log('Deleting group', groupIndex);
+      console.log('Deleting group', groupIndex, 'for participant:', participantDesignation);
       
       const { error } = await SimpleRepeatableGroupService.deleteGroup(
         projectId, 
         targetTable, 
-        groupIndex
+        groupIndex,
+        participantDesignation
       );
       
       if (error) throw error;
@@ -147,16 +157,18 @@ export const useSimpleRepeatableGroups = (
         const hasAnswers = await SimpleRepeatableGroupService.groupHasAnswers(
           projectId, 
           targetTable, 
-          group.groupIndex
+          group.groupIndex,
+          participantDesignation
         );
         
         if (!hasAnswers) {
           await SimpleRepeatableGroupService.deleteGroup(
             projectId, 
             targetTable, 
-            group.groupIndex
+            group.groupIndex,
+            participantDesignation
           );
-          console.log(`Cleaned up empty group ${group.groupIndex}`);
+          console.log(`Cleaned up empty group ${group.groupIndex} for participant:`, participantDesignation);
         }
       }
       

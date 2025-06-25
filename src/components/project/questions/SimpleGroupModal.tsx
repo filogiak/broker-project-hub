@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { X, Save } from 'lucide-react';
-import QuestionRenderer from './QuestionRenderer';
+import { Save, X } from 'lucide-react';
 import { useSimpleGroupQuestions } from '@/hooks/useSimpleGroupQuestions';
-import { useParams } from 'react-router-dom';
+import QuestionRenderer from './QuestionRenderer';
+import type { Database } from '@/integrations/supabase/types';
+
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
 interface QuestionItem {
   id: string;
@@ -14,6 +15,9 @@ interface QuestionItem {
   itemName: string;
   itemType: string;
   repeatableGroupTitle?: string;
+  repeatableGroupSubtitle?: string;
+  repeatableGroupTopButtonText?: string;
+  repeatableGroupStartButtonText?: string;
   repeatableGroupTargetTable?: string;
   subcategory?: string;
 }
@@ -22,40 +26,39 @@ interface SimpleGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: QuestionItem;
-  groupIndex: number | null;
+  groupIndex?: number | null;
+  participantDesignation?: ParticipantDesignation;
 }
 
 const SimpleGroupModal = ({ 
   isOpen, 
   onClose, 
   item, 
-  groupIndex 
+  groupIndex,
+  participantDesignation
 }: SimpleGroupModalProps) => {
-  const { projectId } = useParams();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
 
   const {
     questions,
     loading,
-    saveAllAnswers
+    saveAllAnswers,
+    hasUnsavedChanges
   } = useSimpleGroupQuestions(
-    projectId!,
     item.repeatableGroupTargetTable!,
     item.subcategory!,
-    groupIndex
+    groupIndex || 0,
+    participantDesignation
   );
 
-  // Load existing answers when modal opens
   useEffect(() => {
     if (isOpen && questions.length > 0) {
-      const initialFormData: Record<string, any> = {};
+      const initialData: Record<string, any> = {};
       questions.forEach(question => {
-        if (question.currentValue !== undefined && question.currentValue !== null) {
-          initialFormData[question.id] = question.currentValue;
-        }
+        initialData[question.itemId] = question.currentValue || '';
       });
-      setFormData(initialFormData);
+      setFormData(initialData);
     }
   }, [isOpen, questions]);
 
@@ -67,83 +70,108 @@ const SimpleGroupModal = ({
   };
 
   const handleSave = async () => {
+    if (!item.repeatableGroupTargetTable || groupIndex === null || groupIndex === undefined) {
+      return;
+    }
+
     try {
       setSaving(true);
       await saveAllAnswers(formData);
       onClose();
     } catch (error) {
-      console.error('Error saving group:', error);
+      console.error('Error saving group answers:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  const completedQuestions = Object.keys(formData).filter(key => 
-    formData[key] !== undefined && formData[key] !== ''
-  ).length;
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      if (confirm('You have unsaved changes. Are you sure you want to close?')) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
 
-  const progressPercentage = questions.length > 0 
-    ? Math.round((completedQuestions / questions.length) * 100)
-    : 0;
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>
-              {item.repeatableGroupTitle || item.itemName}
-              {groupIndex && ` - Group #${groupIndex}`}
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <div>
+              <DialogTitle className="text-xl">
+                {item.repeatableGroupTitle || item.itemName}
+                {groupIndex !== null && groupIndex !== undefined && (
+                  <span className="text-muted-foreground ml-2">- Group #{groupIndex}</span>
+                )}
+              </DialogTitle>
+              {participantDesignation && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {participantDesignation === 'solo_applicant' ? 'Solo Applicant' :
+                   participantDesignation === 'applicant_one' ? 'Applicant 1' :
+                   participantDesignation === 'applicant_two' ? 'Applicant 2' : 
+                   participantDesignation}
+                </p>
+              )}
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Progress</span>
-              <span>{completedQuestions} of {questions.length} completed</span>
-            </div>
-            <Progress value={progressPercentage} className="w-full" />
           </div>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {loading ? (
             <div className="text-center py-8">
-              <div className="text-muted-foreground">Loading questions...</div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading questions...</p>
             </div>
-          ) : questions.length > 0 ? (
-            questions.map((question) => (
-              <div key={question.id} className="space-y-2">
-                <label className="text-sm font-medium">
-                  {question.itemName}
-                  {question.required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                
-                <QuestionRenderer
-                  item={question}
-                  currentValue={formData[question.id]}
-                  onChange={handleInputChange}
-                  isAdditional={false}
-                />
-              </div>
-            ))
+          ) : questions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No questions available for this group.</p>
+            </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No questions found for this group.
+            <div className="space-y-6">
+              {questions.map((question, index) => (
+                <div key={question.itemId} className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {index + 1}. {question.itemName}
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <QuestionRenderer
+                    item={{
+                      id: question.id,
+                      itemId: question.itemId,
+                      itemName: question.itemName,
+                      itemType: question.itemType,
+                      displayValue: question.currentValue,
+                      typedValue: question.typedValue
+                    } as any}
+                    currentValue={formData[question.itemId] || question.currentValue || ''}
+                    onChange={handleInputChange}
+                    isAdditional={false}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t pt-4">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || questions.length === 0}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save'}
+          <Button 
+            onClick={handleSave} 
+            disabled={saving || loading || questions.length === 0}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving...' : 'Save Group'}
           </Button>
         </div>
       </DialogContent>

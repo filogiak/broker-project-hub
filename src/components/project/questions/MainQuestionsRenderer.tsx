@@ -7,6 +7,9 @@ import { Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import QuestionRenderer from './QuestionRenderer';
 import SimpleRepeatableGroupRenderer from './SimpleRepeatableGroupRenderer';
 import type { TypedChecklistItem } from '@/services/checklistItemService';
+import type { Database } from '@/integrations/supabase/types';
+
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
 interface MainQuestionsRendererProps {
   categoryItems: TypedChecklistItem[];
@@ -15,6 +18,7 @@ interface MainQuestionsRendererProps {
   saveError: string | null;
   lastSaveTime: Date | null;
   saving: boolean;
+  participantDesignation?: ParticipantDesignation;
   onInputChange: (itemId: string, value: any) => void;
   onSave: () => void;
 }
@@ -26,6 +30,7 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
   saveError,
   lastSaveTime,
   saving,
+  participantDesignation,
   onInputChange,
   onSave,
 }) => {
@@ -46,7 +51,8 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
     name: item.itemName,
     type: item.itemType,
     subcategory: item.subcategory,
-    isRepeatable: item.itemType === 'repeatable_group'
+    isRepeatable: item.itemType === 'repeatable_group',
+    participantDesignation
   })));
 
   return (
@@ -89,7 +95,8 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
             console.log(`🔧 Rendering item ${index + 1}:`, {
               name: item.itemName,
               type: item.itemType,
-              isRepeatable: item.itemType === 'repeatable_group'
+              isRepeatable: item.itemType === 'repeatable_group',
+              participantDesignation
             });
 
             // FIXED: Handle repeatable groups with proper renderer and callback adaptation
@@ -119,6 +126,7 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
                         subcategory: item.subcategory,
                       }}
                       onChange={(value) => onInputChange(item.id, value)}
+                      participantDesignation={participantDesignation}
                     />
                   </div>
                 </div>
