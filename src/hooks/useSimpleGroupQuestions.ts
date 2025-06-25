@@ -138,6 +138,7 @@ export const useSimpleGroupQuestions = (
             }
             break;
           case 'multiple_choice_checkbox':
+            // FIXED: Handle array properly for multiple choice
             currentValue = Array.isArray(typedValue.jsonValue) ? typedValue.jsonValue : [];
             break;
           default:

@@ -44,8 +44,8 @@ export const useSimpleRepeatableGroups = (
       
       if (error) throw error;
 
-      // Group by group_index (mirrors project_checklist_items processing)
-      const groupedData = data?.reduce((acc, item) => {
+      // FIXED: Properly type the reduce operation
+      const groupedData = data?.reduce((acc: Record<number, SimpleRepeatableGroup>, item: any) => {
         const groupIndex = item.group_index;
         if (!acc[groupIndex]) {
           acc[groupIndex] = {
@@ -76,7 +76,8 @@ export const useSimpleRepeatableGroups = (
         return acc;
       }, {} as Record<number, SimpleRepeatableGroup>) || {};
 
-      const groupsArray = Object.values(groupedData).sort((a, b) => a.groupIndex - b.groupIndex);
+      // FIXED: Properly type the groups array
+      const groupsArray: SimpleRepeatableGroup[] = Object.values(groupedData).sort((a, b) => a.groupIndex - b.groupIndex);
       setGroups(groupsArray);
 
     } catch (error) {
