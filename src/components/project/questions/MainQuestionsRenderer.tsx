@@ -47,13 +47,16 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
     );
   }
 
-  console.log('🔧 MainQuestionsRenderer: Rendering items:', categoryItems.map(item => ({
-    name: item.itemName,
-    type: item.itemType,
-    subcategory: item.subcategory,
-    isRepeatable: item.itemType === 'repeatable_group',
-    participantDesignation
-  })));
+  console.log('🔧 MainQuestionsRenderer: Rendering items with participant:', {
+    participantDesignation,
+    itemCount: categoryItems.length,
+    items: categoryItems.map(item => ({
+      name: item.itemName,
+      type: item.itemType,
+      subcategory: item.subcategory,
+      isRepeatable: item.itemType === 'repeatable_group'
+    }))
+  });
 
   return (
     <div className="space-y-6">
@@ -99,7 +102,7 @@ const MainQuestionsRenderer: React.FC<MainQuestionsRendererProps> = ({
               participantDesignation
             });
 
-            // FIXED: Handle repeatable groups with proper renderer and callback adaptation
+            // Handle repeatable groups with proper participant designation
             if (item.itemType === 'repeatable_group') {
               return (
                 <div key={`repeatable-${item.id}`} className="space-y-3">

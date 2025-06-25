@@ -416,6 +416,7 @@ const CategoryQuestions = React.memo(({ categoryId, categoryName, applicant, onB
             saveError={saveError}
             lastSaveTime={lastSaveTime}
             saving={saving}
+            participantDesignation={participantDesignation}
             onInputChange={handleInputChange}
             onSave={handleSave}
           />
