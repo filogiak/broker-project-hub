@@ -76,8 +76,9 @@ export const useSimpleRepeatableGroups = (
         return acc;
       }, {} as Record<number, SimpleRepeatableGroup>) || {};
 
-      // FIXED: Properly type the groups array
-      const groupsArray: SimpleRepeatableGroup[] = Object.values(groupedData).sort((a, b) => a.groupIndex - b.groupIndex);
+      // FIXED: Explicitly cast Object.values result to properly typed array
+      const groupsArray: SimpleRepeatableGroup[] = (Object.values(groupedData) as SimpleRepeatableGroup[])
+        .sort((a, b) => a.groupIndex - b.groupIndex);
       setGroups(groupsArray);
 
     } catch (error) {

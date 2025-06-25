@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -110,7 +109,6 @@ export const useSimpleGroupQuestions = (
       const questionsData: GroupQuestion[] = requiredItems?.map(item => {
         const existingAnswer = answersMap.get(item.id);
         
-        let currentValue = '';
         const typedValue = {
           textValue: existingAnswer?.text_value || null,
           numericValue: existingAnswer?.numeric_value || null,
@@ -120,7 +118,8 @@ export const useSimpleGroupQuestions = (
           documentReferenceId: existingAnswer?.document_reference_id || null,
         };
 
-        // Set current value based on type
+        // FIXED: Set current value based on type, keeping arrays for multiple choice
+        let currentValue: any;
         switch (item.item_type) {
           case 'number':
             currentValue = typedValue.numericValue || '';
@@ -138,7 +137,7 @@ export const useSimpleGroupQuestions = (
             }
             break;
           case 'multiple_choice_checkbox':
-            // FIXED: Handle array properly for multiple choice
+            // FIXED: Keep as array for multiple choice checkboxes
             currentValue = Array.isArray(typedValue.jsonValue) ? typedValue.jsonValue : [];
             break;
           default:
