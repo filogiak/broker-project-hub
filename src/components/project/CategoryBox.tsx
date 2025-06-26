@@ -31,8 +31,8 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
           </div>
           
           {!isComplete && (
-            <Badge className="bg-lime-300 text-form-green border-lime-300 font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
-              Incompleto {completionPercentage}%
+            <Badge className="bg-yellow-200 text-form-green border-yellow-200 font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
+              Completato al {completionPercentage}%
             </Badge>
           )}
           
@@ -71,18 +71,15 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
           {/* Bottom section with count and arrow */}
           {completion && (
             <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">Items</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-form-green">{completion.totalItems}</span>
-                <ChevronRight className="h-4 w-4 text-gray-400" />
-              </div>
+              <span className="font-semibold text-form-green">{completion.totalItems}</span>
+              <ChevronRight className="h-5 w-5 text-gray-600" />
             </div>
           )}
 
           {/* Arrow only section for categories without completion data */}
           {!completion && (
             <div className="flex justify-end pt-2 border-t border-gray-100">
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronRight className="h-5 w-5 text-gray-600" />
             </div>
           )}
         </div>
