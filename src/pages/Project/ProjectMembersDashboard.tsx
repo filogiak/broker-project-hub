@@ -226,33 +226,6 @@ const ProjectMembersDashboard = () => {
         <ProjectSidebar />
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
-            {/* Header */}
-            <div className="bg-white rounded-[12px] border border-form-border p-6 shadow-sm">
-              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{project.name}</h1>
-              <p className="text-muted-foreground mt-1 font-dm-sans">
-                Dashboard Membri Progetto - {formatApplicantCount(project.applicant_count)}
-              </p>
-            </div>
-
-            {/* Project Info Card */}
-            <Card className="bg-white border-form-border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-form-green font-dm-sans">Configurazione Progetto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground font-dm-sans">Numero Richiedenti</label>
-                    <p className="text-lg font-dm-sans text-form-green">{formatApplicantCount(project.applicant_count)}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground font-dm-sans">Tipo Progetto</label>
-                    <p className="text-lg font-dm-sans text-form-green">{project.project_type ? formatRole(project.project_type) : 'Non impostato'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Project Members */}
             <Card className="bg-white border-form-border shadow-sm">
               <CardHeader>
