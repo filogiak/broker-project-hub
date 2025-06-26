@@ -32,10 +32,10 @@
     --accent-yellow: 56 93% 66%; /* Yellow Fluo for highlights */
     --accent-yellow-alt: 56 93% 56%; /* Darker yellow for hover */
     
-    /* Background Colors - Updated to match screenshot */
-    --background: 0 0% 96%; /* #F5F5F5 - Light gray-beige like screenshot */
-    --background-cream: 0 0% 96%; /* #F5F5F5 */
-    --background-light: 0 0% 96%; /* #F5F5F5 - Main project background */
+    /* Background Colors - Updated to match user request */
+    --background: 36 28% 96%; /* #f8f5f1 - Warm cream/beige background */
+    --background-cream: 36 28% 96%; /* #f8f5f1 */
+    --background-light: 36 28% 96%; /* #f8f5f1 - Main project background */
     --foreground: 167 45% 15%;
 
     /* UI Colors */
@@ -164,6 +164,23 @@
     border-radius: inherit;
     z-index: -1;
   }
+
+  /* New Shadow Styles for Screenshot Match */
+  .screenshot-card-shadow {
+    box-shadow: 0 8px 32px rgba(190, 184, 174, 0.35), 0 4px 16px rgba(190, 184, 174, 0.25);
+  }
+
+  .screenshot-card-shadow-hover {
+    box-shadow: 0 12px 40px rgba(190, 184, 174, 0.4), 0 6px 20px rgba(190, 184, 174, 0.3);
+  }
+
+  .screenshot-green-card-shadow {
+    box-shadow: 0 10px 35px rgba(36, 92, 79, 0.25), 0 6px 18px rgba(36, 92, 79, 0.15);
+  }
+
+  .screenshot-green-card-shadow-hover {
+    box-shadow: 0 14px 45px rgba(36, 92, 79, 0.3), 0 8px 24px rgba(36, 92, 79, 0.2);
+  }
 }
 
 @layer components {
@@ -172,7 +189,7 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
     @apply px-6 py-3 font-dm-sans font-medium;
-    @apply shadow-[0_6px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)];
+    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover;
     @apply hover:translate-y-[-2px] transition-all duration-200;
   }
 
@@ -180,7 +197,7 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply border border-[hsl(var(--form-border))] bg-white text-foreground hover:bg-[hsl(var(--vibe-green-light))];
     @apply px-4 py-2 font-dm-sans font-normal;
-    @apply shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-200;
+    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover transition-all duration-200;
   }
 
   /* GoMutuo.it Form Components */
@@ -191,22 +208,28 @@
     @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-background;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply transition-all duration-200;
-    @apply shadow-[0_2px_8px_rgba(0,0,0,0.04)];
+    @apply screenshot-card-shadow;
   }
 
   .gomutuo-selection-tag {
     @apply bg-[hsl(var(--vibe-green-light))] text-[hsl(var(--form-green))] font-semibold px-3 py-1 rounded-[6px] font-dm-sans text-sm;
   }
 
-  /* GoMutuo.it Card System - Enhanced shadows to match screenshot */
+  /* GoMutuo.it Card System - Updated shadows to match screenshots */
   .gomutuo-card {
     @apply bg-white rounded-[12px] border border-gray-200 transition-all duration-200;
     @apply p-6;
-    @apply shadow-[0_4px_20px_rgba(0,0,0,0.08)];
+    @apply screenshot-card-shadow;
   }
 
   .gomutuo-card-hover {
-    @apply gomutuo-card hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-1;
+    @apply gomutuo-card hover:screenshot-card-shadow-hover hover:-translate-y-1;
+  }
+
+  .gomutuo-card-green {
+    @apply bg-[hsl(var(--form-green))] text-white rounded-[12px] border border-[hsl(var(--form-green))] transition-all duration-200;
+    @apply p-6;
+    @apply screenshot-green-card-shadow hover:screenshot-green-card-shadow-hover;
   }
 
   /* GoMutuo.it specific styles */

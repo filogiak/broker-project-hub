@@ -38,7 +38,7 @@ const ProjectStats = ({ projectId }: ProjectStatsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat) => (
-        <Card key={stat.title} className="bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-[12px]">
+        <Card key={stat.title} className="bg-white border border-gray-100 screenshot-card-shadow rounded-[12px]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
