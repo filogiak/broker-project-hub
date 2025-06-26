@@ -226,11 +226,11 @@ const ProjectMembersDashboard = () => {
                     </Button>
                   </div> : <div className="space-y-4">
                     {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-form-green-dark"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-form-green"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <User className="h-9 w-9 text-form-green-dark" />
+                              <User className="h-9 w-9 text-form-green" />
                             </div>
 
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
