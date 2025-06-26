@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ProjectOverviewCardProps {
   title: string;
@@ -13,10 +14,10 @@ interface ProjectOverviewCardProps {
   count?: number;
 }
 
-const ProjectOverviewCard = ({ 
-  title, 
-  description, 
-  icon: Icon, 
+const ProjectOverviewCard = ({
+  title,
+  description,
+  icon: Icon,
   onClick,
   badge,
   progress,
@@ -24,49 +25,49 @@ const ProjectOverviewCard = ({
 }: ProjectOverviewCardProps) => {
   return (
     <Card 
-      className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
+      className="bg-white border border-form-border rounded-[12px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
       onClick={onClick}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 rounded-xl bg-vibe-green-light flex items-center justify-center">
-            <Icon className="h-6 w-6 text-form-green" />
+          <div className="flex items-center gap-4">
+            <Icon className="h-7 w-7 text-form-green-dark" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-black font-dm-sans mb-1">{title}</h3>
+            </div>
           </div>
           {badge && (
-            <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
+            <Badge variant="secondary" className="bg-vibe-yellow-fluo text-black text-xs font-medium">
               {badge}
-            </span>
+            </Badge>
           )}
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-2">{title}</h3>
-            <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">{description}</p>
+        <p className="text-gray-600 font-dm-sans mb-4 text-sm leading-relaxed">
+          {description}
+        </p>
+
+        {progress !== undefined && (
+          <div className="mb-3">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-gray-500 font-dm-sans">Progress</span>
+              <span className="text-xs text-form-green font-semibold font-dm-sans">{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-form-green h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
+        )}
 
-          {progress !== undefined && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Progress</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-form-green transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {count !== undefined && (
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">Items</span>
-              <span className="font-semibold text-form-green">{count}</span>
-            </div>
-          )}
-        </div>
+        {count !== undefined && (
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-500 font-dm-sans">Items</span>
+            <span className="text-form-green font-semibold font-dm-sans">{count}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
