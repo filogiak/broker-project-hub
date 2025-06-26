@@ -51,8 +51,8 @@ const ProjectSidebar = () => {
     {
       title: 'Settings',
       icon: Settings,
-      path: '#',
-      isActive: false,
+      path: `/project/${projectId}/settings`,
+      isActive: window.location.pathname === `/project/${projectId}/settings`,
     },
   ];
 

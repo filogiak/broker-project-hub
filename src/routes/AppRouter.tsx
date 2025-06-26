@@ -22,6 +22,7 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
 import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
 import ProjectDocuments from '@/pages/Project/ProjectDocuments';
+import ProjectSettings from '@/pages/Project/ProjectSettings';
 
 // Other pages
 import Index from '@/pages/Index';
@@ -83,6 +84,12 @@ const AppRouter = () => {
             <Route path="/project/:projectId/documents" element={
               <ProtectedRoute>
                 <ProjectDocuments />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/project/:projectId/settings" element={
+              <ProtectedRoute>
+                <ProjectSettings />
               </ProtectedRoute>
             } />
 
