@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, Circle, Users, Calendar } from 'lucide-react';
+import { Clock, Circle, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProjectHeaderCardProps {
@@ -18,7 +18,7 @@ const ProjectHeaderCard = ({
   isActive = true
 }: ProjectHeaderCardProps) => {
   return (
-    <Card className="bg-white border-2 border-form-green rounded-[16px] shadow-lg relative overflow-hidden">
+    <Card className="bg-white border border-gray-200 rounded-[16px] shadow-sm relative overflow-hidden">
       {/* Bottom accent line */}
       <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
       
@@ -27,7 +27,7 @@ const ProjectHeaderCard = ({
           {/* Project Info with extended green line */}
           <div className="flex-1 pr-8 relative">
             {/* Extended green accent line */}
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-form-green rounded-full"></div>
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-form-green rounded-full"></div>
             
             <div className="ml-6">
               <h1 className="text-3xl font-bold text-black font-dm-sans leading-tight mb-3">
@@ -43,7 +43,7 @@ const ProjectHeaderCard = ({
           </div>
 
           {/* Professional Status & Info Section */}
-          <div className="flex items-center gap-6 flex-shrink-0">
+          <div className="flex items-center gap-8 flex-shrink-0">
             {/* Status Badge */}
             <div className="flex items-center gap-2">
               <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
@@ -51,9 +51,6 @@ const ProjectHeaderCard = ({
                 {isActive ? 'Attivo' : 'Non Attivo'}
               </span>
             </div>
-
-            {/* Divider */}
-            <div className="w-px h-8 bg-gray-200"></div>
 
             {/* Last Activity */}
             <div className="flex items-center gap-2">
@@ -63,21 +60,6 @@ const ProjectHeaderCard = ({
                 <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
               </div>
             </div>
-
-            {/* Divider */}
-            <div className="w-px h-8 bg-gray-200"></div>
-
-            {/* Team Members Count */}
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-form-green" />
-              <div className="text-right">
-                <p className="text-xs text-gray-500 font-dm-sans leading-none">Team</p>
-                <span className="text-sm font-semibold text-form-green font-dm-sans">4 membri</span>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-8 bg-gray-200"></div>
 
             {/* Project Date */}
             <div className="flex items-center gap-2">
