@@ -10,7 +10,9 @@ import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AddMemberModal from '@/components/project/AddMemberModal';
+import ProjectInvitationsSection from '@/components/project/ProjectInvitationsSection';
 import type { Database } from '@/integrations/supabase/types';
+
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
   profiles: {
@@ -19,6 +21,7 @@ type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
     email: string;
   } | null;
 };
+
 const ProjectMembersDashboard = () => {
   const {
     projectId
@@ -223,7 +226,7 @@ const ProjectMembersDashboard = () => {
                     </Button>
                   </div> : <div className="space-y-4">
                     {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-form-green-dark"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-form-green-dark"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -262,6 +265,11 @@ const ProjectMembersDashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Project Invitations Section */}
+            {projectId && (
+              <ProjectInvitationsSection projectId={projectId} />
+            )}
+
             {/* Add Member Modal */}
             <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId!} onMemberAdded={handleMemberAdded} />
           </div>
@@ -269,4 +277,5 @@ const ProjectMembersDashboard = () => {
       </div>
     </SidebarProvider>;
 };
+
 export default ProjectMembersDashboard;
