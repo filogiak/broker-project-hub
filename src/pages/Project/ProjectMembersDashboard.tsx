@@ -11,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AddMemberModal from '@/components/project/AddMemberModal';
 import type { Database } from '@/integrations/supabase/types';
-
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
   profiles: {
@@ -20,73 +19,67 @@ type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
     email: string;
   } | null;
 };
-
 const ProjectMembersDashboard = () => {
-  const { projectId } = useParams();
+  const {
+    projectId
+  } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
-  
+  const {
+    user,
+    loading: authLoading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-
   useEffect(() => {
     const loadProjectData = async () => {
       if (authLoading) return;
-      
       if (!user?.id) {
         navigate('/auth');
         return;
       }
-
       if (!projectId) {
         setError('No project ID provided');
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
         setError(null);
-
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', projectId)
-          .single();
-
+        const {
+          data: projectData,
+          error: projectError
+        } = await supabase.from('projects').select('*').eq('id', projectId).single();
         if (projectError) {
           console.error('Error loading project:', projectError);
           setError('Failed to load project details');
           return;
         }
-
         setProject(projectData);
-
-        const { data: membersData, error: membersError } = await supabase
-          .from('project_members')
-          .select(`
+        const {
+          data: membersData,
+          error: membersError
+        } = await supabase.from('project_members').select(`
             *,
             profiles!project_members_user_id_fkey (
               first_name,
               last_name,
               email
             )
-          `)
-          .eq('project_id', projectId)
-          .order('joined_at', { ascending: false });
-
+          `).eq('project_id', projectId).order('joined_at', {
+          ascending: false
+        });
         if (membersError) {
           console.error('Error loading project members:', membersError);
           setError('Failed to load project members');
           return;
         }
-
         setMembers(membersData || []);
-
       } catch (error) {
         console.error('Error loading project data:', error);
         setError('An unexpected error occurred');
@@ -94,44 +87,38 @@ const ProjectMembersDashboard = () => {
         setLoading(false);
       }
     };
-
     loadProjectData();
   }, [user, authLoading, projectId, navigate]);
-
   const loadMembers = async () => {
     if (!projectId) return;
-
     try {
-      const { data: membersData, error: membersError } = await supabase
-        .from('project_members')
-        .select(`
+      const {
+        data: membersData,
+        error: membersError
+      } = await supabase.from('project_members').select(`
           *,
           profiles!project_members_user_id_fkey (
             first_name,
             last_name,
             email
           )
-        `)
-        .eq('project_id', projectId)
-        .order('joined_at', { ascending: false });
-
+        `).eq('project_id', projectId).order('joined_at', {
+        ascending: false
+      });
       if (membersError) {
         console.error('Error loading project members:', membersError);
         return;
       }
-
       setMembers(membersData || []);
     } catch (error) {
       console.error('Error loading members:', error);
     }
   };
-
   useEffect(() => {
     if (project) {
       loadMembers();
     }
   }, [project, projectId]);
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -141,11 +128,10 @@ const ProjectMembersDashboard = () => {
       toast({
         title: "Logout Error",
         description: "Failed to logout properly. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const formatUserName = (member: ProjectMember) => {
     const profile = member.profiles;
     if (!profile) return 'Utente Sconosciuto';
@@ -154,34 +140,27 @@ const ProjectMembersDashboard = () => {
     }
     return profile.email;
   };
-
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-
   const formatParticipantDesignation = (designation: string | null) => {
     if (!designation) return 'Non assegnato';
     return designation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-
   const formatApplicantCount = (count: string | null) => {
     if (!count) return 'Non impostato';
     return count.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Non ancora entrato';
     return new Date(dateString).toLocaleDateString('it-IT');
   };
-
   const handleMemberAdded = () => {
     loadMembers();
     setIsAddMemberModalOpen(false);
   };
-
   if (authLoading || loading) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -190,13 +169,10 @@ const ProjectMembersDashboard = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
   if (error || !project) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -215,12 +191,9 @@ const ProjectMembersDashboard = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background-light">
         <ProjectSidebar />
         <SidebarInset>
@@ -229,40 +202,27 @@ const ProjectMembersDashboard = () => {
             <Card className="bg-white border-0 shadow-none">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
+                  <CardTitle className="flex items-center justify-between font-dm-sans text-black">
                     Membri Attivi del Progetto
                     <span className="text-sm font-normal text-muted-foreground ml-4">
                       {members.length} {members.length === 1 ? 'membro' : 'membri'}
                     </span>
                   </CardTitle>
-                  <Button 
-                    onClick={() => setIsAddMemberModalOpen(true)}
-                    className="gomutuo-button-primary flex items-center gap-2"
-                  >
+                  <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
                     <Plus className="h-4 w-4" />
                     Aggiungi Membro
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {members.length === 0 ? (
-                  <div className="text-center py-8">
+                {members.length === 0 ? <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4 font-dm-sans">Nessun membro del progetto trovato.</p>
-                    <Button 
-                      onClick={() => setIsAddMemberModalOpen(true)}
-                      className="gomutuo-button-primary flex items-center gap-2"
-                    >
+                    <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
                       <Plus className="h-4 w-4" />
                       Aggiungi Primo Membro
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {members.map((member) => (
-                      <Card 
-                        key={member.id} 
-                        className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden"
-                      >
+                  </div> : <div className="space-y-4">
+                    {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
                         <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-form-green-dark"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
@@ -297,25 +257,16 @@ const ProjectMembersDashboard = () => {
                             </div>
                           </div>
                         </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                      </Card>)}
+                  </div>}
               </CardContent>
             </Card>
 
             {/* Add Member Modal */}
-            <AddMemberModal
-              isOpen={isAddMemberModalOpen}
-              onClose={() => setIsAddMemberModalOpen(false)}
-              projectId={projectId!}
-              onMemberAdded={handleMemberAdded}
-            />
+            <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId!} onMemberAdded={handleMemberAdded} />
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default ProjectMembersDashboard;
