@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, FileText, Clock, Home, Circle } from 'lucide-react';
+import { Users, FileText, Clock, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import CustomHouseIcon from '@/components/ui/custom-house-icon';
 
 interface ProjectHeaderCardProps {
   projectName: string;
@@ -46,61 +47,59 @@ const ProjectHeaderCard = ({
   ];
 
   return (
-    <Card className="bg-form-green text-white border-form-green rounded-[12px] solid-shadow-dark press-down-effect-dark overflow-hidden">
+    <Card className="bg-form-green text-white border-2 border-form-green-dark rounded-[12px] shadow-lg shadow-form-green-darker/20 relative overflow-hidden" style={{ borderBottomWidth: '4px' }}>
       <CardContent className="p-0">
-        {/* Compact Header Section */}
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              {/* Smaller Project Icon */}
-              <div className="w-10 h-10 bg-white/10 rounded-[8px] flex items-center justify-center">
-                <Home className="h-5 w-5 text-white" />
+        {/* Main Header Section - DOMINANT */}
+        <div className="px-6 py-6">
+          <div className="flex items-start gap-4 mb-6">
+            {/* Custom Project Icon */}
+            <div className="w-12 h-12 bg-white/15 rounded-[8px] flex items-center justify-center flex-shrink-0">
+              <CustomHouseIcon className="text-white" size={24} />
+            </div>
+            
+            {/* Project Title & Description - PROMINENT */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-white font-dm-sans leading-tight">{projectName}</h1>
+                {/* Compact Status Badge */}
+                <Badge 
+                  variant="secondary" 
+                  className={`
+                    px-2 py-0.5 text-xs font-medium rounded-full border-0 flex items-center gap-1.5 flex-shrink-0
+                    ${isActive 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-600'
+                    }
+                  `}
+                >
+                  <Circle className={`h-1.5 w-1.5 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                  {isActive ? 'Attivo' : 'Non Attivo'}
+                </Badge>
               </div>
-              
-              {/* Compact Project Title & Description */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-semibold text-white font-dm-sans">{projectName}</h1>
-                  {/* Compact Status Badge */}
-                  <Badge 
-                    variant="secondary" 
-                    className={`
-                      px-2 py-0.5 text-xs font-medium rounded-full border-0 flex items-center gap-1
-                      ${isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-600'
-                      }
-                    `}
-                  >
-                    <Circle className={`h-1.5 w-1.5 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-                    {isActive ? 'Attivo' : 'Non Attivo'}
-                  </Badge>
-                </div>
-                {projectDescription && (
-                  <p className="text-sm text-green-100 font-dm-sans opacity-90">
-                    {projectDescription}
-                  </p>
-                )}
-              </div>
+              {projectDescription && (
+                <p className="text-lg text-green-50 font-dm-sans opacity-95 leading-relaxed">
+                  {projectDescription}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Compact Section Title */}
+          {/* Secondary Section Title - SUBDUED */}
           <div className="mb-3">
-            <h3 className="text-lg font-medium text-white font-dm-sans">Panoramica Progetto</h3>
+            <h3 className="text-sm font-medium text-white/80 font-dm-sans uppercase tracking-wider">Panoramica Progetto</h3>
           </div>
         </div>
 
-        {/* Compact Statistics Section */}
-        <div className="px-6 pb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Statistics Section - SECONDARY */}
+        <div className="px-6 pb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {stats.map((stat, index) => (
               <div 
                 key={stat.title}
-                className="bg-white rounded-[8px] border border-gray-100 p-3 solid-shadow-light press-down-effect hover:scale-[1.01] transition-all duration-200"
+                className="bg-white rounded-[8px] border border-gray-100 p-3 shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-gray-500 mb-1 font-dm-sans uppercase tracking-wide">
                       {stat.title}
                     </p>
@@ -108,7 +107,7 @@ const ProjectHeaderCard = ({
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`w-8 h-8 rounded-[6px] ${stat.bgColor} flex items-center justify-center`}>
+                  <div className={`w-8 h-8 rounded-[6px] ${stat.bgColor} flex items-center justify-center flex-shrink-0`}>
                     <stat.icon className={`h-4 w-4 ${stat.iconColor}`} />
                   </div>
                 </div>

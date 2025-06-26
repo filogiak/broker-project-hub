@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -60,6 +59,8 @@ export default {
 				// GoMutuo.it Extended Colors
 				form: {
 					green: 'hsl(var(--form-green))',
+					'green-dark': '#1a4c2e',
+					'green-darker': '#0f2f1b',
 					beige: 'hsl(var(--form-beige))',
 					placeholder: 'hsl(var(--form-placeholder))',
 					border: 'hsl(var(--form-border))',
