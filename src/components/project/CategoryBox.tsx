@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ChevronRight } from 'lucide-react';
 import { CategoryIconService } from '@/services/categoryIconService';
 import type { CategoryCompletionInfo } from '@/services/categoryCompletionService';
 
@@ -19,33 +20,39 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
 
   return (
     <Card 
-      className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
+      className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
       onClick={onClick}
     >
       <CardContent className="p-6">
-        {/* Top section with icon and status */}
+        {/* Top section with icon, title and status */}
         <div className="flex items-start justify-between mb-6">
-          <div className="w-14 h-14 rounded-[10px] bg-vibe-green-light flex items-center justify-center">
-            <IconComponent className="h-7 w-7 text-form-green" />
+          <div className="flex items-center gap-4 flex-1">
+            <IconComponent className="h-6 w-6 text-form-green flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-black font-dm-sans">{name}</h3>
+            </div>
           </div>
           
-          {!isComplete && (
-            <Badge className="bg-accent-yellow text-form-green border-accent-yellow font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
-              Incompleto {completionPercentage}%
-            </Badge>
-          )}
-          
-          {isComplete && (
-            <Badge className="bg-form-green text-white border-form-green font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
-              Completo
-            </Badge>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isComplete && (
+              <Badge className="bg-lime-400 text-form-green border-lime-400 font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
+                Incompleto {completionPercentage}%
+              </Badge>
+            )}
+            
+            {isComplete && (
+              <Badge className="bg-form-green text-white border-form-green font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
+                Completo
+              </Badge>
+            )}
+            
+            <ChevronRight className="h-5 w-5 text-gray-400" />
+          </div>
         </div>
 
         {/* Content section */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-2">{name}</h3>
             <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
               {completion ? `${completion.completedItems}/${completion.totalItems} elementi completati` : 'Clicca per visualizzare i dettagli'}
             </p>

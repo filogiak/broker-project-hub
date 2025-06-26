@@ -7,8 +7,7 @@ import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
@@ -274,31 +273,6 @@ const ProjectDocuments = () => {
                 />
               ))}
             </div>
-
-            {/* Documents Summary Card */}
-            <Card className="bg-form-green text-white border-form-green shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold font-dm-sans">Documenti</h3>
-                    <p className="text-white/80 font-dm-sans">
-                      Documenti e file caricati per questo progetto
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold font-dm-sans">
-                      {overallCompletion.completionPercentage}%
-                    </div>
-                    <p className="text-sm text-white/80 font-dm-sans">
-                      {overallCompletion.completedItems} di {overallCompletion.totalItems}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         );
 
