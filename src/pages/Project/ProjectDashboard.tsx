@@ -131,13 +131,14 @@ const ProjectDashboard = () => {
         <ProjectSidebar />
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
-            {/* Project Header with Integrated Stats */}
+            {/* Enhanced Project Header with Status */}
             <ProjectHeaderCard
               projectName={project.name}
               projectDescription={project.description || undefined}
               membersCount={4}
               progressPercentage={65}
               lastActivity="2h"
+              isActive={true}
             />
 
             {/* Main Action Cards */}

@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, FileText, Clock } from 'lucide-react';
+import { Users, FileText, Clock, Home, Circle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ProjectHeaderCardProps {
   projectName: string;
@@ -9,6 +10,7 @@ interface ProjectHeaderCardProps {
   membersCount: number;
   progressPercentage: number;
   lastActivity: string;
+  isActive?: boolean;
 }
 
 const ProjectHeaderCard = ({ 
@@ -16,7 +18,8 @@ const ProjectHeaderCard = ({
   projectDescription, 
   membersCount, 
   progressPercentage, 
-  lastActivity 
+  lastActivity,
+  isActive = true
 }: ProjectHeaderCardProps) => {
   const stats = [
     {
@@ -43,32 +46,79 @@ const ProjectHeaderCard = ({
   ];
 
   return (
-    <Card className="bg-form-green text-white border-form-green rounded-[12px] solid-shadow-dark press-down-effect-dark">
-      <CardContent className="p-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white font-dm-sans mb-2">{projectName}</h1>
-          {projectDescription && (
-            <p className="text-lg text-green-100 font-dm-sans opacity-90">{projectDescription}</p>
-          )}
+    <Card className="bg-form-green text-white border-form-green rounded-[12px] solid-shadow-dark press-down-effect-dark overflow-hidden">
+      <CardContent className="p-0">
+        {/* Enhanced Header Section */}
+        <div className="px-8 pt-8 pb-6">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              {/* Project Icon */}
+              <div className="w-14 h-14 bg-white/10 rounded-[12px] flex items-center justify-center backdrop-blur-sm">
+                <Home className="h-7 w-7 text-white" />
+              </div>
+              
+              {/* Project Title & Description */}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold text-white font-dm-sans">{projectName}</h1>
+                  {/* Status Badge */}
+                  <Badge 
+                    variant="secondary" 
+                    className={`
+                      px-3 py-1 text-xs font-medium rounded-full border-0 flex items-center gap-1.5
+                      ${isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-600'
+                      }
+                    `}
+                  >
+                    <Circle className={`h-2 w-2 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                    {isActive ? 'Attivo' : 'Non Attivo'}
+                  </Badge>
+                </div>
+                {projectDescription && (
+                  <p className="text-lg text-green-100 font-dm-sans opacity-90 leading-relaxed">
+                    {projectDescription}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Elegant Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent mb-6"></div>
+
+          {/* Enhanced Section Title */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-6 bg-white rounded-full"></div>
+            <h3 className="text-xl font-semibold text-white font-dm-sans">Panoramica Progetto</h3>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent"></div>
+          </div>
         </div>
 
-        {/* Embedded Statistics */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white font-dm-sans mb-4">Panoramica Progetto</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {stats.map((stat) => (
+        {/* Enhanced Statistics Section */}
+        <div className="px-8 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {stats.map((stat, index) => (
               <div 
                 key={stat.title}
-                className="bg-white rounded-[10px] border border-gray-200 p-4 solid-shadow-light press-down-effect"
+                className="bg-white rounded-[12px] border border-gray-100 p-5 solid-shadow-light press-down-effect group hover:scale-[1.02] transition-all duration-300"
+                style={{ 
+                  animationDelay: `${index * 100}ms`,
+                  animation: 'fade-in 0.6s ease-out both'
+                }}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1 font-dm-sans">{stat.title}</p>
-                    <p className="text-xl font-bold text-form-green font-dm-sans">{stat.value}</p>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-500 mb-2 font-dm-sans tracking-wide uppercase">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold text-form-green font-dm-sans mb-1 group-hover:text-form-green/80 transition-colors">
+                      {stat.value}
+                    </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                  <div className={`w-12 h-12 rounded-[10px] ${stat.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
                   </div>
                 </div>
               </div>
