@@ -194,7 +194,7 @@ const ProjectSettings = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Inserisci il nome del progetto"
-                    className="gomutuo-form-input"
+                    className="flex w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium font-dm-sans placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light"
                     required
                   />
                 </div>
@@ -208,7 +208,7 @@ const ProjectSettings = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Inserisci una descrizione del progetto (opzionale)"
-                    className="gomutuo-form-input min-h-[100px] resize-none"
+                    className="flex min-h-[100px] w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light resize-none font-dm-sans"
                     rows={4}
                   />
                 </div>
