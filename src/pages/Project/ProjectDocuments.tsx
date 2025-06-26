@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
+import ProjectHeaderCard from '@/components/project/ProjectHeaderCard';
 import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
@@ -254,25 +255,13 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Title and Progress Section */}
-            <div className="bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-form-green font-dm-sans">Documenti Progetto</h1>
-                  <p className="text-muted-foreground mt-1 font-dm-sans">
-                    Seleziona una categoria per visualizzare e gestire documenti e informazioni correlate
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-form-green font-dm-sans">
-                    {overallCompletion.completionPercentage}%
-                  </div>
-                  <p className="text-sm text-muted-foreground font-dm-sans">
-                    {overallCompletion.completedItems} di {overallCompletion.totalItems} completati
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Project Header Card */}
+            <ProjectHeaderCard 
+              projectName={projectData.name}
+              projectDescription="Gestione documenti e informazioni del progetto"
+              lastActivity="2h"
+              isActive={true}
+            />
             
             {/* Categories Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -286,7 +275,7 @@ const ProjectDocuments = () => {
               ))}
             </div>
 
-            {/* Documents Section */}
+            {/* Documents Summary Card */}
             <Card className="bg-form-green text-white border-form-green shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
@@ -299,8 +288,13 @@ const ProjectDocuments = () => {
                       Documenti e file caricati per questo progetto
                     </p>
                   </div>
-                  <div className="text-2xl font-bold font-dm-sans">
-                    {overallCompletion.completedItems}
+                  <div className="text-right">
+                    <div className="text-2xl font-bold font-dm-sans">
+                      {overallCompletion.completionPercentage}%
+                    </div>
+                    <p className="text-sm text-white/80 font-dm-sans">
+                      {overallCompletion.completedItems} di {overallCompletion.totalItems}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -311,12 +305,12 @@ const ProjectDocuments = () => {
       case 'applicant_selection':
         return (
           <div className="space-y-6">
-            <div className="text-center bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
-              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{viewState.categoryName}</h1>
-              <p className="text-muted-foreground mt-1 font-dm-sans">
-                Questa categoria richiede informazioni specifiche per richiedente
-              </p>
-            </div>
+            <ProjectHeaderCard 
+              projectName={viewState.categoryName}
+              projectDescription="Questa categoria richiede informazioni specifiche per richiedente"
+              lastActivity="2h"
+              isActive={true}
+            />
             <ApplicantSelector 
               onSelectApplicant={handleApplicantSelect}
               onBack={handleBackToCategories}
