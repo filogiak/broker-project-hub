@@ -18,7 +18,7 @@ const ProjectHeaderCard = ({
   isActive = true
 }: ProjectHeaderCardProps) => {
   return (
-    <Card className="bg-white border border-gray-200 rounded-[16px] shadow-sm relative overflow-hidden">
+    <Card className="bg-white border-2 border-form-green rounded-[16px] shadow-lg relative overflow-hidden">
       {/* Bottom accent line */}
       <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
       
@@ -54,19 +54,23 @@ const ProjectHeaderCard = ({
 
             {/* Last Activity */}
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-form-green" />
               <div className="text-right">
                 <p className="text-xs text-gray-500 font-dm-sans leading-none">Ultima attività</p>
-                <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
+                <div className="flex items-center gap-1 justify-end">
+                  <Clock className="h-4 w-4 text-form-green" />
+                  <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
+                </div>
               </div>
             </div>
 
             {/* Project Date */}
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-form-green" />
               <div className="text-right">
                 <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
-                <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
+                <div className="flex items-center gap-1 justify-end">
+                  <Calendar className="h-4 w-4 text-form-green" />
+                  <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
+                </div>
               </div>
             </div>
           </div>
