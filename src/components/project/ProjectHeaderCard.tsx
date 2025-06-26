@@ -42,8 +42,18 @@ const ProjectHeaderCard = ({
             </div>
           </div>
 
-          {/* Professional Status & Info Section */}
-          <div className="flex items-center gap-8 flex-shrink-0">
+          {/* Status Badge - Top Right */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+            <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
+              {isActive ? 'Attivo' : 'Non Attivo'}
+            </span>
+          </div>
+        </div>
+
+        {/* Last Activity & Created Date - Bottom Right */}
+        <div className="absolute bottom-8 right-8">
+          <div className="flex items-center gap-8">
             {/* Last Activity */}
             <div className="flex items-center gap-2">
               <div className="text-right">
@@ -65,16 +75,6 @@ const ProjectHeaderCard = ({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Status Badge - Bottom Right */}
-        <div className="absolute bottom-8 right-8">
-          <div className="flex items-center gap-2">
-            <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-            <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
-              {isActive ? 'Attivo' : 'Non Attivo'}
-            </span>
           </div>
         </div>
       </CardContent>
