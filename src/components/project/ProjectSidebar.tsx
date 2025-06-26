@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -12,10 +11,12 @@ import {
 } from '@/components/ui/sidebar';
 import { Users, FileText, MessageSquare, Bell, Settings, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 const ProjectSidebar = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { user } = useAuth();
 
   const menuItems = [
     {
@@ -63,7 +64,9 @@ const ProjectSidebar = () => {
   };
 
   const handleBackToBrokerage = () => {
-    navigate(-1);
+    // Navigate to brokerage dashboard - we'll use the user's brokerage ID if available
+    // For now, navigate to the base brokerage route which will handle the routing
+    navigate('/brokerage');
   };
 
   return (
