@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, FileText, Clock, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import CustomHouseIcon from '@/components/ui/custom-house-icon';
 
 interface ProjectHeaderCardProps {
   projectName: string;
@@ -68,12 +67,7 @@ const ProjectHeaderCard = ({
             </Badge>
           </div>
 
-          <div className="flex items-start gap-4 pr-20">
-            {/* Custom Project Icon */}
-            <div className="w-11 h-11 bg-white/15 rounded-[8px] flex items-center justify-center flex-shrink-0">
-              <CustomHouseIcon className="text-white" size={22} />
-            </div>
-            
+          <div className="pr-20">
             {/* Project Title & Description */}
             <div className="flex-1 min-w-0">
               <h1 className="text-3xl font-bold text-white font-dm-sans leading-tight mb-2">{projectName}</h1>
