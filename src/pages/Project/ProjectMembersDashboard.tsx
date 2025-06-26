@@ -226,7 +226,7 @@ const ProjectMembersDashboard = () => {
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
             {/* Project Members */}
-            <Card className="bg-white">
+            <Card className="bg-white border-0 shadow-none">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
@@ -261,9 +261,9 @@ const ProjectMembersDashboard = () => {
                     {members.map((member) => (
                       <Card 
                         key={member.id} 
-                        className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative"
+                        className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden"
                       >
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-form-green-dark rounded-b-[10px]"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-form-green-dark"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
