@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -227,8 +228,7 @@ const ProjectMembersDashboard = () => {
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
             {/* Project Members */}
-            <Card className="bg-white border-2 border-form-green solid-shadow-light relative">
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-form-green-dark rounded-b-[10px]"></div>
+            <Card className="bg-white">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
@@ -263,8 +263,9 @@ const ProjectMembersDashboard = () => {
                     {members.map((member) => (
                       <Card 
                         key={member.id} 
-                        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
+                        className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] solid-shadow-light press-down-effect relative"
                       >
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-form-green-dark rounded-b-[10px]"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -320,3 +321,4 @@ const ProjectMembersDashboard = () => {
 };
 
 export default ProjectMembersDashboard;
+
