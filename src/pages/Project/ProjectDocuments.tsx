@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import MainLayout from '@/components/layout/MainLayout';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import ProjectSidebar from '@/components/project/ProjectSidebar';
 import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
@@ -42,7 +43,6 @@ const ProjectDocuments = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get completion data - using correct participant designation
   const { 
     completionData, 
     loading: completionLoading, 
@@ -51,7 +51,6 @@ const ProjectDocuments = () => {
   } = useCategoryCompletion(
     projectId || '', 
     categories,
-    // For now, we'll use applicant_one as default for multi-applicant projects
     projectData?.applicant_count !== 'one_applicant' ? 'applicant_one' : undefined
   );
 
@@ -66,7 +65,6 @@ const ProjectDocuments = () => {
       try {
         console.log('Fetching project and category data for ID:', projectId);
         
-        // Fetch project data
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
           .select('id, name, applicant_count')
@@ -86,7 +84,6 @@ const ProjectDocuments = () => {
           return;
         }
 
-        // Fetch categories from the database
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('items_categories')
           .select('id, name')
@@ -106,7 +103,6 @@ const ProjectDocuments = () => {
         setCategories(categoriesData || []);
         setError(null);
 
-        // Preload category scope information for better performance
         if (categoriesData && categoriesData.length > 0) {
           const categoryIds = categoriesData.map(cat => cat.id);
           await CategoryScopeService.preloadCategoryScopes(categoryIds, projectId);
@@ -148,7 +144,6 @@ const ProjectDocuments = () => {
     
     const hasMultipleApplicants = projectData.applicant_count === 'two_applicants' || projectData.applicant_count === 'three_or_more_applicants';
     
-    // For single applicant projects, always go directly to questions
     if (!hasMultipleApplicants) {
       console.log('📝 Single applicant project - going directly to questions');
       setViewState({
@@ -159,7 +154,6 @@ const ProjectDocuments = () => {
       return;
     }
 
-    // For multi-applicant projects, check if category requires participant selection
     try {
       const requiresParticipantSelection = await CategoryScopeService.checkCategoryRequiresParticipantSelection(
         categoryId, 
@@ -169,14 +163,12 @@ const ProjectDocuments = () => {
       console.log('🎯 Category requires participant selection:', requiresParticipantSelection);
 
       if (requiresParticipantSelection) {
-        // Show applicant selection screen
         setViewState({
           type: 'applicant_selection',
           categoryId,
           categoryName
         });
       } else {
-        // Go directly to questions (project-scoped only)
         setViewState({
           type: 'questions',
           categoryId,
@@ -185,7 +177,6 @@ const ProjectDocuments = () => {
       }
     } catch (error) {
       console.error('Error checking category scope:', error);
-      // Fallback to showing applicant selection (safer default)
       setViewState({
         type: 'applicant_selection',
         categoryId,
@@ -200,7 +191,6 @@ const ProjectDocuments = () => {
         type: 'questions',
         categoryId: viewState.categoryId,
         categoryName: viewState.categoryName,
-        // Map to correct enum values
         applicant: applicant === 'applicant_1' ? 'applicant_1' : 'applicant_2'
       });
     }
@@ -220,42 +210,42 @@ const ProjectDocuments = () => {
     }
   };
 
-  // Show loading state
   if (isLoading) {
     return (
-      <MainLayout
-        title="Loading Project..."
-        userEmail={user?.email || ''}
-        onLogout={handleLogout}
-      >
-        <div className="flex items-center justify-center min-h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading project data...</p>
-          </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-form-green mx-auto mb-4"></div>
+                <p className="text-muted-foreground font-dm-sans">Caricamento dati progetto...</p>
+              </div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
-  // Show error state
   if (error || !projectData) {
     return (
-      <MainLayout
-        title="Error"
-        userEmail={user?.email || ''}
-        onLogout={handleLogout}
-      >
-        <div className="flex items-center justify-center min-h-64">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">{error || 'Project not found'}</p>
-            <Button onClick={handleBackToProject}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
-            </Button>
-          </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-64">
+              <div className="text-center">
+                <p className="text-red-500 mb-4 font-dm-sans">{error || 'Progetto non trovato'}</p>
+                <Button onClick={handleBackToProject} className="gomutuo-button-secondary">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Torna ai Progetti
+                </Button>
+              </div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
@@ -264,29 +254,21 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Header Section */}
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={handleBackToProject}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Project
-              </Button>
-            </div>
-            
             {/* Title and Progress Section */}
-            <div className="bg-white rounded-lg border p-6">
+            <div className="bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-primary">Project Documents</h1>
-                  <p className="text-muted-foreground mt-1">
-                    Select a category to view and manage related documents and information
+                  <h1 className="text-3xl font-bold text-form-green font-dm-sans">Documenti Progetto</h1>
+                  <p className="text-muted-foreground mt-1 font-dm-sans">
+                    Seleziona una categoria per visualizzare e gestire documenti e informazioni correlate
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-2xl font-bold text-form-green font-dm-sans">
                     {overallCompletion.completionPercentage}%
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {overallCompletion.completedItems} of {overallCompletion.totalItems} completed
+                  <p className="text-sm text-muted-foreground font-dm-sans">
+                    {overallCompletion.completedItems} di {overallCompletion.totalItems} completati
                   </p>
                 </div>
               </div>
@@ -305,19 +287,19 @@ const ProjectDocuments = () => {
             </div>
 
             {/* Documents Section */}
-            <Card className="bg-primary text-primary-foreground">
+            <Card className="bg-form-green text-white border-form-green shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-primary-foreground" />
+                  <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold">Documents</h3>
-                    <p className="text-primary-foreground/80">
-                      Uploaded documents and files for this project
+                    <h3 className="text-xl font-semibold font-dm-sans">Documenti</h3>
+                    <p className="text-white/80 font-dm-sans">
+                      Documenti e file caricati per questo progetto
                     </p>
                   </div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-bold font-dm-sans">
                     {overallCompletion.completedItems}
                   </div>
                 </div>
@@ -329,10 +311,10 @@ const ProjectDocuments = () => {
       case 'applicant_selection':
         return (
           <div className="space-y-6">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-primary">{viewState.categoryName}</h1>
-              <p className="text-muted-foreground mt-1">
-                This category requires applicant-specific information
+            <div className="text-center bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
+              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{viewState.categoryName}</h1>
+              <p className="text-muted-foreground mt-1 font-dm-sans">
+                Questa categoria richiede informazioni specifiche per richiedente
               </p>
             </div>
             <ApplicantSelector 
@@ -358,13 +340,16 @@ const ProjectDocuments = () => {
   };
 
   return (
-    <MainLayout
-      title={`${projectData?.name} - Documents`}
-      userEmail={user?.email || ''}
-      onLogout={handleLogout}
-    >
-      {renderContent()}
-    </MainLayout>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background-light">
+        <ProjectSidebar />
+        <SidebarInset>
+          <div className="flex-1 p-8">
+            {renderContent()}
+          </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };
 

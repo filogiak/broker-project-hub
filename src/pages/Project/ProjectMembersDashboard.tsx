@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import MainLayout from '@/components/layout/MainLayout';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import ProjectSidebar from '@/components/project/ProjectSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,6 @@ const ProjectMembersDashboard = () => {
         setLoading(true);
         setError(null);
 
-        // Load project details
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
           .select('*')
@@ -68,7 +67,6 @@ const ProjectMembersDashboard = () => {
 
         setProject(projectData);
 
-        // Load project members with profile information using specific foreign key relationship
         const { data: membersData, error: membersError } = await supabase
           .from('project_members')
           .select(`
@@ -151,7 +149,7 @@ const ProjectMembersDashboard = () => {
 
   const formatUserName = (member: ProjectMember) => {
     const profile = member.profiles;
-    if (!profile) return 'Unknown User';
+    if (!profile) return 'Utente Sconosciuto';
     if (profile.first_name || profile.last_name) {
       return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     }
@@ -163,166 +161,171 @@ const ProjectMembersDashboard = () => {
   };
 
   const formatParticipantDesignation = (designation: string | null) => {
-    if (!designation) return 'Not assigned';
+    if (!designation) return 'Non assegnato';
     return designation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatApplicantCount = (count: string | null) => {
-    if (!count) return 'Not set';
+    if (!count) return 'Non impostato';
     return count.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not joined yet';
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'Non ancora entrato';
+    return new Date(dateString).toLocaleDateString('it-IT');
   };
 
   const handleMemberAdded = () => {
-    loadMembers(); // Refresh the members list
+    loadMembers();
     setIsAddMemberModalOpen(false);
   };
 
   if (authLoading || loading) {
     return (
-      <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading project dashboard...</div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-lg text-form-green font-dm-sans">Caricamento dashboard membri...</div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
   if (error || !project) {
     return (
-      <MainLayout title="Project Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2 text-destructive">
-              {error ? 'Project Access Issue' : 'Project Not Found'}
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
-            </p>
-            <Button onClick={() => navigate(-1)} variant="outline">
-              Go Back
-            </Button>
-          </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2 text-destructive font-dm-sans">
+                  {error ? 'Problema di Accesso al Progetto' : 'Progetto Non Trovato'}
+                </h2>
+                <p className="text-muted-foreground mb-4 font-dm-sans">
+                  {error || "Il progetto che stai cercando non esiste o non hai i permessi per accedervi."}
+                </p>
+                <Button onClick={() => navigate(-1)} variant="outline" className="font-dm-sans">
+                  Torna Indietro
+                </Button>
+              </div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
   return (
-    <MainLayout 
-      title={`${project.name} - Project Members`}
-      userEmail={user?.email || ''} 
-      onLogout={handleLogout}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">{project.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              Project Members Dashboard - {formatApplicantCount(project.applicant_count)}
-            </p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background-light">
+        <ProjectSidebar />
+        <SidebarInset>
+          <div className="flex-1 p-8 space-y-8">
+            {/* Header */}
+            <div className="bg-white rounded-[12px] border border-form-border p-6 shadow-sm">
+              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{project.name}</h1>
+              <p className="text-muted-foreground mt-1 font-dm-sans">
+                Dashboard Membri Progetto - {formatApplicantCount(project.applicant_count)}
+              </p>
+            </div>
+
+            {/* Project Info Card */}
+            <Card className="bg-white border-form-border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-form-green font-dm-sans">Configurazione Progetto</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground font-dm-sans">Numero Richiedenti</label>
+                    <p className="text-lg font-dm-sans text-form-green">{formatApplicantCount(project.applicant_count)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground font-dm-sans">Tipo Progetto</label>
+                    <p className="text-lg font-dm-sans text-form-green">{project.project_type ? formatRole(project.project_type) : 'Non impostato'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Project Members */}
+            <Card className="bg-white border-form-border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
+                    Membri Attivi del Progetto
+                    <span className="text-sm font-normal text-muted-foreground ml-4">
+                      {members.length} {members.length === 1 ? 'membro' : 'membri'}
+                    </span>
+                  </CardTitle>
+                  <Button 
+                    onClick={() => setIsAddMemberModalOpen(true)}
+                    className="gomutuo-button-primary flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Aggiungi Membro
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {members.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4 font-dm-sans">Nessun membro del progetto trovato.</p>
+                    <Button 
+                      onClick={() => setIsAddMemberModalOpen(true)}
+                      className="gomutuo-button-primary flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Aggiungi Primo Membro
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-[10px] border border-form-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="font-dm-sans">Nome</TableHead>
+                          <TableHead className="font-dm-sans">Email</TableHead>
+                          <TableHead className="font-dm-sans">Ruolo</TableHead>
+                          <TableHead className="font-dm-sans">Tipo Partecipante</TableHead>
+                          <TableHead className="font-dm-sans">Data Ingresso</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {members.map((member) => (
+                          <TableRow key={member.id}>
+                            <TableCell className="font-medium font-dm-sans">
+                              {formatUserName(member)}
+                            </TableCell>
+                            <TableCell className="font-dm-sans">{member.profiles?.email || 'Sconosciuto'}</TableCell>
+                            <TableCell className="font-dm-sans">{formatRole(member.role)}</TableCell>
+                            <TableCell className="font-dm-sans">{formatParticipantDesignation(member.participant_designation)}</TableCell>
+                            <TableCell className="font-dm-sans">{formatDate(member.joined_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Add Member Modal */}
+            <AddMemberModal
+              isOpen={isAddMemberModalOpen}
+              onClose={() => setIsAddMemberModalOpen(false)}
+              projectId={projectId!}
+              onMemberAdded={handleMemberAdded}
+            />
           </div>
-          <Button 
-            onClick={() => navigate(`/project/${projectId}`)}
-            variant="outline"
-          >
-            Back to Project
-          </Button>
-        </div>
-
-        {/* Project Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Configuration</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Applicant Count</label>
-                <p className="text-lg">{formatApplicantCount(project.applicant_count)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Project Type</label>
-                <p className="text-lg">{project.project_type ? formatRole(project.project_type) : 'Not set'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Project Members */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center justify-between">
-                Active Project Members
-                <span className="text-sm font-normal text-muted-foreground">
-                  {members.length} {members.length === 1 ? 'member' : 'members'}
-                </span>
-              </CardTitle>
-              <Button 
-                onClick={() => setIsAddMemberModalOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Member
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {members.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No project members found.</p>
-                <Button 
-                  onClick={() => setIsAddMemberModalOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add First Member
-                </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Participant Type</TableHead>
-                    <TableHead>Joined Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {formatUserName(member)}
-                      </TableCell>
-                      <TableCell>{member.profiles?.email || 'Unknown'}</TableCell>
-                      <TableCell>{formatRole(member.role)}</TableCell>
-                      <TableCell>{formatParticipantDesignation(member.participant_designation)}</TableCell>
-                      <TableCell>{formatDate(member.joined_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Add Member Modal */}
-        <AddMemberModal
-          isOpen={isAddMemberModalOpen}
-          onClose={() => setIsAddMemberModalOpen(false)}
-          projectId={projectId!}
-          onMemberAdded={handleMemberAdded}
-        />
+        </SidebarInset>
       </div>
-    </MainLayout>
+    </SidebarProvider>
   );
 };
 

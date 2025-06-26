@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -86,11 +85,11 @@ const ProjectDashboard = () => {
   if (authLoading || loading) {
     return (
       <SidebarProvider>
-        <div className="min-h-screen flex w-full">
+        <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
             <div className="flex items-center justify-center min-h-screen">
-              <div className="text-lg text-form-green font-dm-sans">Loading project dashboard...</div>
+              <div className="text-lg text-form-green font-dm-sans">Caricamento dashboard progetto...</div>
             </div>
           </SidebarInset>
         </div>
@@ -101,22 +100,22 @@ const ProjectDashboard = () => {
   if (error || !project) {
     return (
       <SidebarProvider>
-        <div className="min-h-screen flex w-full">
+        <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
             <div className="flex items-center justify-center min-h-screen">
               <div className="text-center">
                 <h2 className="text-xl font-semibold mb-2 text-destructive font-dm-sans">
-                  {error ? 'Project Access Issue' : 'Project Not Found'}
+                  {error ? 'Problema di Accesso al Progetto' : 'Progetto Non Trovato'}
                 </h2>
-                <p className="text-muted-foreground mb-4 font-inter">
-                  {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
+                <p className="text-muted-foreground mb-4 font-dm-sans">
+                  {error || "Il progetto che stai cercando non esiste o non hai i permessi per accedervi."}
                 </p>
                 <button 
                   onClick={() => navigate(-1)} 
-                  className="bg-form-green text-white px-6 py-2 rounded-lg hover:bg-form-green/90 transition-colors font-inter"
+                  className="gomutuo-button-primary font-dm-sans"
                 >
-                  Go Back
+                  Torna Indietro
                 </button>
               </div>
             </div>
@@ -133,44 +132,46 @@ const ProjectDashboard = () => {
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
             {/* Project Hero Section */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{project.name}</h1>
-              {project.description && (
-                <p className="text-lg text-gray-600 font-inter">{project.description}</p>
-              )}
-              <div className="flex items-center gap-4 text-sm text-gray-500 font-inter">
-                <span>Created {new Date(project.created_at).toLocaleDateString()}</span>
-                {project.project_type && (
-                  <span className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-form-green rounded-full" />
-                    <span className="capitalize">{project.project_type.replace('_', ' ')}</span>
-                  </span>
+            <div className="space-y-4">
+              <div className="bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
+                <h1 className="text-3xl font-bold text-form-green font-dm-sans mb-2">{project.name}</h1>
+                {project.description && (
+                  <p className="text-lg text-gray-600 font-dm-sans mb-4">{project.description}</p>
                 )}
+                <div className="flex items-center gap-6 text-sm text-gray-500 font-dm-sans">
+                  <span>Creato il {new Date(project.created_at).toLocaleDateString('it-IT')}</span>
+                  {project.project_type && (
+                    <span className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-form-green rounded-full" />
+                      <span className="capitalize">{project.project_type.replace('_', ' ')}</span>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Project Statistics */}
             <div>
-              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Project Overview</h2>
+              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-6">Panoramica Progetto</h2>
               <ProjectStats projectId={projectId!} />
             </div>
 
             {/* Main Action Cards */}
             <div>
-              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Quick Actions</h2>
+              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-6">Azioni Principali</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <ProjectOverviewCard
-                  title="Manage Team"
-                  description="Add members, assign roles, and track team participation in the project"
+                  title="Gestione Team"
+                  description="Aggiungi membri, assegna ruoli e monitora la partecipazione del team al progetto"
                   icon={Users}
                   onClick={() => navigate(`/project/${projectId}/members`)}
-                  badge="4 members"
+                  badge="4 membri"
                   count={4}
                 />
 
                 <ProjectOverviewCard
-                  title="Documents Hub"
-                  description="Upload, organize, and track completion of all project documents and forms"
+                  title="Hub Documenti"
+                  description="Carica, organizza e monitora il completamento di tutti i documenti e moduli del progetto"
                   icon={FileText}
                   onClick={() => navigate(`/project/${projectId}/documents`)}
                   progress={65}
@@ -178,13 +179,13 @@ const ProjectDashboard = () => {
                 />
 
                 <ProjectOverviewCard
-                  title="Project Analytics"
-                  description="View detailed reports, progress tracking, and performance metrics"
+                  title="Analytics Progetto"
+                  description="Visualizza report dettagliati, monitoraggio progressi e metriche di performance"
                   icon={BarChart3}
                   onClick={() => {
                     toast({
-                      title: "Coming Soon",
-                      description: "Analytics dashboard is under development.",
+                      title: "Prossimamente",
+                      description: "La dashboard analytics è in fase di sviluppo.",
                     });
                   }}
                   badge="Beta"
@@ -197,35 +198,35 @@ const ProjectDashboard = () => {
               <RecentActivity />
               
               <div className="space-y-6">
-                <div className="bg-white rounded-lg border border-form-border p-6">
-                  <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-4">Quick Actions</h3>
+                <div className="bg-white rounded-[12px] border border-form-border p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-4">Azioni Rapide</h3>
                   <div className="space-y-3">
-                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-form-green" />
                         <div>
-                          <p className="font-medium text-form-green font-inter">Export Data</p>
-                          <p className="text-xs text-gray-500 font-inter">Download project data</p>
+                          <p className="font-medium text-form-green font-dm-sans">Esporta Dati</p>
+                          <p className="text-xs text-gray-500 font-dm-sans">Scarica dati del progetto</p>
                         </div>
                       </div>
                     </button>
                     
-                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
                       <div className="flex items-center gap-3">
                         <BarChart3 className="h-5 w-5 text-form-green" />
                         <div>
-                          <p className="font-medium text-form-green font-inter">Generate Report</p>
-                          <p className="text-xs text-gray-500 font-inter">Create progress report</p>
+                          <p className="font-medium text-form-green font-dm-sans">Genera Report</p>
+                          <p className="text-xs text-gray-500 font-dm-sans">Crea report di avanzamento</p>
                         </div>
                       </div>
                     </button>
                     
-                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
                       <div className="flex items-center gap-3">
                         <MessageSquare className="h-5 w-5 text-form-green" />
                         <div>
-                          <p className="font-medium text-form-green font-inter">Send Update</p>
-                          <p className="text-xs text-gray-500 font-inter">Notify team members</p>
+                          <p className="font-medium text-form-green font-dm-sans">Invia Aggiornamento</p>
+                          <p className="text-xs text-gray-500 font-dm-sans">Notifica membri del team</p>
                         </div>
                       </div>
                     </button>
