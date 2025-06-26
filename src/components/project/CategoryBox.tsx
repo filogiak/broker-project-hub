@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { CategoryIconService } from '@/services/categoryIconService';
 import type { CategoryCompletionInfo } from '@/services/categoryCompletionService';
 
@@ -20,19 +19,25 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
 
   return (
     <Card 
-      className="hover:shadow-lg transition-all duration-200 cursor-pointer border-2 hover:border-primary/30 bg-white"
+      className="gomutuo-card-hover cursor-pointer border-2 hover:border-form-green/30 animate-fade-in"
       onClick={onClick}
     >
       <CardContent className="p-6">
         {/* Top section with icon and status */}
         <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <IconComponent className="h-6 w-6 text-primary" />
+          <div className="w-12 h-12 rounded-lg bg-vibe-green-light flex items-center justify-center">
+            <IconComponent className="h-6 w-6 text-form-green" />
           </div>
           
           {!isComplete && (
-            <Badge variant="outline" className="bg-accent-yellow text-primary border-accent-yellow font-medium">
+            <Badge className="gomutuo-badge-incomplete text-xs font-medium px-2 py-1">
               Incomplet {completionPercentage}%
+            </Badge>
+          )}
+          
+          {isComplete && (
+            <Badge className="bg-vibe-green-vivid text-white border-vibe-green-vivid font-medium text-xs px-2 py-1">
+              Completo
             </Badge>
           )}
         </div>
@@ -40,21 +45,23 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
         {/* Content section */}
         <div className="space-y-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">{name}</h3>
-            <p className="text-sm text-gray-600">
-              {completion ? `${completion.completedItems}/${completion.totalItems} items completed` : 'Click to view details'}
+            <h3 className="gomutuo-heading text-lg mb-1">{name}</h3>
+            <p className="gomutuo-text text-sm">
+              {completion ? `${completion.completedItems}/${completion.totalItems} elementi completati` : 'Clicca per visualizzare i dettagli'}
             </p>
           </div>
 
           {/* Progress bar */}
           {completion && (
             <div className="space-y-2">
-              <Progress 
-                value={completionPercentage} 
-                className="h-2 bg-gray-200"
-              />
-              <p className="text-xs text-gray-500 text-right">
-                {completionPercentage}% complete
+              <div className="gomutuo-progress-bar">
+                <div 
+                  className="gomutuo-progress-fill"
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-right font-inter">
+                {completionPercentage}% completo
               </p>
             </div>
           )}

@@ -26,7 +26,7 @@ export class CategoryCompletionService {
       // Get all required items for this category
       const { data: requiredItems, error: requiredError } = await supabase
         .from('required_items')
-        .select('id, name, scope')
+        .select('id, item_name, scope')
         .eq('category_id', categoryId);
 
       if (requiredError) throw requiredError;
@@ -90,9 +90,9 @@ export class CategoryCompletionService {
     participantDesignation?: ParticipantDesignation
   ): Promise<boolean> {
     try {
-      // Check in checklist_items table
+      // Check in project_checklist_items table
       let query = supabase
-        .from('checklist_items')
+        .from('project_checklist_items')
         .select('id')
         .eq('project_id', projectId)
         .eq('item_id', itemId)
@@ -108,9 +108,9 @@ export class CategoryCompletionService {
         return true;
       }
 
-      // Check in documents table
+      // Check in project_documents table
       const { data: documentData } = await supabase
-        .from('documents')
+        .from('project_documents')
         .select('id')
         .eq('project_id', projectId)
         .eq('item_id', itemId)

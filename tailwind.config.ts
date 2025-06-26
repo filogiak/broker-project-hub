@@ -57,11 +57,19 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// GoMutuo.it Extended Colors
 				form: {
+					green: 'hsl(var(--form-green))',
 					beige: 'hsl(var(--form-beige))',
 					placeholder: 'hsl(var(--form-placeholder))',
 					border: 'hsl(var(--form-border))',
 					shadow: 'hsl(var(--form-shadow))'
+				},
+				vibe: {
+					green: 'hsl(var(--vibe-green))',
+					'green-vivid': 'hsl(var(--vibe-green-vivid))',
+					'green-light': 'hsl(var(--vibe-green-light))',
+					'yellow-fluo': 'hsl(var(--vibe-yellow-fluo))'
 				},
 				'background-cream': 'hsl(var(--background-cream))',
 				'background-light': 'hsl(var(--background-light))',
@@ -102,11 +110,32 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'expand-line': {
+					'0%': { transform: 'scaleX(0)' },
+					'100%': { transform: 'scaleX(1)' }
+				},
+				'shine': {
+					'0%': { 'background-position': '0% center' },
+					'100%': { 'background-position': '200% center' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.6s ease-out',
+				'expand-line': 'expand-line 0.3s ease-out',
+				'shine': 'shine 3s linear infinite'
 			}
 		}
 	},

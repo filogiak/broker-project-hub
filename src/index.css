@@ -3,48 +3,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Broker Project Hub Design System */
+/* Import GoMutuo.it Fonts */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* GoMutuo.it Design System */
 
 @layer base {
   :root {
     /* GoMutuo.it Brand Colors */
-    --primary: 153 47% 32%; /* #245C4F - GoMutuo.it green */
+    --primary: 142 72% 29%; /* #00853E - Main green for CTAs */
     --primary-foreground: 0 0% 100%;
-    --primary-dark: 153 48% 22%; /* #1e4f44 */
-    --primary-darker: 153 50% 17%; /* #1a3f37 */
+    --primary-dark: 142 72% 22%; /* Darker green for hover states */
+    --primary-darker: 142 72% 17%; /* Even darker for active states */
     
-    /* GoMutuo.it Accent Colors */
-    --accent-yellow: 45 100% 70%; /* #FFD700 - GoMutuo.it yellow */
-    --accent-yellow-alt: 45 100% 60%; /* #E6C200 */
+    /* Form-Specific Colors (GoMutuo.it) */
+    --form-green: 167 45% 25%; /* #245C4F - Darker green for form elements */
+    --form-beige: 39 28% 91%; /* #F0EAE0 - Background for form sections */
+    --form-placeholder: 37 31% 89%; /* #F8F4EF - Input placeholder backgrounds */
+    --form-border: 36 15% 74%; /* #BEB8AE - Form element borders */
+    --form-shadow: 36 9% 65%; /* #AFA89F - Shadow color for form elements */
     
-    /* Form Colors */
-    --form-beige: 36 33% 91%; /* #F0EAE0 */
-    --form-placeholder: 36 33% 96%; /* #F8F4EF */
-    --form-border: 36 12% 71%; /* #BEB8AE */
-    --form-shadow: 36 11% 66%; /* #AFA89F */
+    /* GoMutuo.it Extended Palette */
+    --vibe-green: 142 100% 26%; /* #00853E */
+    --vibe-green-vivid: 151 100% 45%; /* #00E676 */
+    --vibe-green-light: 122 39% 95%; /* #E8F5E9 */
+    --vibe-yellow-fluo: 78 100% 50%; /* #C6FF00 */
+    --accent-yellow: 56 93% 66%; /* Yellow Fluo for highlights */
+    --accent-yellow-alt: 56 93% 56%; /* Darker yellow for hover */
     
     /* Background Colors */
-    --background: 0 0% 98%; /* #FAFAFA - Clean white background */
+    --background: 30 100% 97%; /* #fff7f0 - Warm white for main pages */
     --background-cream: 30 100% 97%; /* #fff7f0 */
-    --background-light: 42 29% 97%; /* #f8f5f1 */
-    --foreground: 153 47% 15%;
+    --background-light: 42 29% 97%; /* #f8f5f1 - Admin background */
+    --foreground: 167 45% 15%;
 
     /* UI Colors */
     --card: 0 0% 100%;
-    --card-foreground: 153 47% 15%;
+    --card-foreground: 167 45% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 153 47% 15%;
+    --popover-foreground: 167 45% 15%;
     --secondary: 42 29% 97%;
-    --secondary-foreground: 153 47% 15%;
+    --secondary-foreground: 167 45% 15%;
     --muted: 42 29% 95%;
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 42 29% 95%;
-    --accent-foreground: 153 47% 15%;
+    --accent-foreground: 167 45% 15%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 36 12% 71%;
-    --input: 36 12% 71%;
-    --ring: 153 47% 32%;
+    --border: 36 15% 74%;
+    --input: 36 15% 74%;
+    --ring: 142 72% 29%;
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
@@ -58,25 +67,25 @@
   }
 
   .dark {
-    --background: 153 47% 5%;
+    --background: 167 45% 5%;
     --foreground: 30 100% 97%;
-    --card: 153 47% 5%;
+    --card: 167 45% 5%;
     --card-foreground: 30 100% 97%;
-    --popover: 153 47% 5%;
+    --popover: 167 45% 5%;
     --popover-foreground: 30 100% 97%;
-    --primary: 153 47% 32%;
+    --primary: 142 72% 29%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 153 30% 12%;
+    --secondary: 167 30% 12%;
     --secondary-foreground: 30 100% 97%;
-    --muted: 153 30% 12%;
+    --muted: 167 30% 12%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 153 30% 12%;
+    --accent: 167 30% 12%;
     --accent-foreground: 30 100% 97%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 153 30% 18%;
-    --input: 153 30% 18%;
-    --ring: 153 47% 32%;
+    --border: 167 30% 18%;
+    --input: 167 30% 18%;
+    --ring: 142 72% 29%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -98,54 +107,134 @@
   }
 }
 
+/* GoMutuo.it Animation System */
+@layer utilities {
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes expand-line {
+    0% { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+  }
+
+  @keyframes shine {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+  }
+
+  .animate-fade-in-delayed {
+    animation: fade-in 0.6s ease-out 0.3s both;
+    opacity: 0;
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-200;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-1;
+  }
+
+  .hover-grow:hover {
+    @apply scale-[1.02];
+  }
+
+  .animated-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, hsl(var(--form-green)), hsl(var(--form-beige)), hsl(var(--form-green)));
+    background-size: 200% 100%;
+    animation: shine 3s linear infinite;
+    border-radius: inherit;
+    z-index: -1;
+  }
+}
+
 @layer components {
-  /* Button Components */
-  .primary-button {
-    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply bg-primary text-primary-foreground hover:bg-primary-dark active:bg-primary-darker;
-    @apply h-10 px-4 py-2;
-    @apply shadow-md hover:shadow-lg;
+  /* GoMutuo.it Button System */
+  .gomutuo-button-primary {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply bg-[hsl(var(--form-green))] text-primary-foreground hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
+    @apply px-[32px] py-[16px] font-dm-sans font-medium;
+    @apply shadow-[0_6px_12px_rgba(36,92,79,0.2)] hover:shadow-[0_8px_16px_rgba(36,92,79,0.25)];
+    @apply shadow-[0_3px_0_0_hsl(167_45%_15%)] hover:translate-y-[1px] hover:shadow-[0_2px_0_0_hsl(167_45%_15%)];
   }
 
-  .secondary-button {
-    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply border border-form-border bg-form-beige text-foreground hover:bg-form-placeholder;
-    @apply h-10 px-4 py-2;
-    @apply shadow-sm hover:shadow-md;
+  .gomutuo-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply border-[1.5px] border-[hsl(var(--form-border))] bg-[hsl(var(--form-beige))] text-foreground hover:bg-[hsl(var(--form-placeholder))];
+    @apply px-[18px] py-[12px] font-inter font-normal;
+    @apply shadow-[0_3px_0_0_hsl(var(--form-shadow))] hover:translate-y-[1px] hover:shadow-[0_2px_0_0_hsl(var(--form-shadow))];
   }
 
-  /* Card Components */
-  .card-primary {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
-    @apply p-6;
-    @apply border-form-border;
-  }
-
-  .card-secondary {
-    @apply rounded-lg border bg-form-beige text-card-foreground shadow-sm;
-    @apply p-6;
-    @apply border-form-border;
-  }
-
-  /* Form Input Components */
-  .form-input {
-    @apply flex h-10 w-full rounded-md border border-form-border bg-form-placeholder px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  /* GoMutuo.it Form Components */
+  .gomutuo-form-input {
+    @apply flex w-full rounded-[10px] border-[1.5px] border-[hsl(var(--form-border))] bg-[hsl(var(--form-placeholder))] px-[18px] py-[12px] text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
+    @apply font-inter placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2;
+    @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-background;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
-    @apply transition-colors duration-200;
+    @apply transition-all duration-200;
+    @apply shadow-[0_3px_0_0_hsl(var(--form-shadow))];
   }
 
-  .form-input:focus {
-    @apply border-primary bg-background;
-    @apply shadow-[0_0_0_3px_hsl(var(--form-shadow)_/_0.1)];
+  .gomutuo-selection-tag {
+    @apply bg-[hsl(var(--form-placeholder))] text-[hsl(var(--form-green))] font-semibold px-[10px] py-[4px] rounded-[6px] font-inter text-sm;
+  }
+
+  /* GoMutuo.it Card System */
+  .gomutuo-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200;
+    @apply p-6;
+  }
+
+  .gomutuo-card-hover {
+    @apply gomutuo-card hover:shadow-lg hover:-translate-y-1;
   }
 
   /* GoMutuo.it specific styles */
-  .gomutuo-card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200;
+  .gomutuo-badge-incomplete {
+    @apply bg-[hsl(var(--accent-yellow))] text-[hsl(var(--form-green))] border-[hsl(var(--accent-yellow))] font-medium;
   }
 
-  .gomutuo-badge-incomplete {
-    @apply bg-accent-yellow text-primary border-accent-yellow;
+  .gomutuo-progress-bar {
+    @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+  }
+
+  .gomutuo-progress-fill {
+    @apply h-full bg-[hsl(var(--primary))] transition-all duration-300 ease-out;
+  }
+
+  /* Typography */
+  .gomutuo-heading {
+    @apply font-dm-sans font-semibold text-[hsl(var(--form-green))];
+  }
+
+  .gomutuo-text {
+    @apply font-inter text-gray-600;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(167_45%_20%)] bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(167_45%_20%)] text-white;
   }
 }

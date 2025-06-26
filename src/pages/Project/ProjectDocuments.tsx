@@ -42,7 +42,7 @@ const ProjectDocuments = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get completion data
+  // Get completion data - using correct participant designation
   const { 
     completionData, 
     loading: completionLoading, 
@@ -51,8 +51,8 @@ const ProjectDocuments = () => {
   } = useCategoryCompletion(
     projectId || '', 
     categories,
-    // For now, we'll use applicant_1 as default for multi-applicant projects
-    projectData?.applicant_count !== 'one_applicant' ? 'applicant_1' : undefined
+    // For now, we'll use applicant_one as default for multi-applicant projects
+    projectData?.applicant_count !== 'one_applicant' ? 'applicant_one' : undefined
   );
 
   useEffect(() => {
@@ -200,7 +200,8 @@ const ProjectDocuments = () => {
         type: 'questions',
         categoryId: viewState.categoryId,
         categoryName: viewState.categoryName,
-        applicant
+        // Map to correct enum values
+        applicant: applicant === 'applicant_1' ? 'applicant_1' : 'applicant_2'
       });
     }
   };
