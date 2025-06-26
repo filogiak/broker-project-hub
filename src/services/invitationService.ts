@@ -41,26 +41,183 @@ export const checkInvitationStatus = async (invitationId: string): Promise<{
   return checkInvitationProcessingStatus(invitationId);
 };
 
-// Legacy function - kept for backward compatibility but simplified
-// The database trigger now handles most of this automatically
+// Enhanced debug function to check database state
+export const debugInvitationState = async (email: string): Promise<{
+  invitationExists: boolean;
+  userExists: boolean;
+  profileExists: boolean;
+  invitation?: Invitation;
+  details: any;
+}> => {
+  console.log('🔍 [INVITATION DEBUG] Checking state for email:', email);
+  
+  try {
+    // Check invitation
+    const { data: invitation, error: invError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('email', email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (invError) {
+      console.error('❌ [INVITATION DEBUG] Error checking invitation:', invError);
+    }
+
+    // Check if user exists in auth
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('🔍 [INVITATION DEBUG] Current auth user:', user?.email);
+
+    // Check profile
+    let profileExists = false;
+    if (user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      profileExists = !!profile;
+      if (profileError) {
+        console.error('❌ [INVITATION DEBUG] Error checking profile:', profileError);
+      }
+    }
+
+    const result = {
+      invitationExists: !!invitation,
+      userExists: !!user,
+      profileExists,
+      invitation: invitation || undefined,
+      details: {
+        invitation: invitation ? {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          project_id: invitation.project_id,
+          accepted_at: invitation.accepted_at,
+          expires_at: invitation.expires_at
+        } : null,
+        currentUser: user ? {
+          id: user.id,
+          email: user.email
+        } : null
+      }
+    };
+
+    console.log('📋 [INVITATION DEBUG] State summary:', result);
+    return result;
+
+  } catch (error) {
+    console.error('❌ [INVITATION DEBUG] Debug failed:', error);
+    return {
+      invitationExists: false,
+      userExists: false,
+      profileExists: false,
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+};
+
+// Legacy function - enhanced with better error handling and debugging
 export const acceptInvitation = async (
   invitationId: string,
   userId: string
 ): Promise<void> => {
-  console.log('🤝 [INVITATION SERVICE] Legacy acceptInvitation called - database trigger should handle this automatically');
+  console.log('🤝 [INVITATION SERVICE] Legacy acceptInvitation called');
   console.log('📋 [INVITATION SERVICE] Parameters:', { invitationId, userId });
   
-  // Just check if the invitation was processed by the trigger
-  const { processed, error } = await checkInvitationStatus(invitationId);
-  
-  if (error) {
-    throw new Error(`Failed to verify invitation processing: ${error}`);
+  try {
+    // Get invitation details for debugging
+    const { data: invitation, error: invError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('id', invitationId)
+      .single();
+
+    if (invError || !invitation) {
+      console.error('❌ [INVITATION SERVICE] Failed to fetch invitation:', invError);
+      throw new Error(`Invitation not found: ${invError?.message || 'Unknown error'}`);
+    }
+
+    console.log('📋 [INVITATION SERVICE] Invitation details:', {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      project_id: invitation.project_id,
+      accepted_at: invitation.accepted_at
+    });
+
+    // Run debug check
+    await debugInvitationState(invitation.email);
+
+    // Check if the invitation was processed by the trigger
+    const { processed, error } = await checkInvitationStatus(invitationId);
+    
+    if (error) {
+      console.error('❌ [INVITATION SERVICE] Error checking invitation status:', error);
+      throw new Error(`Failed to verify invitation processing: ${error}`);
+    }
+    
+    if (!processed) {
+      console.warn('⚠️ [INVITATION SERVICE] Invitation not processed by trigger - this might indicate an issue');
+      console.log('🔧 [INVITATION SERVICE] Attempting manual processing...');
+      
+      // Manual processing as fallback
+      try {
+        // Add user role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: invitation.role })
+          .select()
+          .single();
+
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error('❌ [INVITATION SERVICE] Failed to add user role:', roleError);
+          throw new Error(`Failed to assign role: ${roleError.message}`);
+        }
+
+        // Add to project members if invitation has a project
+        if (invitation.project_id) {
+          const { error: memberError } = await supabase
+            .from('project_members')
+            .insert({
+              project_id: invitation.project_id,
+              user_id: userId,
+              role: invitation.role,
+              invited_by: invitation.invited_by,
+              joined_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (memberError && !memberError.message.includes('duplicate')) {
+            console.error('❌ [INVITATION SERVICE] Failed to add project member:', memberError);
+            throw new Error(`Failed to add to project: ${memberError.message}`);
+          }
+        }
+
+        // Mark invitation as accepted
+        const { error: updateError } = await supabase
+          .from('invitations')
+          .update({ accepted_at: new Date().toISOString() })
+          .eq('id', invitationId);
+
+        if (updateError) {
+          console.error('❌ [INVITATION SERVICE] Failed to mark invitation as accepted:', updateError);
+        }
+
+        console.log('✅ [INVITATION SERVICE] Manual processing completed successfully');
+      } catch (manualError) {
+        console.error('❌ [INVITATION SERVICE] Manual processing failed:', manualError);
+        throw new Error(`Manual invitation processing failed: ${manualError instanceof Error ? manualError.message : 'Unknown error'}`);
+      }
+    } else {
+      console.log('✅ [INVITATION SERVICE] Invitation was processed successfully by database trigger');
+    }
+    
+  } catch (error) {
+    console.error('❌ [INVITATION SERVICE] acceptInvitation failed:', error);
+    throw error;
   }
-  
-  if (!processed) {
-    console.warn('⚠️ [INVITATION SERVICE] Invitation not processed by trigger - this might indicate an issue');
-    throw new Error('Invitation was not processed automatically. Please contact support.');
-  }
-  
-  console.log('✅ [INVITATION SERVICE] Invitation was processed successfully by database trigger');
 };

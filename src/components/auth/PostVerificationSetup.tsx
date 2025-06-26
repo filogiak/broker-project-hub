@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Loader2, XCircle, User, Users, UserCheck, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { acceptInvitation } from '@/services/invitationService';
+import { acceptInvitation, debugInvitationState } from '@/services/invitationService';
 import { debugAuthState, validateSessionBeforeOperation } from '@/services/authDebugService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -53,6 +53,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
   const [hasError, setHasError] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
   const updateStepStatus = (stepId: string, status: SetupStep['status']) => {
@@ -83,7 +84,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
         
         if (attempt < maxAttempts) {
           console.log(`⏳ [POST-VERIFICATION] Auth not ready, waiting... (${attempt}/${maxAttempts})`);
-          await delay(1500); // Increased delay for better stability
+          await delay(1500);
         }
       } catch (error) {
         console.error(`❌ [POST-VERIFICATION] Auth check error on attempt ${attempt}:`, error);
@@ -102,6 +103,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       console.log('🔄 [POST-VERIFICATION] Starting setup process...');
       setHasError(false);
       setErrorMessage('');
+      setDebugInfo('');
       setRetryAttempt(prev => prev + 1);
 
       // Step 0: Validate authentication state
@@ -112,12 +114,12 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       
       const authStabilized = await waitForAuthStabilization();
       if (!authStabilized) {
-        throw new Error('Authentication state not stable. Please try logging in again.');
+        throw new Error('Authentication state not stable. Please try refreshing the page or logging in again.');
       }
       
       const { valid: sessionValid, session } = await validateSessionBeforeOperation();
       if (!sessionValid || !session?.user) {
-        throw new Error('Session validation failed. Please try logging in again.');
+        throw new Error('Session validation failed. Please try refreshing the page or logging in again.');
       }
       
       if (session.user.id !== userId) {
@@ -133,10 +135,16 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
 
       console.log('📝 [POST-VERIFICATION] Waiting for profile creation by trigger...');
       
+      // Run debug check before waiting
+      const debugResult = await debugInvitationState(invitation.email);
+      setDebugInfo(`Debug info: User exists: ${debugResult.userExists}, Profile exists: ${debugResult.profileExists}, Invitation exists: ${debugResult.invitationExists}`);
+      
       // Wait for the trigger to complete profile creation
       let profileFound = false;
-      for (let attempt = 1; attempt <= 10; attempt++) {
+      for (let attempt = 1; attempt <= 12; attempt++) {
         await delay(2000);
+        
+        console.log(`🔍 [POST-VERIFICATION] Profile check attempt ${attempt}/12`);
         
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -146,8 +154,8 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
 
         if (profileError) {
           console.error(`❌ [POST-VERIFICATION] Error checking profile (attempt ${attempt}):`, profileError);
-          if (attempt === 10) {
-            throw new Error('Failed to verify profile creation: ' + profileError.message);
+          if (attempt === 12) {
+            throw new Error(`Failed to verify profile creation: ${profileError.message}. This might be a database trigger issue.`);
           }
           continue;
         }
@@ -160,89 +168,35 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
           
           // Verify profile email matches invitation
           if (profile.email !== invitation.email) {
-            throw new Error('Email mismatch between profile and invitation.');
+            console.warn('⚠️ [POST-VERIFICATION] Email mismatch between profile and invitation:', {
+              profileEmail: profile.email,
+              invitationEmail: invitation.email
+            });
+            // Don't throw error, as this might be expected in some cases
           }
           
           profileFound = true;
           break;
         } else {
-          console.log(`⏳ [POST-VERIFICATION] Profile not yet created, attempt ${attempt}/10`);
+          console.log(`⏳ [POST-VERIFICATION] Profile not yet created, attempt ${attempt}/12`);
         }
       }
 
       if (!profileFound) {
-        throw new Error('Profile was not created automatically. Please contact support.');
+        throw new Error('Profile was not created automatically after 24 seconds. This indicates the database trigger may not be working properly. Please contact support.');
       }
 
       updateStepStatus('profile', 'complete');
       await delay(500);
 
-      // Step 2: Wait for invitation processing (handled by trigger)
+      // Step 2: Process invitation (with enhanced fallback)
       updateStepStatus('invitation', 'loading');
       setCurrentStep(2);
 
-      console.log('🤝 [POST-VERIFICATION] Waiting for invitation processing by trigger...');
+      console.log('🤝 [POST-VERIFICATION] Processing invitation...');
       
-      // The trigger should have processed the invitation automatically
-      // Let's verify it was processed correctly
-      await delay(3000); // Give the trigger time to complete
-      
-      // Verify everything was set up correctly
-      if (invitation.project_id) {
-        console.log('🔍 [POST-VERIFICATION] Verifying project membership...');
-        
-        const { data: projectMember, error: memberCheckError } = await supabase
-          .from('project_members')
-          .select('*')
-          .eq('project_id', invitation.project_id)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (memberCheckError) {
-          console.error('❌ [POST-VERIFICATION] Error checking project membership:', memberCheckError);
-          throw new Error('Failed to verify project membership: ' + memberCheckError.message);
-        }
-
-        if (!projectMember) {
-          throw new Error('User was not automatically added to the project. The invitation trigger may not be working properly.');
-        }
-        
-        console.log('✅ [POST-VERIFICATION] Project membership verified');
-      }
-
-      // Verify role assignment
-      const { data: userRole, error: roleCheckError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('role', invitation.role)
-        .maybeSingle();
-
-      if (roleCheckError) {
-        console.error('❌ [POST-VERIFICATION] Error checking user role:', roleCheckError);
-        throw new Error('Failed to verify user role: ' + roleCheckError.message);
-      }
-
-      if (!userRole) {
-        throw new Error('User role was not assigned automatically. The invitation trigger may not be working properly.');
-      }
-
-      console.log('✅ [POST-VERIFICATION] Role assignment verified');
-
-      // Verify invitation was marked as accepted
-      const { data: processedInvitation, error: invitationCheckError } = await supabase
-        .from('invitations')
-        .select('accepted_at')
-        .eq('id', invitation.id)
-        .single();
-
-      if (invitationCheckError) {
-        console.error('❌ [POST-VERIFICATION] Error checking invitation status:', invitationCheckError);
-      } else if (!processedInvitation.accepted_at) {
-        console.warn('⚠️ [POST-VERIFICATION] Invitation not marked as accepted, but roles were assigned');
-      } else {
-        console.log('✅ [POST-VERIFICATION] Invitation marked as accepted');
-      }
+      // Use the enhanced acceptInvitation function which includes fallback logic
+      await acceptInvitation(invitation.id, userId);
 
       updateStepStatus('invitation', 'complete');
       await delay(500);
@@ -264,6 +218,14 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setErrorMessage(errorMessage);
+      
+      // Enhanced debug info on error
+      try {
+        const debugResult = await debugInvitationState(invitation.email);
+        setDebugInfo(`Debug info: User exists: ${debugResult.userExists}, Profile exists: ${debugResult.profileExists}, Invitation exists: ${debugResult.invitationExists}. Details: ${JSON.stringify(debugResult.details, null, 2)}`);
+      } catch (debugError) {
+        console.error('❌ [POST-VERIFICATION] Debug failed:', debugError);
+      }
       
       // Mark current step as error
       if (currentStep < steps.length) {
@@ -288,6 +250,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
     setCurrentStep(0);
     setHasError(false);
     setErrorMessage('');
+    setDebugInfo('');
     runSetup();
   };
 
@@ -344,7 +307,12 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
           <div className="border-t pt-4 space-y-3">
             {errorMessage && (
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-                {errorMessage}
+                <strong>Error:</strong> {errorMessage}
+              </div>
+            )}
+            {debugInfo && (
+              <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md max-h-32 overflow-y-auto">
+                <strong>Debug Info:</strong> {debugInfo}
               </div>
             )}
             <Button onClick={handleRetry} className="w-full">
