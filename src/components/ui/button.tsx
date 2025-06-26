@@ -1,4 +1,5 @@
 
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -18,8 +19,8 @@ const buttonVariants = cva(
         secondary:
           "gomutuo-button-secondary",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-form-green underline-offset-4 hover:underline font-dm-sans",
-        accent: "bg-accent-yellow text-form-green hover:bg-accent-yellow-alt shadow-[0_6px_12px_rgba(198,255,0,0.2)] hover:shadow-[0_8px_16px_rgba(198,255,0,0.25)] shadow-[0_3px_0_0_hsl(56_93%_56%)] hover:translate-y-[1px] hover:shadow-[0_2px_0_0_hsl(56_93%_56%)] rounded-[12px] px-[32px] py-[16px] font-dm-sans font-medium",
+        link: "text-[hsl(var(--form-green))] underline-offset-4 hover:underline font-dm-sans",
+        accent: "bg-accent-yellow text-[hsl(var(--form-green))] hover:bg-accent-yellow-alt shadow-[0_6px_12px_rgba(198,255,0,0.2)] hover:shadow-[0_8px_16px_rgba(198,255,0,0.25)] shadow-[0_3px_0_0_hsl(56_93%_56%)] hover:translate-y-[1px] hover:shadow-[0_2px_0_0_hsl(56_93%_56%)] rounded-[12px] px-[32px] py-[16px] font-dm-sans font-medium",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -56,3 +57,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
+

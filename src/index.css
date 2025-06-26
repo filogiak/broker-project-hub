@@ -17,8 +17,10 @@
     --primary-dark: 142 72% 22%; /* Darker green for hover states */
     --primary-darker: 142 72% 17%; /* Even darker for active states */
     
-    /* Form-Specific Colors (GoMutuo.it) */
-    --form-green: 167 45% 25%; /* #245C4F - Darker green for form elements */
+    /* Form-Specific Colors (GoMutuo.it) - Updated to new green */
+    --form-green: 167 45% 25%; /* #235c4e - New standardized green */
+    --form-green-hover: 167 45% 20%; /* Darker for hover states */
+    --form-green-active: 167 45% 15%; /* Even darker for active states */
     --form-beige: 39 28% 91%; /* #F0EAE0 - Background for form sections */
     --form-placeholder: 39 31% 89%; /* #F8F4EF - Input placeholder backgrounds */
     --form-border: 36 15% 74%; /* #BEB8AE - Form element borders */
@@ -59,7 +61,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 36 15% 74%;
     --input: 36 15% 74%;
-    --ring: 142 72% 29%;
+    --ring: 167 45% 25%; /* Updated to match form-green */
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
@@ -91,7 +93,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 167 30% 18%;
     --input: 167 30% 18%;
-    --ring: 142 72% 29%;
+    --ring: 167 45% 25%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -238,10 +240,10 @@
 }
 
 @layer components {
-  /* GoMutuo.it Button System */
+  /* GoMutuo.it Button System - Updated with new green */
   .gomutuo-button-primary {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
+    @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(var(--form-green-hover))] active:bg-[hsl(var(--form-green-active))];
     @apply px-6 py-3 font-dm-sans font-medium;
     @apply solid-shadow-green press-down-effect-green;
   }
@@ -258,7 +260,7 @@
     @apply flex w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
     @apply font-dm-sans placeholder:text-muted-foreground;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2;
-    @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-background;
+    @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply transition-all duration-200;
     @apply solid-shadow-light;
@@ -310,10 +312,10 @@
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(167_45%_20%)] bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(var(--form-green-hover))] bg-clip-text text-transparent;
   }
 
   .gradient-bg {
-    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(167_45%_20%)] text-white;
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(var(--form-green-hover))] text-white;
   }
 }

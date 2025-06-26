@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -56,11 +57,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// GoMutuo.it Extended Colors
+				// GoMutuo.it Extended Colors - Updated with new green #235c4e
 				form: {
-					green: 'hsl(var(--form-green))',
-					'green-dark': '#1a4c2e',
-					'green-darker': '#0f2f1b',
+					green: '#235c4e', /* Direct hex value for consistency */
+					'green-hover': '#1e4f43', /* Darker for hover */
+					'green-active': '#194238', /* Even darker for active */
 					beige: 'hsl(var(--form-beige))',
 					placeholder: 'hsl(var(--form-placeholder))',
 					border: 'hsl(var(--form-border))',
