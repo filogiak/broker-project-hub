@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
-import ProjectStats from '@/components/project/ProjectStats';
+import ProjectHeaderCard from '@/components/project/ProjectHeaderCard';
 import ProjectOverviewCard from '@/components/project/ProjectOverviewCard';
 import RecentActivity from '@/components/project/RecentActivity';
 import { Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
@@ -131,30 +131,14 @@ const ProjectDashboard = () => {
         <ProjectSidebar />
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
-            {/* Project Hero Section */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-[12px] border border-form-border p-8 shadow-sm">
-                <h1 className="text-3xl font-bold text-form-green font-dm-sans mb-2">{project.name}</h1>
-                {project.description && (
-                  <p className="text-lg text-gray-600 font-dm-sans mb-4">{project.description}</p>
-                )}
-                <div className="flex items-center gap-6 text-sm text-gray-500 font-dm-sans">
-                  <span>Creato il {new Date(project.created_at).toLocaleDateString('it-IT')}</span>
-                  {project.project_type && (
-                    <span className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-form-green rounded-full" />
-                      <span className="capitalize">{project.project_type.replace('_', ' ')}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Project Statistics */}
-            <div>
-              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-6">Panoramica Progetto</h2>
-              <ProjectStats projectId={projectId!} />
-            </div>
+            {/* Project Header with Integrated Stats */}
+            <ProjectHeaderCard
+              projectName={project.name}
+              projectDescription={project.description || undefined}
+              membersCount={4}
+              progressPercentage={65}
+              lastActivity="2h"
+            />
 
             {/* Main Action Cards */}
             <div>
