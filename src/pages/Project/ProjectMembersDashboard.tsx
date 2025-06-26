@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -226,7 +227,8 @@ const ProjectMembersDashboard = () => {
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
             {/* Project Members */}
-            <Card className="bg-white border-2 border-form-green solid-shadow-light">
+            <Card className="bg-white border-2 border-form-green solid-shadow-light relative">
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-form-green-dark rounded-b-[10px]"></div>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
@@ -279,12 +281,12 @@ const ProjectMembersDashboard = () => {
                                 </p>
                               </div>
 
-                              <div className="text-center">
+                              <div className="text-left">
                                 <p className="text-xs text-gray-500 mb-1">Ruolo</p>
                                 <p className="font-medium text-form-green text-sm">{formatRole(member.role)}</p>
                               </div>
 
-                              <div className="text-center">
+                              <div className="text-left">
                                 <p className="text-xs text-gray-500 mb-1">Tipo Partecipante</p>
                                 <p className="font-medium text-form-green text-sm">{formatParticipantDesignation(member.participant_designation)}</p>
                               </div>
