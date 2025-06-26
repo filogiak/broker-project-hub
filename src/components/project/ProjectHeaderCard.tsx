@@ -49,33 +49,34 @@ const ProjectHeaderCard = ({
   return (
     <Card className="bg-form-green text-white border-2 border-form-green-dark rounded-[12px] shadow-lg shadow-form-green-darker/20 relative overflow-hidden" style={{ borderBottomWidth: '4px' }}>
       <CardContent className="p-0">
-        {/* Main Header Section - DOMINANT */}
-        <div className="px-6 py-6">
-          <div className="flex items-start gap-4 mb-6">
+        {/* Main Header Section with Status Badge at top right */}
+        <div className="px-6 py-5 relative">
+          {/* Status Badge - Top Right */}
+          <div className="absolute top-4 right-4">
+            <Badge 
+              variant="secondary" 
+              className={`
+                px-2 py-0.5 text-xs font-medium rounded-full border-0 flex items-center gap-1.5 flex-shrink-0
+                ${isActive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-gray-100 text-gray-600'
+                }
+              `}
+            >
+              <Circle className={`h-1.5 w-1.5 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+              {isActive ? 'Attivo' : 'Non Attivo'}
+            </Badge>
+          </div>
+
+          <div className="flex items-start gap-4 pr-20">
             {/* Custom Project Icon */}
-            <div className="w-12 h-12 bg-white/15 rounded-[8px] flex items-center justify-center flex-shrink-0">
-              <CustomHouseIcon className="text-white" size={24} />
+            <div className="w-11 h-11 bg-white/15 rounded-[8px] flex items-center justify-center flex-shrink-0">
+              <CustomHouseIcon className="text-white" size={22} />
             </div>
             
-            {/* Project Title & Description - PROMINENT */}
+            {/* Project Title & Description */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-white font-dm-sans leading-tight">{projectName}</h1>
-                {/* Compact Status Badge */}
-                <Badge 
-                  variant="secondary" 
-                  className={`
-                    px-2 py-0.5 text-xs font-medium rounded-full border-0 flex items-center gap-1.5 flex-shrink-0
-                    ${isActive 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-600'
-                    }
-                  `}
-                >
-                  <Circle className={`h-1.5 w-1.5 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-                  {isActive ? 'Attivo' : 'Non Attivo'}
-                </Badge>
-              </div>
+              <h1 className="text-3xl font-bold text-white font-dm-sans leading-tight mb-2">{projectName}</h1>
               {projectDescription && (
                 <p className="text-lg text-green-50 font-dm-sans opacity-95 leading-relaxed">
                   {projectDescription}
@@ -83,15 +84,16 @@ const ProjectHeaderCard = ({
               )}
             </div>
           </div>
-
-          {/* Secondary Section Title - SUBDUED */}
-          <div className="mb-3">
-            <h3 className="text-sm font-medium text-white/80 font-dm-sans uppercase tracking-wider">Panoramica Progetto</h3>
-          </div>
         </div>
 
-        {/* Statistics Section - SECONDARY */}
+        {/* Statistics Section with Title */}
         <div className="px-6 pb-5">
+          {/* Section Title */}
+          <div className="mb-3">
+            <h3 className="text-sm font-medium text-white/70 font-dm-sans uppercase tracking-wider">Panoramica Progetto</h3>
+          </div>
+
+          {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {stats.map((stat, index) => (
               <div 
