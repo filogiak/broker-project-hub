@@ -71,6 +71,7 @@ export const debugInvitationState = async (email: string): Promise<{
 
     // Check profile
     let profileExists = false;
+    let profileData = null;
     if (user) {
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -79,6 +80,7 @@ export const debugInvitationState = async (email: string): Promise<{
         .maybeSingle();
       
       profileExists = !!profile;
+      profileData = profile;
       if (profileError) {
         console.error('❌ [INVITATION DEBUG] Error checking profile:', profileError);
       }
@@ -101,6 +103,11 @@ export const debugInvitationState = async (email: string): Promise<{
         currentUser: user ? {
           id: user.id,
           email: user.email
+        } : null,
+        profile: profileData ? {
+          id: profileData.id,
+          email: profileData.email,
+          created_at: profileData.created_at
         } : null
       }
     };
@@ -119,12 +126,12 @@ export const debugInvitationState = async (email: string): Promise<{
   }
 };
 
-// Legacy function - enhanced with better error handling and debugging
+// Enhanced invitation acceptance with comprehensive error handling
 export const acceptInvitation = async (
   invitationId: string,
   userId: string
 ): Promise<void> => {
-  console.log('🤝 [INVITATION SERVICE] Legacy acceptInvitation called');
+  console.log('🤝 [INVITATION SERVICE] Enhanced acceptInvitation called');
   console.log('📋 [INVITATION SERVICE] Parameters:', { invitationId, userId });
   
   try {
@@ -140,7 +147,7 @@ export const acceptInvitation = async (
       throw new Error(`Invitation not found: ${invError?.message || 'Unknown error'}`);
     }
 
-    console.log('📋 [INVITATION SERVICE] Invitation details:', {
+    console.log('📋 [INVITATION SERVICE] Processing invitation:', {
       id: invitation.id,
       email: invitation.email,
       role: invitation.role,
@@ -148,8 +155,15 @@ export const acceptInvitation = async (
       accepted_at: invitation.accepted_at
     });
 
-    // Run debug check
-    await debugInvitationState(invitation.email);
+    // Check if already processed
+    if (invitation.accepted_at) {
+      console.log('✅ [INVITATION SERVICE] Invitation already accepted');
+      return;
+    }
+
+    // Run comprehensive debug check
+    const debugResult = await debugInvitationState(invitation.email);
+    console.log('🔍 [INVITATION SERVICE] Debug state:', debugResult);
 
     // Check if the invitation was processed by the trigger
     const { processed, error } = await checkInvitationStatus(invitationId);
@@ -160,12 +174,12 @@ export const acceptInvitation = async (
     }
     
     if (!processed) {
-      console.warn('⚠️ [INVITATION SERVICE] Invitation not processed by trigger - this might indicate an issue');
-      console.log('🔧 [INVITATION SERVICE] Attempting manual processing...');
+      console.warn('⚠️ [INVITATION SERVICE] Invitation not processed by trigger - manual processing required');
       
-      // Manual processing as fallback
+      // Manual processing with better error handling
       try {
         // Add user role
+        console.log('🔧 [INVITATION SERVICE] Adding user role:', invitation.role);
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: invitation.role })
@@ -179,6 +193,7 @@ export const acceptInvitation = async (
 
         // Add to project members if invitation has a project
         if (invitation.project_id) {
+          console.log('🔧 [INVITATION SERVICE] Adding to project members');
           const { error: memberError } = await supabase
             .from('project_members')
             .insert({
@@ -198,6 +213,7 @@ export const acceptInvitation = async (
         }
 
         // Mark invitation as accepted
+        console.log('🔧 [INVITATION SERVICE] Marking invitation as accepted');
         const { error: updateError } = await supabase
           .from('invitations')
           .update({ accepted_at: new Date().toISOString() })
@@ -205,6 +221,7 @@ export const acceptInvitation = async (
 
         if (updateError) {
           console.error('❌ [INVITATION SERVICE] Failed to mark invitation as accepted:', updateError);
+          // Don't throw here as the main processing succeeded
         }
 
         console.log('✅ [INVITATION SERVICE] Manual processing completed successfully');
