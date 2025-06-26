@@ -22,17 +22,11 @@ type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
 };
 
 const ProjectMembersDashboard = () => {
-  const {
-    projectId
-  } = useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
-  const {
-    user,
-    loading: authLoading
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,47 +36,57 @@ const ProjectMembersDashboard = () => {
   useEffect(() => {
     const loadProjectData = async () => {
       if (authLoading) return;
+      
       if (!user?.id) {
         navigate('/auth');
         return;
       }
+
       if (!projectId) {
         setError('No project ID provided');
         setLoading(false);
         return;
       }
+
       try {
         setLoading(true);
         setError(null);
-        const {
-          data: projectData,
-          error: projectError
-        } = await supabase.from('projects').select('*').eq('id', projectId).single();
+
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .single();
+
         if (projectError) {
           console.error('Error loading project:', projectError);
           setError('Failed to load project details');
           return;
         }
+
         setProject(projectData);
-        const {
-          data: membersData,
-          error: membersError
-        } = await supabase.from('project_members').select(`
+
+        const { data: membersData, error: membersError } = await supabase
+          .from('project_members')
+          .select(`
             *,
             profiles!project_members_user_id_fkey (
               first_name,
               last_name,
               email
             )
-          `).eq('project_id', projectId).order('joined_at', {
-          ascending: false
-        });
+          `)
+          .eq('project_id', projectId)
+          .order('joined_at', { ascending: false });
+
         if (membersError) {
           console.error('Error loading project members:', membersError);
           setError('Failed to load project members');
           return;
         }
+
         setMembers(membersData || []);
+
       } catch (error) {
         console.error('Error loading project data:', error);
         setError('An unexpected error occurred');
@@ -90,29 +94,32 @@ const ProjectMembersDashboard = () => {
         setLoading(false);
       }
     };
+
     loadProjectData();
   }, [user, authLoading, projectId, navigate]);
 
   const loadMembers = async () => {
     if (!projectId) return;
+
     try {
-      const {
-        data: membersData,
-        error: membersError
-      } = await supabase.from('project_members').select(`
+      const { data: membersData, error: membersError } = await supabase
+        .from('project_members')
+        .select(`
           *,
           profiles!project_members_user_id_fkey (
             first_name,
             last_name,
             email
           )
-        `).eq('project_id', projectId).order('joined_at', {
-        ascending: false
-      });
+        `)
+        .eq('project_id', projectId)
+        .order('joined_at', { ascending: false });
+
       if (membersError) {
         console.error('Error loading project members:', membersError);
         return;
       }
+
       setMembers(membersData || []);
     } catch (error) {
       console.error('Error loading members:', error);
@@ -134,7 +141,7 @@ const ProjectMembersDashboard = () => {
       toast({
         title: "Logout Error",
         description: "Failed to logout properly. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -222,13 +229,13 @@ const ProjectMembersDashboard = () => {
             <Card className="bg-white border-form-border shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center justify-between font-dm-sans text-black">
+                  <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
                     Membri Attivi del Progetto
                     <span className="text-sm font-normal text-muted-foreground ml-4">
                       {members.length} {members.length === 1 ? 'membro' : 'membri'}
                     </span>
                   </CardTitle>
-                  <Button
+                  <Button 
                     onClick={() => setIsAddMemberModalOpen(true)}
                     className="gomutuo-button-primary flex items-center gap-2"
                   >
@@ -241,7 +248,7 @@ const ProjectMembersDashboard = () => {
                 {members.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4 font-dm-sans">Nessun membro del progetto trovato.</p>
-                    <Button
+                    <Button 
                       onClick={() => setIsAddMemberModalOpen(true)}
                       className="gomutuo-button-primary flex items-center gap-2"
                     >
@@ -252,9 +259,9 @@ const ProjectMembersDashboard = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {members.map((member) => (
-                      <Card
-                        key={member.id}
-                        className="cursor-pointer bg-white border-2 border-form-green rounded-[8px] solid-shadow-light press-down-effect"
+                      <Card 
+                        key={member.id} 
+                        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
                       >
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between mb-4">
