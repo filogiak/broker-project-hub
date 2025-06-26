@@ -30,7 +30,7 @@ const ProjectOverviewCard = ({
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-            <Icon className="h-7 w-7 text-form-green-dark" />
+            <Icon className="h-9 w-9 text-form-green-dark" />
           </div>
           {badge && (
             <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
