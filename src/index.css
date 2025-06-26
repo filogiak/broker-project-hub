@@ -38,6 +38,10 @@
     --background-light: 36 28% 96%; /* #f8f5f1 - Main project background */
     --foreground: 167 45% 15%;
 
+    /* Card Border Colors - New thick border system */
+    --card-border-thick: 36 20% 75%; /* #D4C4B0 - Thick border for cards matching screenshot */
+    --card-border-thick-hover: 36 25% 70%; /* Slightly darker on hover */
+
     /* UI Colors */
     --card: 0 0% 100%;
     --card-foreground: 167 45% 15%;
@@ -165,21 +169,18 @@
     z-index: -1;
   }
 
-  /* New Shadow Styles for Screenshot Match */
-  .screenshot-card-shadow {
-    box-shadow: 0 8px 32px rgba(190, 184, 174, 0.35), 0 4px 16px rgba(190, 184, 174, 0.25);
+  /* New Thick Border Card Styles - Replacing Shadow System */
+  .gomutuo-card-border {
+    border: 3px solid hsl(var(--card-border-thick));
+    transition: all 0.2s ease-in-out;
   }
 
-  .screenshot-card-shadow-hover {
-    box-shadow: 0 12px 40px rgba(190, 184, 174, 0.4), 0 6px 20px rgba(190, 184, 174, 0.3);
+  .gomutuo-card-border-hover {
+    border: 3px solid hsl(var(--card-border-thick-hover));
   }
 
-  .screenshot-green-card-shadow {
-    box-shadow: 0 10px 35px rgba(36, 92, 79, 0.25), 0 6px 18px rgba(36, 92, 79, 0.15);
-  }
-
-  .screenshot-green-card-shadow-hover {
-    box-shadow: 0 14px 45px rgba(36, 92, 79, 0.3), 0 8px 24px rgba(36, 92, 79, 0.2);
+  .gomutuo-card-border-green {
+    border: 3px solid hsl(var(--form-green));
   }
 }
 
@@ -189,7 +190,7 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
     @apply px-6 py-3 font-dm-sans font-medium;
-    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover;
+    @apply gomutuo-card-border hover:gomutuo-card-border-hover;
     @apply hover:translate-y-[-2px] transition-all duration-200;
   }
 
@@ -197,7 +198,7 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply border border-[hsl(var(--form-border))] bg-white text-foreground hover:bg-[hsl(var(--vibe-green-light))];
     @apply px-4 py-2 font-dm-sans font-normal;
-    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover transition-all duration-200;
+    @apply gomutuo-card-border hover:gomutuo-card-border-hover transition-all duration-200;
   }
 
   /* GoMutuo.it Form Components */
@@ -208,28 +209,28 @@
     @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-background;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply transition-all duration-200;
-    @apply screenshot-card-shadow;
+    @apply gomutuo-card-border;
   }
 
   .gomutuo-selection-tag {
     @apply bg-[hsl(var(--vibe-green-light))] text-[hsl(var(--form-green))] font-semibold px-3 py-1 rounded-[6px] font-dm-sans text-sm;
   }
 
-  /* GoMutuo.it Card System - Updated shadows to match screenshots */
+  /* GoMutuo.it Card System - Updated with thick borders */
   .gomutuo-card {
-    @apply bg-white rounded-[12px] border border-gray-200 transition-all duration-200;
+    @apply bg-white rounded-[12px] transition-all duration-200;
     @apply p-6;
-    @apply screenshot-card-shadow;
+    @apply gomutuo-card-border;
   }
 
   .gomutuo-card-hover {
-    @apply gomutuo-card hover:screenshot-card-shadow-hover hover:-translate-y-1;
+    @apply gomutuo-card hover:gomutuo-card-border-hover hover:-translate-y-1;
   }
 
   .gomutuo-card-green {
-    @apply bg-[hsl(var(--form-green))] text-white rounded-[12px] border border-[hsl(var(--form-green))] transition-all duration-200;
+    @apply bg-[hsl(var(--form-green))] text-white rounded-[12px] transition-all duration-200;
     @apply p-6;
-    @apply screenshot-green-card-shadow hover:screenshot-green-card-shadow-hover;
+    @apply gomutuo-card-border-green;
   }
 
   /* GoMutuo.it specific styles */
