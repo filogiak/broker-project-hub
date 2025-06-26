@@ -31,7 +31,10 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
           </div>
           
           {!isComplete && (
-            <Badge className="bg-yellow-200 text-form-green border-yellow-200 font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans">
+            <Badge 
+              className="font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans border-[#E3FD53] text-form-green"
+              style={{ backgroundColor: '#E3FD53' }}
+            >
               Completato al {completionPercentage}%
             </Badge>
           )}
