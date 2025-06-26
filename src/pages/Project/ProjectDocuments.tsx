@@ -5,12 +5,14 @@ import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CategoryScopeService } from '@/services/categoryScopeService';
+import { useCategoryCompletion } from '@/hooks/useCategoryCompletion';
 
 type ViewState = 
   | { type: 'categories' }
@@ -39,6 +41,19 @@ const ProjectDocuments = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get completion data
+  const { 
+    completionData, 
+    loading: completionLoading, 
+    getCompletionForCategory,
+    overallCompletion 
+  } = useCategoryCompletion(
+    projectId || '', 
+    categories,
+    // For now, we'll use applicant_1 as default for multi-applicant projects
+    projectData?.applicant_count !== 'one_applicant' ? 'applicant_1' : undefined
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -247,7 +262,8 @@ const ProjectDocuments = () => {
     switch (viewState.type) {
       case 'categories':
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Header Section */}
             <div className="flex items-center gap-4">
               <Button variant="outline" onClick={handleBackToProject}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -255,25 +271,57 @@ const ProjectDocuments = () => {
               </Button>
             </div>
             
-            <div>
-              <h1 className="text-3xl font-bold text-primary">Project Documents</h1>
-              <p className="text-muted-foreground mt-1">
-                Select a category to view and manage related documents and information
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Project type: {projectData?.applicant_count.replace('_', ' ')}
-              </p>
+            {/* Title and Progress Section */}
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-primary">Project Documents</h1>
+                  <p className="text-muted-foreground mt-1">
+                    Select a category to view and manage related documents and information
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">
+                    {overallCompletion.completionPercentage}%
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {overallCompletion.completedItems} of {overallCompletion.totalItems} completed
+                  </p>
+                </div>
+              </div>
             </div>
             
+            {/* Categories Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {categories.map((category) => (
                 <CategoryBox
                   key={category.id}
                   name={category.name}
                   onClick={() => handleCategoryClick(category.id, category.name)}
+                  completion={getCompletionForCategory(category.id)}
                 />
               ))}
             </div>
+
+            {/* Documents Section */}
+            <Card className="bg-primary text-primary-foreground">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold">Documents</h3>
+                    <p className="text-primary-foreground/80">
+                      Uploaded documents and files for this project
+                    </p>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {overallCompletion.completedItems}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
@@ -310,7 +358,7 @@ const ProjectDocuments = () => {
 
   return (
     <MainLayout
-      title={`${projectData.name} - Documents`}
+      title={`${projectData?.name} - Documents`}
       userEmail={user?.email || ''}
       onLogout={handleLogout}
     >

@@ -7,15 +7,15 @@
 
 @layer base {
   :root {
-    /* Brand Colors */
-    --primary: 153 47% 32%; /* #245C4F */
+    /* GoMutuo.it Brand Colors */
+    --primary: 153 47% 32%; /* #245C4F - GoMutuo.it green */
     --primary-foreground: 0 0% 100%;
     --primary-dark: 153 48% 22%; /* #1e4f44 */
     --primary-darker: 153 50% 17%; /* #1a3f37 */
     
-    /* Accent Colors */
-    --accent-yellow: 73 90% 65%; /* #d3f54f */
-    --accent-yellow-alt: 73 100% 50%; /* #C8FF00 */
+    /* GoMutuo.it Accent Colors */
+    --accent-yellow: 45 100% 70%; /* #FFD700 - GoMutuo.it yellow */
+    --accent-yellow-alt: 45 100% 60%; /* #E6C200 */
     
     /* Form Colors */
     --form-beige: 36 33% 91%; /* #F0EAE0 */
@@ -24,7 +24,7 @@
     --form-shadow: 36 11% 66%; /* #AFA89F */
     
     /* Background Colors */
-    --background: 30 100% 97%; /* #fff7f0 */
+    --background: 0 0% 98%; /* #FAFAFA - Clean white background */
     --background-cream: 30 100% 97%; /* #fff7f0 */
     --background-light: 42 29% 97%; /* #f8f5f1 */
     --foreground: 153 47% 15%;
@@ -138,5 +138,14 @@
   .form-input:focus {
     @apply border-primary bg-background;
     @apply shadow-[0_0_0_3px_hsl(var(--form-shadow)_/_0.1)];
+  }
+
+  /* GoMutuo.it specific styles */
+  .gomutuo-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200;
+  }
+
+  .gomutuo-badge-incomplete {
+    @apply bg-accent-yellow text-primary border-accent-yellow;
   }
 }
