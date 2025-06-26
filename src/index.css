@@ -20,9 +20,13 @@
     /* Form-Specific Colors (GoMutuo.it) */
     --form-green: 167 45% 25%; /* #245C4F - Darker green for form elements */
     --form-beige: 39 28% 91%; /* #F0EAE0 - Background for form sections */
-    --form-placeholder: 37 31% 89%; /* #F8F4EF - Input placeholder backgrounds */
+    --form-placeholder: 39 31% 89%; /* #F8F4EF - Input placeholder backgrounds */
     --form-border: 36 15% 74%; /* #BEB8AE - Form element borders */
     --form-shadow: 36 9% 65%; /* #AFA89F - Shadow color for form elements */
+    
+    /* 3D Shadow System Colors */
+    --solid-shadow-light: 36 9% 65%; /* #AFA89F - Light shadow for primary cards */
+    --solid-shadow-dark: 167 45% 15%; /* #1a3f37 - Dark shadow for secondary cards */
     
     /* GoMutuo.it Extended Palette */
     --vibe-green: 142 100% 26%; /* #00853E */
@@ -165,21 +169,37 @@
     z-index: -1;
   }
 
-  /* New Shadow Styles for Screenshot Match */
-  .screenshot-card-shadow {
-    box-shadow: 0 8px 32px rgba(190, 184, 174, 0.35), 0 4px 16px rgba(190, 184, 174, 0.25);
+  /* 3D Solid Shadow System */
+  .solid-shadow-light {
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-light));
   }
 
-  .screenshot-card-shadow-hover {
-    box-shadow: 0 12px 40px rgba(190, 184, 174, 0.4), 0 6px 20px rgba(190, 184, 174, 0.3);
+  .solid-shadow-light-pressed {
+    box-shadow: 0 2px 0 0 hsl(var(--solid-shadow-light));
   }
 
-  .screenshot-green-card-shadow {
-    box-shadow: 0 10px 35px rgba(36, 92, 79, 0.25), 0 6px 18px rgba(36, 92, 79, 0.15);
+  .solid-shadow-dark {
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-dark));
   }
 
-  .screenshot-green-card-shadow-hover {
-    box-shadow: 0 14px 45px rgba(36, 92, 79, 0.3), 0 8px 24px rgba(36, 92, 79, 0.2);
+  .solid-shadow-dark-pressed {
+    box-shadow: 0 2px 0 0 hsl(var(--solid-shadow-dark));
+  }
+
+  .press-down-effect {
+    @apply transition-all duration-200 hover:translate-y-[1px];
+  }
+
+  .press-down-effect:hover {
+    @apply solid-shadow-light-pressed;
+  }
+
+  .press-down-effect-dark {
+    @apply transition-all duration-200 hover:translate-y-[1px];
+  }
+
+  .press-down-effect-dark:hover {
+    @apply solid-shadow-dark-pressed;
   }
 }
 
@@ -189,15 +209,14 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
     @apply px-6 py-3 font-dm-sans font-medium;
-    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover;
-    @apply hover:translate-y-[-2px] transition-all duration-200;
+    @apply solid-shadow-light press-down-effect;
   }
 
   .gomutuo-button-secondary {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply border border-[hsl(var(--form-border))] bg-white text-foreground hover:bg-[hsl(var(--vibe-green-light))];
     @apply px-4 py-2 font-dm-sans font-normal;
-    @apply screenshot-card-shadow hover:screenshot-card-shadow-hover transition-all duration-200;
+    @apply solid-shadow-light press-down-effect;
   }
 
   /* GoMutuo.it Form Components */
@@ -208,28 +227,30 @@
     @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-background;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply transition-all duration-200;
-    @apply screenshot-card-shadow;
+    @apply solid-shadow-light;
   }
 
   .gomutuo-selection-tag {
     @apply bg-[hsl(var(--vibe-green-light))] text-[hsl(var(--form-green))] font-semibold px-3 py-1 rounded-[6px] font-dm-sans text-sm;
   }
 
-  /* GoMutuo.it Card System - Updated shadows to match screenshots */
+  /* GoMutuo.it Card System - Updated with 3D Shadows */
   .gomutuo-card {
-    @apply bg-white rounded-[12px] border border-gray-200 transition-all duration-200;
+    @apply bg-white rounded-[12px] border border-[hsl(var(--form-border))] transition-all duration-200;
     @apply p-6;
-    @apply screenshot-card-shadow;
+    @apply solid-shadow-light press-down-effect;
   }
 
-  .gomutuo-card-hover {
-    @apply gomutuo-card hover:screenshot-card-shadow-hover hover:-translate-y-1;
+  .gomutuo-card-secondary {
+    @apply bg-[hsl(var(--form-placeholder))] rounded-[12px] border-2 border-[hsl(var(--form-green))] transition-all duration-200;
+    @apply p-6;
+    @apply solid-shadow-dark press-down-effect-dark;
   }
 
   .gomutuo-card-green {
     @apply bg-[hsl(var(--form-green))] text-white rounded-[12px] border border-[hsl(var(--form-green))] transition-all duration-200;
     @apply p-6;
-    @apply screenshot-green-card-shadow hover:screenshot-green-card-shadow-hover;
+    @apply solid-shadow-dark press-down-effect-dark;
   }
 
   /* GoMutuo.it specific styles */
