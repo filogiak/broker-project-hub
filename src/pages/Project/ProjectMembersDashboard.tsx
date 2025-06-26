@@ -3,9 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
@@ -258,31 +257,47 @@ const ProjectMembersDashboard = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-[10px] border border-form-border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="font-dm-sans">Nome</TableHead>
-                          <TableHead className="font-dm-sans">Email</TableHead>
-                          <TableHead className="font-dm-sans">Ruolo</TableHead>
-                          <TableHead className="font-dm-sans">Tipo Partecipante</TableHead>
-                          <TableHead className="font-dm-sans">Data Ingresso</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {members.map((member) => (
-                          <TableRow key={member.id}>
-                            <TableCell className="font-medium font-dm-sans">
-                              {formatUserName(member)}
-                            </TableCell>
-                            <TableCell className="font-dm-sans">{member.profiles?.email || 'Sconosciuto'}</TableCell>
-                            <TableCell className="font-dm-sans">{formatRole(member.role)}</TableCell>
-                            <TableCell className="font-dm-sans">{formatParticipantDesignation(member.participant_designation)}</TableCell>
-                            <TableCell className="font-dm-sans">{formatDate(member.joined_at)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {members.map((member) => (
+                      <Card 
+                        key={member.id} 
+                        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+                              <User className="h-9 w-9 text-form-green-dark" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <h3 className="font-semibold text-black font-dm-sans mb-2 text-lg">
+                                {formatUserName(member)}
+                              </h3>
+                              <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
+                                {member.profiles?.email || 'Sconosciuto'}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>Ruolo</span>
+                                <span className="font-medium text-form-green">{formatRole(member.role)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>Tipo Partecipante</span>
+                                <span className="font-medium text-form-green">{formatParticipantDesignation(member.participant_designation)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>Data Ingresso</span>
+                                <span className="font-medium text-form-green">{formatDate(member.joined_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </CardContent>
