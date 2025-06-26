@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AddMemberModal from '@/components/project/AddMemberModal';
 import type { Database } from '@/integrations/supabase/types';
+
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
   profiles: {
@@ -19,6 +20,7 @@ type ProjectMember = Database['public']['Tables']['project_members']['Row'] & {
     email: string;
   } | null;
 };
+
 const ProjectMembersDashboard = () => {
   const {
     projectId
@@ -36,6 +38,7 @@ const ProjectMembersDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
   useEffect(() => {
     const loadProjectData = async () => {
       if (authLoading) return;
@@ -89,6 +92,7 @@ const ProjectMembersDashboard = () => {
     };
     loadProjectData();
   }, [user, authLoading, projectId, navigate]);
+
   const loadMembers = async () => {
     if (!projectId) return;
     try {
@@ -114,11 +118,13 @@ const ProjectMembersDashboard = () => {
       console.error('Error loading members:', error);
     }
   };
+
   useEffect(() => {
     if (project) {
       loadMembers();
     }
   }, [project, projectId]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -132,6 +138,7 @@ const ProjectMembersDashboard = () => {
       });
     }
   };
+
   const formatUserName = (member: ProjectMember) => {
     const profile = member.profiles;
     if (!profile) return 'Utente Sconosciuto';
@@ -140,27 +147,34 @@ const ProjectMembersDashboard = () => {
     }
     return profile.email;
   };
+
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
   const formatParticipantDesignation = (designation: string | null) => {
     if (!designation) return 'Non assegnato';
     return designation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
   const formatApplicantCount = (count: string | null) => {
     if (!count) return 'Non impostato';
     return count.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Non ancora entrato';
     return new Date(dateString).toLocaleDateString('it-IT');
   };
+
   const handleMemberAdded = () => {
     loadMembers();
     setIsAddMemberModalOpen(false);
   };
+
   if (authLoading || loading) {
-    return <SidebarProvider>
+    return (
+      <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -169,10 +183,13 @@ const ProjectMembersDashboard = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>;
+      </SidebarProvider>
+    );
   }
+
   if (error || !project) {
-    return <SidebarProvider>
+    return (
+      <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -191,9 +208,12 @@ const ProjectMembersDashboard = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>;
+      </SidebarProvider>
+    );
   }
-  return <SidebarProvider>
+
+  return (
+    <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background-light">
         <ProjectSidebar />
         <SidebarInset>
@@ -208,21 +228,34 @@ const ProjectMembersDashboard = () => {
                       {members.length} {members.length === 1 ? 'membro' : 'membri'}
                     </span>
                   </CardTitle>
-                  <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
+                  <Button
+                    onClick={() => setIsAddMemberModalOpen(true)}
+                    className="gomutuo-button-primary flex items-center gap-2"
+                  >
                     <Plus className="h-4 w-4" />
                     Aggiungi Membro
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {members.length === 0 ? <div className="text-center py-8">
+                {members.length === 0 ? (
+                  <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4 font-dm-sans">Nessun membro del progetto trovato.</p>
-                    <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
+                    <Button
+                      onClick={() => setIsAddMemberModalOpen(true)}
+                      className="gomutuo-button-primary flex items-center gap-2"
+                    >
                       <Plus className="h-4 w-4" />
                       Aggiungi Primo Membro
                     </Button>
-                  </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect">
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {members.map((member) => (
+                      <Card
+                        key={member.id}
+                        className="cursor-pointer bg-white border-2 border-form-green rounded-[8px] solid-shadow-light press-down-effect"
+                      >
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between mb-4">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center">
@@ -256,16 +289,25 @@ const ProjectMembersDashboard = () => {
                             </div>
                           </div>
                         </CardContent>
-                      </Card>)}
-                  </div>}
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Add Member Modal */}
-            <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId!} onMemberAdded={handleMemberAdded} />
+            <AddMemberModal
+              isOpen={isAddMemberModalOpen}
+              onClose={() => setIsAddMemberModalOpen(false)}
+              projectId={projectId!}
+              onMemberAdded={handleMemberAdded}
+            />
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>;
+    </SidebarProvider>
+  );
 };
+
 export default ProjectMembersDashboard;
