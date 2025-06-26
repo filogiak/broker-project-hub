@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -11,7 +12,7 @@ const buttonVariants = cva(
       variant: {
         default: "gomutuo-button-primary",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 solid-shadow-light press-down-effect",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 solid-shadow-red press-down-effect-red",
         outline:
           "gomutuo-button-secondary",
         secondary:

@@ -25,8 +25,10 @@
     --form-shadow: 36 9% 65%; /* #AFA89F - Shadow color for form elements */
     
     /* 3D Shadow System Colors */
-    --solid-shadow-light: 36 9% 65%; /* #AFA89F - Light shadow for primary cards */
+    --solid-shadow-light: 36 9% 65%; /* #AFA89F - Light shadow for beige buttons */
     --solid-shadow-dark: 167 45% 15%; /* #1a3f37 - Dark shadow for secondary cards */
+    --solid-shadow-green: 167 45% 15%; /* Darker green shadow for green buttons */
+    --solid-shadow-red: 0 84% 45%; /* Darker red shadow for destructive buttons */
     
     /* GoMutuo.it Extended Palette */
     --vibe-green: 142 100% 26%; /* #00853E */
@@ -186,6 +188,22 @@
     box-shadow: 0 2px 0 0 hsl(var(--solid-shadow-dark));
   }
 
+  .solid-shadow-green {
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-green));
+  }
+
+  .solid-shadow-green-pressed {
+    box-shadow: 0 2px 0 0 hsl(var(--solid-shadow-green));
+  }
+
+  .solid-shadow-red {
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-red));
+  }
+
+  .solid-shadow-red-pressed {
+    box-shadow: 0 2px 0 0 hsl(var(--solid-shadow-red));
+  }
+
   .press-down-effect {
     @apply transition-all duration-200 hover:translate-y-[1px];
   }
@@ -201,6 +219,22 @@
   .press-down-effect-dark:hover {
     @apply solid-shadow-dark-pressed;
   }
+
+  .press-down-effect-green {
+    @apply transition-all duration-200 hover:translate-y-[1px];
+  }
+
+  .press-down-effect-green:hover {
+    @apply solid-shadow-green-pressed;
+  }
+
+  .press-down-effect-red {
+    @apply transition-all duration-200 hover:translate-y-[1px];
+  }
+
+  .press-down-effect-red:hover {
+    @apply solid-shadow-red-pressed;
+  }
 }
 
 @layer components {
@@ -209,7 +243,7 @@
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(167_45%_20%)] active:bg-[hsl(167_45%_15%)];
     @apply px-6 py-3 font-dm-sans font-medium;
-    @apply solid-shadow-light press-down-effect;
+    @apply solid-shadow-green press-down-effect-green;
   }
 
   .gomutuo-button-secondary {
