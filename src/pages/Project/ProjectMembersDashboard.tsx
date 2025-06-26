@@ -226,7 +226,7 @@ const ProjectMembersDashboard = () => {
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
             {/* Project Members */}
-            <Card className="bg-white border-form-border shadow-sm">
+            <Card className="bg-white border-2 border-form-green solid-shadow-light">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center justify-between text-form-green font-dm-sans">
@@ -257,41 +257,41 @@ const ProjectMembersDashboard = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
                     {members.map((member) => (
                       <Card 
                         key={member.id} 
                         className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect"
                       >
                         <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+                          <div className="flex items-center gap-6">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
                               <User className="h-9 w-9 text-form-green-dark" />
                             </div>
-                          </div>
 
-                          <div className="space-y-3">
-                            <div>
-                              <h3 className="font-semibold text-black font-dm-sans mb-2 text-lg">
-                                {formatUserName(member)}
-                              </h3>
-                              <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
-                                {member.profiles?.email || 'Sconosciuto'}
-                              </p>
-                            </div>
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                              <div>
+                                <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
+                                  {formatUserName(member)}
+                                </h3>
+                                <p className="text-sm text-gray-600 font-dm-sans">
+                                  {member.profiles?.email || 'Sconosciuto'}
+                                </p>
+                              </div>
 
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>Ruolo</span>
-                                <span className="font-medium text-form-green">{formatRole(member.role)}</span>
+                              <div className="text-center">
+                                <p className="text-xs text-gray-500 mb-1">Ruolo</p>
+                                <p className="font-medium text-form-green text-sm">{formatRole(member.role)}</p>
                               </div>
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>Tipo Partecipante</span>
-                                <span className="font-medium text-form-green">{formatParticipantDesignation(member.participant_designation)}</span>
+
+                              <div className="text-center">
+                                <p className="text-xs text-gray-500 mb-1">Tipo Partecipante</p>
+                                <p className="font-medium text-form-green text-sm">{formatParticipantDesignation(member.participant_designation)}</p>
                               </div>
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>Data Ingresso</span>
-                                <span className="font-medium text-form-green">{formatDate(member.joined_at)}</span>
+
+                              <div className="text-center">
+                                <p className="text-xs text-gray-500 mb-1">Data Ingresso</p>
+                                <p className="font-medium text-form-green text-sm">{formatDate(member.joined_at)}</p>
                               </div>
                             </div>
                           </div>
