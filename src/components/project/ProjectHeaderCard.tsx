@@ -27,7 +27,7 @@ const ProjectHeaderCard = ({
           {/* Project Info with extended green line */}
           <div className="flex-1 pr-8 relative">
             {/* Extended green accent line */}
-            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-form-green rounded-full"></div>
+            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-form-green rounded-full"></div>
             
             <div className="ml-6">
               <h1 className="text-3xl font-bold text-black font-dm-sans leading-tight mb-3">
@@ -44,14 +44,6 @@ const ProjectHeaderCard = ({
 
           {/* Professional Status & Info Section */}
           <div className="flex items-center gap-8 flex-shrink-0">
-            {/* Status Badge */}
-            <div className="flex items-center gap-2">
-              <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-              <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
-                {isActive ? 'Attivo' : 'Non Attivo'}
-              </span>
-            </div>
-
             {/* Last Activity */}
             <div className="flex items-center gap-2">
               <div className="text-right">
@@ -68,11 +60,21 @@ const ProjectHeaderCard = ({
               <div className="text-right">
                 <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
                 <div className="flex items-center gap-1 justify-end">
-                  <Calendar className="h-4 w-4 text-form-green" />
                   <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
+                  <Calendar className="h-4 w-4 text-form-green" />
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Status Badge - Bottom Right */}
+        <div className="absolute bottom-8 right-8">
+          <div className="flex items-center gap-2">
+            <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+            <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
+              {isActive ? 'Attivo' : 'Non Attivo'}
+            </span>
           </div>
         </div>
       </CardContent>
