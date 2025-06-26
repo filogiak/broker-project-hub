@@ -226,7 +226,7 @@ const ProjectMembersDashboard = () => {
                     </Button>
                   </div> : <div className="space-y-4">
                     {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
-                        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-form-green-dark"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-form-green-dark"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -262,13 +262,15 @@ const ProjectMembersDashboard = () => {
                         </CardContent>
                       </Card>)}
                   </div>}
+
+                {/* Project Invitations Section - inside the members card */}
+                {projectId && (
+                  <div className="mt-6 pt-4 border-t border-gray-100">
+                    <ProjectInvitationsSection projectId={projectId} />
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* Project Invitations Section */}
-            {projectId && (
-              <ProjectInvitationsSection projectId={projectId} />
-            )}
 
             {/* Add Member Modal */}
             <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId!} onMemberAdded={handleMemberAdded} />

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronRight, Mail, Clock, Users } from 'lucide-react';
+import { ChevronRight, Mail } from 'lucide-react';
 import { getProjectInvitations, InvitationWithStatus } from '@/services/projectInvitationService';
 import ProjectInvitationsModal from './ProjectInvitationsModal';
 
@@ -35,28 +35,22 @@ const ProjectInvitationsSection: React.FC<ProjectInvitationsSectionProps> = ({ p
     }
   }, [projectId]);
 
-  const getInvitationsSummary = () => {
-    const pending = invitations.filter(inv => inv.status === 'pending').length;
-    const total = invitations.length;
-    return { pending, total };
-  };
-
-  const summary = getInvitationsSummary();
-
   if (loading) {
     return (
-      <Card className="bg-form-green/10 border-form-green rounded-[12px] cursor-pointer hover:bg-form-green/15 transition-colors">
-        <CardContent className="p-4">
+      <Card className="bg-form-green rounded-[12px] cursor-pointer hover:bg-form-green/90 transition-colors">
+        <CardContent className="p-3 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-form-green rounded-lg flex items-center justify-center">
-                <Mail className="h-5 w-5 text-white" />
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <Mail className="h-4 w-4 text-form-green" />
               </div>
-              <span className="font-dm-sans text-form-green font-medium text-lg">
+              <span className="font-dm-sans text-white font-medium text-base">
                 Caricamento inviti...
               </span>
             </div>
-            <ChevronRight className="h-5 w-5 text-form-green" />
+            <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+              <ChevronRight className="h-3 w-3 text-form-green" />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -66,34 +60,22 @@ const ProjectInvitationsSection: React.FC<ProjectInvitationsSectionProps> = ({ p
   return (
     <>
       <Card 
-        className="bg-form-green/10 border-form-green rounded-[12px] cursor-pointer hover:bg-form-green/15 transition-colors press-down-effect"
+        className="bg-form-green rounded-[12px] cursor-pointer hover:bg-form-green/90 transition-colors press-down-effect"
         onClick={() => setIsModalOpen(true)}
       >
-        <CardContent className="p-4">
+        <CardContent className="p-3 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-form-green rounded-lg flex items-center justify-center">
-                <Mail className="h-5 w-5 text-white" />
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <Mail className="h-4 w-4 text-form-green" />
               </div>
-              <div>
-                <span className="font-dm-sans text-form-green font-medium text-lg">
-                  Visualizza Inviti
-                </span>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-1 text-sm text-form-green/80">
-                    <Users className="h-3 w-3" />
-                    <span>Totale: {summary.total}</span>
-                  </div>
-                  {summary.pending > 0 && (
-                    <div className="flex items-center gap-1 text-sm text-yellow-600">
-                      <Clock className="h-3 w-3" />
-                      <span>In Attesa: {summary.pending}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <span className="font-dm-sans text-white font-medium text-base">
+                Visualizza Inviti
+              </span>
             </div>
-            <ChevronRight className="h-5 w-5 text-form-green" />
+            <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+              <ChevronRight className="h-3 w-3 text-form-green" />
+            </div>
           </div>
         </CardContent>
       </Card>
