@@ -29,8 +29,8 @@ const ProjectOverviewCard = ({
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 rounded-xl bg-vibe-green-light flex items-center justify-center">
-            <Icon className="h-6 w-6 text-form-green" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <Icon className="h-7 w-7 text-form-green-dark" />
           </div>
           {badge && (
             <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
@@ -41,7 +41,7 @@ const ProjectOverviewCard = ({
 
         <div className="space-y-3">
           <div>
-            <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-2">{title}</h3>
+            <h3 className="text-lg font-semibold text-black font-dm-sans mb-2">{title}</h3>
             <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">{description}</p>
           </div>
 
