@@ -38,13 +38,13 @@ const ProjectStats = ({ projectId }: ProjectStatsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat) => (
-        <Card key={stat.title} className="border border-form-border bg-white">
+        <Card key={stat.title} className="bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-[12px]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1 font-inter">{stat.title}</p>
+                <p className="text-sm font-medium text-gray-500 mb-1 font-dm-sans">{stat.title}</p>
                 <p className="text-2xl font-bold text-form-green font-dm-sans mb-1">{stat.value}</p>
-                <p className="text-xs text-gray-400 font-inter">{stat.subtitle}</p>
+                <p className="text-xs text-gray-400 font-dm-sans">{stat.subtitle}</p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-vibe-green-light flex items-center justify-center">
                 <stat.icon className="h-5 w-5 text-form-green" />

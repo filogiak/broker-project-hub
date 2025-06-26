@@ -24,7 +24,7 @@ const ProjectOverviewCard = ({
 }: ProjectOverviewCardProps) => {
   return (
     <Card 
-      className="cursor-pointer border border-form-border hover:border-form-green/40 transition-all duration-200 hover:shadow-md bg-white"
+      className="cursor-pointer bg-white border border-gray-200 hover:border-form-green/30 transition-all duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-1 rounded-[12px] shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
       onClick={onClick}
     >
       <CardContent className="p-6">
@@ -42,7 +42,7 @@ const ProjectOverviewCard = ({
         <div className="space-y-3">
           <div>
             <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-2">{title}</h3>
-            <p className="text-sm text-gray-600 font-inter leading-relaxed">{description}</p>
+            <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">{description}</p>
           </div>
 
           {progress !== undefined && (
