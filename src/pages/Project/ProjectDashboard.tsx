@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import MainLayout from '@/components/layout/MainLayout';
-import ProjectHeader from '@/components/project/ProjectHeader';
-import ProjectMetrics from '@/components/project/ProjectMetrics';
-import ActionCard from '@/components/project/ActionCard';
-import { Users, FileText, BarChart3 } from 'lucide-react';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import ProjectSidebar from '@/components/project/ProjectSidebar';
+import ProjectStats from '@/components/project/ProjectStats';
+import ProjectOverviewCard from '@/components/project/ProjectOverviewCard';
+import RecentActivity from '@/components/project/RecentActivity';
+import { Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,126 +83,160 @@ const ProjectDashboard = () => {
     }
   };
 
-  const handleBackToBrokerage = () => {
-    if (project?.brokerage_id) {
-      navigate(`/brokerage/${project.brokerage_id}`);
-    } else {
-      navigate(-1);
-    }
-  };
-
   if (authLoading || loading) {
     return (
-      <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading project dashboard...</div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-lg text-form-green font-dm-sans">Loading project dashboard...</div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
   if (error || !project) {
     return (
-      <MainLayout title="Project Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2 text-destructive">
-              {error ? 'Project Access Issue' : 'Project Not Found'}
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
-            </p>
-            <button 
-              onClick={() => navigate(-1)} 
-              className="gomutuo-button-secondary"
-            >
-              Go Back
-            </button>
-          </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <ProjectSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2 text-destructive font-dm-sans">
+                  {error ? 'Project Access Issue' : 'Project Not Found'}
+                </h2>
+                <p className="text-muted-foreground mb-4 font-inter">
+                  {error || "The project you're looking for doesn't exist or you don't have permission to access it."}
+                </p>
+                <button 
+                  onClick={() => navigate(-1)} 
+                  className="bg-form-green text-white px-6 py-2 rounded-lg hover:bg-form-green/90 transition-colors font-inter"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </SidebarInset>
         </div>
-      </MainLayout>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background-light">
-      {/* Project Header */}
-      <ProjectHeader 
-        project={project}
-        onBackToBrokerage={handleBackToBrokerage}
-      />
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background-light">
+        <ProjectSidebar />
+        <SidebarInset>
+          <div className="flex-1 p-8 space-y-8">
+            {/* Project Hero Section */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-form-green font-dm-sans">{project.name}</h1>
+              {project.description && (
+                <p className="text-lg text-gray-600 font-inter">{project.description}</p>
+              )}
+              <div className="flex items-center gap-4 text-sm text-gray-500 font-inter">
+                <span>Created {new Date(project.created_at).toLocaleDateString()}</span>
+                {project.project_type && (
+                  <span className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-form-green rounded-full" />
+                    <span className="capitalize">{project.project_type.replace('_', ' ')}</span>
+                  </span>
+                )}
+              </div>
+            </div>
 
-      {/* Main Content */}
-      <div className="px-6 py-8 space-y-8">
-        {/* Metrics Overview */}
-        <div>
-          <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Overview</h2>
-          <ProjectMetrics projectId={projectId!} />
-        </div>
+            {/* Project Statistics */}
+            <div>
+              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Project Overview</h2>
+              <ProjectStats projectId={projectId!} />
+            </div>
 
-        {/* Action Cards */}
-        <div>
-          <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Manage Project</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ActionCard
-              title="Project Members"
-              description="View and manage project team members, assign roles, and track participation"
-              icon={Users}
-              href={`/project/${projectId}/members`}
-              onClick={() => navigate(`/project/${projectId}/members`)}
-              status="in-progress"
-              count={4}
-              color="green"
-            />
+            {/* Main Action Cards */}
+            <div>
+              <h2 className="text-xl font-semibold text-form-green font-dm-sans mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ProjectOverviewCard
+                  title="Manage Team"
+                  description="Add members, assign roles, and track team participation in the project"
+                  icon={Users}
+                  onClick={() => navigate(`/project/${projectId}/members`)}
+                  badge="4 members"
+                  count={4}
+                />
 
-            <ActionCard
-              title="Documents & Forms"
-              description="Manage project documents, forms, and track completion status"
-              icon={FileText}
-              href={`/project/${projectId}/documents`}
-              onClick={() => navigate(`/project/${projectId}/documents`)}
-              status="in-progress"
-              progress={65}
-              color="blue"
-            />
+                <ProjectOverviewCard
+                  title="Documents Hub"
+                  description="Upload, organize, and track completion of all project documents and forms"
+                  icon={FileText}
+                  onClick={() => navigate(`/project/${projectId}/documents`)}
+                  progress={65}
+                  count={12}
+                />
 
-            <ActionCard
-              title="Analytics & Reports"
-              description="View project analytics, progress reports, and performance metrics"
-              icon={BarChart3}
-              href="#"
-              onClick={() => {
-                toast({
-                  title: "Coming Soon",
-                  description: "Analytics dashboard is under development.",
-                });
-              }}
-              status="pending"
-              color="purple"
-            />
+                <ProjectOverviewCard
+                  title="Project Analytics"
+                  description="View detailed reports, progress tracking, and performance metrics"
+                  icon={BarChart3}
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "Analytics dashboard is under development.",
+                    });
+                  }}
+                  badge="Beta"
+                />
+              </div>
+            </div>
+
+            {/* Recent Activity & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <RecentActivity />
+              
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg border border-form-border p-6">
+                  <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-4">Quick Actions</h3>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-form-green" />
+                        <div>
+                          <p className="font-medium text-form-green font-inter">Export Data</p>
+                          <p className="text-xs text-gray-500 font-inter">Download project data</p>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className="h-5 w-5 text-form-green" />
+                        <div>
+                          <p className="font-medium text-form-green font-inter">Generate Report</p>
+                          <p className="text-xs text-gray-500 font-inter">Create progress report</p>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    <button className="w-full text-left p-3 rounded-lg hover:bg-vibe-green-light transition-colors border border-form-border/50">
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-5 w-5 text-form-green" />
+                        <div>
+                          <p className="font-medium text-form-green font-inter">Send Update</p>
+                          <p className="text-xs text-gray-500 font-inter">Notify team members</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg border border-form-border p-6">
-          <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-4">Quick Actions</h3>
-          <div className="flex flex-wrap gap-3">
-            <button className="gomutuo-button-secondary text-sm">
-              Export Data
-            </button>
-            <button className="gomutuo-button-secondary text-sm">
-              Generate Report
-            </button>
-            <button className="gomutuo-button-secondary text-sm">
-              Send Reminder
-            </button>
-            <button className="gomutuo-button-secondary text-sm">
-              Schedule Meeting
-            </button>
-          </div>
-        </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
