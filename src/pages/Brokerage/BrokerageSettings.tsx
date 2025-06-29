@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import PersonalProfileSection from '@/components/brokerage/PersonalProfileSection';
 import OrganizationSection from '@/components/brokerage/OrganizationSection';
 import type { Database } from '@/integrations/supabase/types';
@@ -21,18 +23,21 @@ const BrokerageSettings = ({
   onBrokerageUpdate 
 }: BrokerageSettingsProps) => {
   return (
-    <div className="flex-1 p-8 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Settings</h1>
-          <p className="text-muted-foreground mt-1 font-dm-sans">
-            Manage your personal profile and organization settings
-          </p>
+    <div className="flex-1 p-8">
+      {/* Header Section - matching progetti attivi layout */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <h1 className="text-4xl font-bold text-black font-dm-sans">Settings</h1>
+          <span className="text-muted-foreground font-dm-sans">2 sezioni</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <Search className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
-      {/* Settings Grid */}
+      {/* Settings Grid - using similar card design */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Profile Section */}
         <PersonalProfileSection 
