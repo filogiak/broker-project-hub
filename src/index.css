@@ -11,36 +11,36 @@
 
 @layer base {
   :root {
-    /* GoMutuo.it Brand Colors - Green-First System */
-    --primary: 167 45% 25%; /* #235c4e - Main green for CTAs */
+    /* GoMutuo.it Brand Colors */
+    --primary: 142 72% 29%; /* #00853E - Main green for CTAs */
     --primary-foreground: 0 0% 100%;
-    --primary-dark: 167 45% 20%; /* Darker green for hover states */
-    --primary-darker: 167 45% 15%; /* Even darker for active states */
+    --primary-dark: 142 72% 22%; /* Darker green for hover states */
+    --primary-darker: 142 72% 17%; /* Even darker for active states */
     
-    /* Form-Specific Colors (GoMutuo.it) - Unified Green System */
-    --form-green: 167 45% 25%; /* #235c4e - Primary brand green */
+    /* Form-Specific Colors (GoMutuo.it) - Updated to new green */
+    --form-green: 167 45% 25%; /* #235c4e - New standardized green */
     --form-green-hover: 167 45% 20%; /* Darker for hover states */
     --form-green-active: 167 45% 15%; /* Even darker for active states */
-    --form-beige: 39 28% 91%; /* #F0EAE0 - Background for form sections only */
-    --form-placeholder: 39 31% 89%; /* #F8F4EF - Input placeholder backgrounds only */
-    --form-border: 167 45% 25%; /* Same as form-green for consistency */
-    --form-shadow: 167 45% 15%; /* Green shadow for form elements */
+    --form-beige: 39 28% 91%; /* #F0EAE0 - Background for form sections */
+    --form-placeholder: 39 31% 89%; /* #F8F4EF - Input placeholder backgrounds */
+    --form-border: 36 15% 74%; /* #BEB8AE - Form element borders */
+    --form-shadow: 36 9% 65%; /* #AFA89F - Shadow color for form elements */
     
-    /* 3D Shadow System Colors - Green-First */
-    --solid-shadow-light: 39 31% 85%; /* Light beige shadow for neutral elements */
-    --solid-shadow-dark: 167 45% 15%; /* Dark green shadow for secondary cards */
-    --solid-shadow-green: 167 45% 15%; /* Primary green shadow for main elements */
-    --solid-shadow-red: 0 84% 45%; /* Red shadow for destructive buttons */
+    /* 3D Shadow System Colors */
+    --solid-shadow-light: 36 9% 65%; /* #AFA89F - Light shadow for beige buttons */
+    --solid-shadow-dark: 167 45% 15%; /* #1a3f37 - Dark shadow for secondary cards */
+    --solid-shadow-green: 167 45% 15%; /* Darker green shadow for green buttons */
+    --solid-shadow-red: 0 84% 45%; /* Darker red shadow for destructive buttons */
     
     /* GoMutuo.it Extended Palette */
-    --vibe-green: 167 45% 25%; /* Unified with form-green */
+    --vibe-green: 142 100% 26%; /* #00853E */
     --vibe-green-vivid: 151 100% 45%; /* #00E676 */
-    --vibe-green-light: 167 45% 95%; /* Light green backgrounds */
+    --vibe-green-light: 122 39% 95%; /* #E8F5E9 */
     --vibe-yellow-fluo: 78 100% 50%; /* #C6FF00 */
-    --accent-yellow: 56 93% 66%; /* Yellow for highlights */
+    --accent-yellow: 56 93% 66%; /* Yellow Fluo for highlights */
     --accent-yellow-alt: 56 93% 56%; /* Darker yellow for hover */
     
-    /* Background Colors */
+    /* Background Colors - Updated to match user request */
     --background: 36 28% 96%; /* #f8f5f1 - Warm cream/beige background */
     --background-cream: 36 28% 96%; /* #f8f5f1 */
     --background-light: 36 28% 96%; /* #f8f5f1 - Main project background */
@@ -59,9 +59,9 @@
     --accent-foreground: 167 45% 15%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 167 45% 25%; /* Unified with form-green */
-    --input: 167 45% 25%; /* Unified with form-green */
-    --ring: 167 45% 25%; /* Unified with form-green */
+    --border: 36 15% 74%;
+    --input: 36 15% 74%;
+    --ring: 167 45% 25%; /* Updated to match form-green */
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
@@ -81,7 +81,7 @@
     --card-foreground: 30 100% 97%;
     --popover: 167 45% 5%;
     --popover-foreground: 30 100% 97%;
-    --primary: 167 45% 25%;
+    --primary: 142 72% 29%;
     --primary-foreground: 0 0% 100%;
     --secondary: 167 30% 12%;
     --secondary-foreground: 30 100% 97%;
@@ -173,9 +173,9 @@
     z-index: -1;
   }
 
-  /* 3D Solid Shadow System - Green-First */
+  /* 3D Solid Shadow System */
   .solid-shadow-light {
-    box-shadow: 0 4px 0 0 hsl(var(--solid-shadow-light));
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-light));
   }
 
   .solid-shadow-light-pressed {
@@ -183,7 +183,7 @@
   }
 
   .solid-shadow-dark {
-    box-shadow: 0 4px 0 0 hsl(var(--solid-shadow-dark));
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-dark));
   }
 
   .solid-shadow-dark-pressed {
@@ -191,7 +191,7 @@
   }
 
   .solid-shadow-green {
-    box-shadow: 0 4px 0 0 hsl(var(--solid-shadow-green));
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-green));
   }
 
   .solid-shadow-green-pressed {
@@ -199,7 +199,7 @@
   }
 
   .solid-shadow-red {
-    box-shadow: 0 4px 0 0 hsl(var(--solid-shadow-red));
+    box-shadow: 0 3px 0 0 hsl(var(--solid-shadow-red));
   }
 
   .solid-shadow-red-pressed {
@@ -240,84 +240,106 @@
 }
 
 @layer components {
-  /* GoMutuo.it Button System - Green-First */
+  /* GoMutuo.it Button System - Updated with new green */
   .gomutuo-button-primary {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply bg-form-green text-white hover:bg-[hsl(var(--form-green-hover))] active:bg-[hsl(var(--form-green-active))];
-    @apply px-6 py-3 font-dm-sans font-semibold;
+    @apply bg-[hsl(var(--form-green))] text-white hover:bg-[hsl(var(--form-green-hover))] active:bg-[hsl(var(--form-green-active))];
+    @apply px-6 py-3 font-dm-sans font-medium;
     @apply solid-shadow-green press-down-effect-green;
   }
 
   .gomutuo-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply border-2 border-form-green bg-white text-form-green hover:bg-vibe-green-light;
-    @apply px-4 py-2 font-dm-sans font-medium;
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply border border-[hsl(var(--form-border))] bg-white text-foreground hover:bg-[hsl(var(--vibe-green-light))];
+    @apply px-4 py-2 font-dm-sans font-normal;
     @apply solid-shadow-light press-down-effect;
   }
 
-  /* GoMutuo.it Form Components - Green-First */
+  /* GoMutuo.it Form Components */
   .gomutuo-form-input {
-    @apply flex w-full rounded-[12px] border-2 border-form-green bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
+    @apply flex w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
     @apply font-dm-sans placeholder:text-muted-foreground;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-form-green focus-visible:ring-offset-2;
-    @apply focus-visible:border-form-green focus-visible:bg-white;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2;
+    @apply focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply transition-all duration-200;
-    @apply solid-shadow-green;
-  }
-
-  .gomutuo-selection-tag {
-    @apply bg-vibe-green-light text-form-green font-semibold px-3 py-1 rounded-[8px] font-dm-sans text-sm border border-form-green;
-  }
-
-  /* Unified Display Field */
-  .gomutuo-display-field {
-    @apply p-3 bg-vibe-green-light border-2 border-form-green rounded-[12px];
-    @apply font-dm-sans text-sm text-form-green font-medium;
-    @apply min-h-[48px] flex items-center;
     @apply solid-shadow-light;
   }
 
-  /* GoMutuo.it Typography */
-  .gomutuo-title {
-    @apply font-dm-sans font-semibold text-form-green text-xl;
+  .gomutuo-selection-tag {
+    @apply bg-[hsl(var(--vibe-green-light))] text-[hsl(var(--form-green))] font-semibold px-3 py-1 rounded-[6px] font-dm-sans text-sm;
   }
 
-  .gomutuo-subtitle {
-    @apply font-dm-sans font-medium text-form-green text-lg;
+  /* GoMutuo.it Card System - Updated with 3D Shadows */
+  .gomutuo-card {
+    @apply bg-white rounded-[12px] border border-[hsl(var(--form-border))] transition-all duration-200;
+    @apply p-6;
+    @apply solid-shadow-light press-down-effect;
   }
 
-  .gomutuo-text {
-    @apply font-dm-sans text-muted-foreground;
+  .gomutuo-card-secondary {
+    @apply bg-[hsl(var(--form-placeholder))] rounded-[12px] border-2 border-[hsl(var(--form-green))] transition-all duration-200;
+    @apply p-6;
+    @apply solid-shadow-dark press-down-effect-dark;
   }
 
-  /* Progress System */
+  .gomutuo-card-green {
+    @apply bg-[hsl(var(--form-green))] text-white rounded-[12px] border border-[hsl(var(--form-green))] transition-all duration-200;
+    @apply p-6;
+    @apply solid-shadow-dark press-down-effect-dark;
+  }
+
+  /* New Specialized Card Variants */
+  .gomutuo-card-stat {
+    @apply gomutuo-card;
+    @apply hover:shadow-lg hover:-translate-y-1;
+    @apply cursor-pointer;
+  }
+
+  .gomutuo-card-action {
+    @apply gomutuo-card;
+    @apply hover:shadow-md;
+  }
+
+  .gomutuo-card-form {
+    @apply gomutuo-card;
+    @apply p-0; /* Reset padding for CardHeader/CardContent control */
+  }
+
+  /* Display Field for Settings */
+  .gomutuo-display-field {
+    @apply p-3 bg-[hsl(var(--form-beige))] border border-[hsl(var(--form-border))] rounded-[10px];
+    @apply font-dm-sans text-sm;
+    @apply min-h-[42px] flex items-center;
+  }
+
+  /* GoMutuo.it specific styles */
+  .gomutuo-badge-incomplete {
+    @apply bg-[hsl(var(--accent-yellow))] text-[hsl(var(--form-green))] border-[hsl(var(--accent-yellow))] font-medium;
+  }
+
   .gomutuo-progress-bar {
-    @apply h-3 bg-vibe-green-light border border-form-green rounded-full overflow-hidden;
+    @apply h-2 bg-gray-200 rounded-full overflow-hidden;
   }
 
   .gomutuo-progress-fill {
-    @apply h-full bg-form-green transition-all duration-300 ease-out rounded-full;
+    @apply h-full bg-[hsl(var(--form-green))] transition-all duration-300 ease-out rounded-full;
   }
 
-  /* Badge System */
-  .gomutuo-badge-primary {
-    @apply bg-form-green text-white border-form-green font-medium px-3 py-1 rounded-[6px] font-dm-sans text-sm;
+  /* Typography */
+  .gomutuo-heading {
+    @apply font-dm-sans font-semibold text-[hsl(var(--form-green))];
   }
 
-  .gomutuo-badge-secondary {
-    @apply bg-vibe-green-light text-form-green border-2 border-form-green font-medium px-3 py-1 rounded-[6px] font-dm-sans text-sm;
-  }
-
-  .gomutuo-badge-yellow {
-    @apply bg-accent-yellow text-form-green border-accent-yellow font-medium px-3 py-1 rounded-[6px] font-dm-sans text-sm;
+  .gomutuo-text {
+    @apply font-dm-sans text-gray-600;
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-form-green to-[hsl(var(--form-green-hover))] bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(var(--form-green-hover))] bg-clip-text text-transparent;
   }
 
   .gradient-bg {
-    @apply bg-gradient-to-r from-form-green to-[hsl(var(--form-green-hover))] text-white;
+    @apply bg-gradient-to-r from-[hsl(var(--form-green))] to-[hsl(var(--form-green-hover))] text-white;
   }
 }

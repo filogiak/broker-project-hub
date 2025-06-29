@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Clock, Users } from 'lucide-react';
-import StandardCard from '@/components/ui/StandardCard';
+import BrokerageOverviewCard from './BrokerageOverviewCard';
 import { getUserProjectStats } from '@/services/projectService';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
@@ -47,10 +47,12 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-[12px] border-2 border-form-green p-6 solid-shadow-green">
-            <div className="animate-pulse">
-              <div className="h-4 bg-vibe-green-light rounded w-24 mb-2"></div>
-              <div className="h-8 bg-vibe-green-light rounded w-16"></div>
+          <div key={i} className="gomutuo-card-stat">
+            <div className="p-6">
+              <div className="animate-pulse">
+                <div className="h-4 bg-form-placeholder rounded w-24 mb-2"></div>
+                <div className="h-8 bg-form-placeholder rounded w-16"></div>
+              </div>
             </div>
           </div>
         ))}
@@ -60,38 +62,29 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <StandardCard
+      <BrokerageOverviewCard
         title="Active Projects"
+        value={activeProjects}
         description="Currently active mortgage projects"
         icon={FileText}
-        variant="overview"
-      >
-        <div className="text-3xl font-bold text-form-green font-dm-sans">
-          {activeProjects}
-        </div>
-      </StandardCard>
+        className="gomutuo-card-stat"
+      />
 
-      <StandardCard
+      <BrokerageOverviewCard
         title="Approvals Due"
+        value={approvalsDue}
         description="Projects pending approval"
         icon={Clock}
-        variant="overview"
-      >
-        <div className="text-3xl font-bold text-form-green font-dm-sans">
-          {approvalsDue}
-        </div>
-      </StandardCard>
+        className="gomutuo-card-stat"
+      />
 
-      <StandardCard
+      <BrokerageOverviewCard
         title="Invited Users"
+        value={invitedUsers}
         description="Total users invited across projects"
         icon={Users}
-        variant="overview"
-      >
-        <div className="text-3xl font-bold text-form-green font-dm-sans">
-          {invitedUsers}
-        </div>
-      </StandardCard>
+        className="gomutuo-card-stat"
+      />
     </div>
   );
 };
