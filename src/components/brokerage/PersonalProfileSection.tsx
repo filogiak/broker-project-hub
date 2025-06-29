@@ -95,7 +95,7 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
           
           <div>
             <Label htmlFor="email" className="font-dm-sans text-form-green font-medium">Email</Label>
-            <div className="gomutuo-display-field mt-1 bg-gray-100 text-muted-foreground">
+            <div className="gomutuo-display-field mt-1 bg-gray-100 text-muted-foreground truncate overflow-hidden">
               {profile.email}
             </div>
           </div>
