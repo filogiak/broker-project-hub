@@ -46,8 +46,8 @@ export default {
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',
 					foreground: 'hsl(var(--accent-foreground))',
-					yellow: 'hsl(var(--accent-yellow))',
-					'yellow-alt': 'hsl(var(--accent-yellow-alt))'
+					yellow: '#D3F54F', /* Updated to new yellow */
+					'yellow-alt': '#C5E849' /* Darker version for hover */
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -71,7 +71,7 @@ export default {
 					green: 'hsl(var(--vibe-green))',
 					'green-vivid': 'hsl(var(--vibe-green-vivid))',
 					'green-light': 'hsl(var(--vibe-green-light))',
-					'yellow-fluo': 'hsl(var(--vibe-yellow-fluo))'
+					'yellow-fluo': '#D3F54F' /* Updated to new yellow */
 				},
 				'background-cream': 'hsl(var(--background-cream))',
 				'background-light': 'hsl(var(--background-light))',

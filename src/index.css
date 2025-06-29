@@ -32,13 +32,13 @@
     --solid-shadow-green: 167 45% 15%; /* Darker green shadow for green buttons */
     --solid-shadow-red: 0 84% 45%; /* Darker red shadow for destructive buttons */
     
-    /* GoMutuo.it Extended Palette */
+    /* GoMutuo.it Extended Palette - Updated yellows to #D3F54F */
     --vibe-green: 142 100% 26%; /* #00853E */
     --vibe-green-vivid: 151 100% 45%; /* #00E676 */
     --vibe-green-light: 122 39% 95%; /* #E8F5E9 */
-    --vibe-yellow-fluo: 78 100% 50%; /* #C6FF00 */
-    --accent-yellow: 56 93% 66%; /* Yellow Fluo for highlights */
-    --accent-yellow-alt: 56 93% 56%; /* Darker yellow for hover */
+    --vibe-yellow-fluo: 71 96% 64%; /* #D3F54F - Updated to new yellow */
+    --accent-yellow: 71 96% 64%; /* #D3F54F - Updated yellow for highlights */
+    --accent-yellow-alt: 71 96% 54%; /* Darker version of new yellow for hover */
     
     /* Background Colors - Updated to match user request */
     --background: 36 28% 96%; /* #f8f5f1 - Warm cream/beige background */
@@ -313,7 +313,7 @@
     @apply min-h-[42px] flex items-center;
   }
 
-  /* GoMutuo.it specific styles */
+  /* GoMutuo.it specific styles - Updated with new yellow */
   .gomutuo-badge-incomplete {
     @apply bg-[hsl(var(--accent-yellow))] text-[hsl(var(--form-green))] border-[hsl(var(--accent-yellow))] font-medium;
   }
