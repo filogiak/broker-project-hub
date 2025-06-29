@@ -1,13 +1,12 @@
 
 import React from 'react';
-import DashboardStats from '@/components/brokerage/DashboardStats';
 import ProjectsSection from '@/components/brokerage/ProjectsSection';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
 
-interface BrokerageDashboardProps {
+interface BrokerageProjectsProps {
   brokerage: Brokerage;
   projects: Project[];
   onCreateProject: (projectData: any) => Promise<void>;
@@ -15,27 +14,24 @@ interface BrokerageDashboardProps {
   onOpenProject: (projectId: string) => void;
 }
 
-const BrokerageDashboard = ({ 
+const BrokerageProjects = ({ 
   brokerage, 
   projects, 
   onCreateProject, 
   onDeleteProject, 
   onOpenProject 
-}: BrokerageDashboardProps) => {
+}: BrokerageProjectsProps) => {
   return (
     <div className="flex-1 p-8 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Dashboard Overview</h1>
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Projects Management</h1>
           <p className="text-muted-foreground mt-1 font-dm-sans">
-            Monitor your brokerage performance and key metrics
+            Create, manage, and monitor all your mortgage projects
           </p>
         </div>
       </div>
-
-      {/* Dashboard Stats */}
-      <DashboardStats brokerageId={brokerage.id} projects={projects} />
 
       {/* Projects Section */}
       <ProjectsSection 
@@ -49,4 +45,4 @@ const BrokerageDashboard = ({
   );
 };
 
-export default BrokerageDashboard;
+export default BrokerageProjects;

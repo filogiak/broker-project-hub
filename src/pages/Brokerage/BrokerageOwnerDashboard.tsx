@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import MainLayout from '@/components/layout/MainLayout';
-import PersonalProfileSection from '@/components/brokerage/PersonalProfileSection';
-import OrganizationSection from '@/components/brokerage/OrganizationSection';
-import ProjectsSection from '@/components/brokerage/ProjectsSection';
-import DashboardStats from '@/components/brokerage/DashboardStats';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
+import BrokerageDashboard from './BrokerageDashboard';
+import BrokerageProjects from './BrokerageProjects';
+import BrokerageUsers from './BrokerageUsers';
+import BrokerageSettings from './BrokerageSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getBrokerageByOwner } from '@/services/brokerageService';
@@ -21,6 +22,7 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 const BrokerageOwnerDashboard = () => {
   const { brokerageId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading, sessionError, refreshUser } = useAuth();
   const { toast } = useToast();
   const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
@@ -260,96 +262,107 @@ const BrokerageOwnerDashboard = () => {
     navigate(`/project/${projectId}`);
   };
 
-  if (authLoading || loading) {
-    return (
-      <MainLayout title="Loading..." userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">
-            {authLoading ? 'Checking authentication...' : 'Loading dashboard...'}
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (error || !brokerage) {
-    return (
-      <MainLayout title="Brokerage Dashboard" userEmail={user?.email || ''} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2 text-destructive">
-              {error ? 'Dashboard Access Issue' : 'No Brokerage Found'}
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              {error || "You don't have a brokerage associated with your account or you don't have permission to access it."}
-            </p>
-            <div className="space-x-2">
-              <button 
-                onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-              >
-                Refresh Page
-              </button>
-              <button 
-                onClick={handleLogout} 
-                className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  return (
-    <MainLayout 
-      title={`${brokerage.name} - Owner Dashboard`}
-      userEmail={user?.email || ''} 
-      onLogout={handleLogout}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Brokerage Owner Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your personal profile, organization, and projects
-            </p>
-          </div>
-        </div>
-
-        {/* Dashboard Stats */}
-        <DashboardStats brokerageId={brokerage.id} projects={projects} />
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Personal Profile Section */}
-          {userProfile && (
-            <PersonalProfileSection 
-              profile={userProfile} 
-              onProfileUpdate={handleProfileUpdate}
-            />
-          )}
-
-          {/* Organization Section */}
-          <OrganizationSection 
-            brokerage={brokerage} 
-            onBrokerageUpdate={handleBrokerageUpdate}
-          />
-        </div>
-
-        {/* Projects Section */}
-        <ProjectsSection 
+  // Determine which component to render based on the current path
+  const renderCurrentPage = () => {
+    const currentPath = location.pathname;
+    
+    if (currentPath.endsWith('/projects')) {
+      return (
+        <BrokerageProjects
+          brokerage={brokerage!}
           projects={projects}
-          brokerageId={brokerage.id}
           onCreateProject={handleCreateProject}
           onDeleteProject={handleDeleteProject}
           onOpenProject={handleOpenProject}
         />
+      );
+    } else if (currentPath.endsWith('/users')) {
+      return <BrokerageUsers />;
+    } else if (currentPath.endsWith('/settings')) {
+      return (
+        <BrokerageSettings
+          brokerage={brokerage!}
+          userProfile={userProfile!}
+          onProfileUpdate={handleProfileUpdate}
+          onBrokerageUpdate={handleBrokerageUpdate}
+        />
+      );
+    } else {
+      // Default to dashboard
+      return (
+        <BrokerageDashboard
+          brokerage={brokerage!}
+          projects={projects}
+          onCreateProject={handleCreateProject}
+          onDeleteProject={handleDeleteProject}
+          onOpenProject={handleOpenProject}
+        />
+      );
+    }
+  };
+
+  if (authLoading || loading) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <BrokerageSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-lg text-form-green font-dm-sans">
+                {authLoading ? 'Checking authentication...' : 'Loading dashboard...'}
+              </div>
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (error || !brokerage || !userProfile) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background-light">
+          <BrokerageSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2 text-destructive font-dm-sans">
+                  {error ? 'Dashboard Access Issue' : 'No Brokerage Found'}
+                </h2>
+                <p className="text-muted-foreground mb-4 font-dm-sans">
+                  {error || "You don't have a brokerage associated with your account or you don't have permission to access it."}
+                </p>
+                <div className="space-x-2">
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 font-dm-sans"
+                  >
+                    Refresh Page
+                  </button>
+                  <button 
+                    onClick={handleLogout} 
+                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90 font-dm-sans"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background-light">
+        <BrokerageSidebar />
+        <SidebarInset>
+          {renderCurrentPage()}
+        </SidebarInset>
       </div>
-    </MainLayout>
+    </SidebarProvider>
   );
 };
 

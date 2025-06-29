@@ -60,7 +60,31 @@ const AppRouter = () => {
             } />
 
             {/* Brokerage owner routes */}
-            <Route path="/brokerage/:brokerageId?" element={
+            <Route path="/brokerage/:brokerageId" element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+                  <BrokerageOwnerDashboard />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/brokerage/:brokerageId/projects" element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+                  <BrokerageOwnerDashboard />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/brokerage/:brokerageId/users" element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+                  <BrokerageOwnerDashboard />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/brokerage/:brokerageId/settings" element={
               <ProtectedRoute>
                 <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
                   <BrokerageOwnerDashboard />
