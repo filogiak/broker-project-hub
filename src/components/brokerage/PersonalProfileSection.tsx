@@ -47,13 +47,12 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
   };
 
   return (
-    <div className="bg-white rounded-[16px] p-8 relative">
+    <div className="bg-white rounded-[16px] p-8">
       {/* Icon at top left */}
       <div className="mb-6">
         <User className="h-9 w-9 text-form-green mb-4" />
         <div>
-          <h3 className="text-xl font-semibold text-black font-dm-sans mb-2">Personal Profile</h3>
-          <p className="text-gray-600 font-dm-sans">Mutuo di Prova</p>
+          <h3 className="text-xl font-semibold text-black font-dm-sans">Personal Profile</h3>
         </div>
       </div>
 
@@ -151,9 +150,6 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
           )}
         </div>
       </div>
-
-      {/* Bottom accent line */}
-      <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
     </div>
   );
 };

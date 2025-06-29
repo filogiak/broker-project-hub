@@ -45,13 +45,12 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
   };
 
   return (
-    <div className="bg-white rounded-[16px] p-8 relative">
+    <div className="bg-white rounded-[16px] p-8">
       {/* Icon at top left */}
       <div className="mb-6">
         <Building className="h-9 w-9 text-form-green mb-4" />
         <div>
-          <h3 className="text-xl font-semibold text-black font-dm-sans mb-2">Organization Details</h3>
-          <p className="text-gray-600 font-dm-sans">Mutuo di Prova</p>
+          <h3 className="text-xl font-semibold text-black font-dm-sans">Organization Details</h3>
         </div>
       </div>
 
@@ -124,9 +123,6 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
           )}
         </div>
       </div>
-
-      {/* Bottom accent line */}
-      <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
     </div>
   );
 };
