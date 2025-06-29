@@ -11,6 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import ProjectCreationWizard from './ProjectCreationWizard';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -34,6 +44,8 @@ const ProjectsFullSection = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -47,6 +59,19 @@ const ProjectsFullSection = ({
   const handleCreateProject = async (projectData: any) => {
     await onCreateProject(projectData);
     setIsCreateModalOpen(false);
+  };
+
+  const handleDeleteClick = (projectId: string) => {
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (projectToDelete) {
+      await onDeleteProject(projectToDelete);
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
   };
 
   // Filter projects based on search query
@@ -131,15 +156,6 @@ const ProjectsFullSection = ({
             <p className="text-muted-foreground mb-4 font-dm-sans">
               {searchQuery ? 'Nessun progetto trovato per la ricerca.' : 'Nessun progetto trovato.'}
             </p>
-            {!searchQuery && (
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="gomutuo-button-primary flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Crea Primo Progetto
-              </Button>
-            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -206,7 +222,7 @@ const ProjectsFullSection = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => onDeleteProject(project.id)}
+                            onClick={() => handleDeleteClick(project.id)}
                             className="text-destructive"
                           >
                             <Trash2 className="h-3 w-3 mr-2" />
@@ -228,6 +244,26 @@ const ProjectsFullSection = ({
           onClose={() => setIsCreateModalOpen(false)}
           onCreateProject={handleCreateProject}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sei sicuro di voler eliminare questo progetto? Questa azione non può essere annullata.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+                Annulla
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
