@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,118 +52,123 @@ const ProjectsFullSection = ({
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header - matching screenshot 3 style */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Projects Management</h1>
-        </div>
-        <Button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-form-green text-white hover:bg-form-green-hover flex items-center gap-2 font-dm-sans font-medium"
-        >
-          <Plus className="h-4 w-4" />
-          Nuovo Progetto
-        </Button>
-      </div>
-
-      {/* Projects Grid - no outer container borders */}
-      <div className="space-y-4">
-        {sortedProjects.length === 0 ? (
-          <div className="text-center py-12">
-            <FolderOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-form-green mb-2 font-dm-sans">
-              Nessun progetto ancora
-            </h3>
-            <p className="text-muted-foreground mb-6 font-dm-sans">
-              Crea il tuo primo progetto per iniziare a gestire i mutui
-            </p>
+    <div className="flex-1 p-8 space-y-8">
+      {/* Project Management */}
+      <Card className="bg-white border-0 shadow-none">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between font-dm-sans text-black">
+              Progetti Attivi
+              <span className="text-sm font-normal text-muted-foreground ml-4">
+                {projects.length} {projects.length === 1 ? 'progetto' : 'progetti'}
+              </span>
+            </CardTitle>
             <Button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-form-green text-white hover:bg-form-green-hover flex items-center gap-2 font-dm-sans font-medium"
+              className="gomutuo-button-primary flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
-              Crea Primo Progetto
+              Nuovo Progetto
             </Button>
           </div>
-        ) : (
-          sortedProjects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white border-2 border-form-green rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="text-lg font-semibold text-form-green font-dm-sans">
-                      {project.name}
-                    </h3>
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs bg-vibe-green-light text-form-green border-form-green"
-                    >
-                      {project.status === 'active' ? 'Attivo' : 
-                       project.status === 'completed' ? 'Completato' : 
-                       project.status === 'pending_approval' ? 'In attesa' : project.status}
-                    </Badge>
-                  </div>
-                  
-                  {project.description && (
-                    <p className="text-sm text-muted-foreground mb-4 font-dm-sans">
-                      {project.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="font-dm-sans">
-                        Creato il {formatDate(project.created_at)}
-                      </span>
-                    </div>
-                    {project.project_type && (
-                      <div className="flex items-center gap-1">
-                        <span className="font-dm-sans capitalize">
-                          {project.project_type.replace('_', ' ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenProject(project.id)}
-                    className="flex items-center gap-1 font-dm-sans"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Apri
-                  </Button>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="p-2">
-                        <MoreVertical className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => onDeleteProject(project.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3 mr-2" />
-                        Elimina
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+        </CardHeader>
+        <CardContent>
+          {sortedProjects.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4 font-dm-sans">Nessun progetto trovato.</p>
+              <Button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="gomutuo-button-primary flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Crea Primo Progetto
+              </Button>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedProjects.map((project) => (
+                <Card 
+                  key={project.id} 
+                  className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden"
+                >
+                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-form-green rounded-b-[10px]"></div>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-6">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <FolderOpen className="h-9 w-9 text-form-green" />
+                      </div>
+
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <div>
+                          <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
+                            {project.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 font-dm-sans">
+                            {project.description || 'Nessuna descrizione'}
+                          </p>
+                        </div>
+
+                        <div className="text-left">
+                          <p className="text-xs text-gray-500 mb-1">Stato</p>
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs bg-vibe-green-light text-form-green border-form-green"
+                          >
+                            {project.status === 'active' ? 'Attivo' : 
+                             project.status === 'completed' ? 'Completato' : 
+                             project.status === 'pending_approval' ? 'In attesa' : project.status}
+                          </Badge>
+                        </div>
+
+                        <div className="text-left">
+                          <p className="text-xs text-gray-500 mb-1">Tipo Progetto</p>
+                          <p className="font-medium text-form-green text-sm">
+                            {project.project_type ? project.project_type.replace('_', ' ') : 'Non specificato'}
+                          </p>
+                        </div>
+
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 mb-1">Data Creazione</p>
+                          <p className="font-medium text-form-green text-sm">{formatDate(project.created_at)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onOpenProject(project.id)}
+                          className="flex items-center gap-1 font-dm-sans"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Apri
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="p-2">
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => onDeleteProject(project.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Elimina
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create Project Modal */}
       <CreateProjectModal
