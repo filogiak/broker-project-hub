@@ -16,6 +16,9 @@ const BrokerageHeaderCard = ({
   lastActivity,
   isActive = true
 }: BrokerageHeaderCardProps) => {
+  // Extract the actual brokerage name by removing "Progetto di" prefix if it exists
+  const actualBrokerageName = brokerageName.replace(/^Progetto di\s*/i, '');
+
   return (
     <Card className="bg-white border-2 border-form-green rounded-[16px] shadow-lg relative overflow-hidden">
       {/* Bottom accent line */}
@@ -30,7 +33,7 @@ const BrokerageHeaderCard = ({
             
             <div className="ml-6">
               <h1 className="text-3xl font-bold text-black font-dm-sans leading-tight mb-3">
-                Organizzazione di {brokerageName}
+                Organizzazione di {actualBrokerageName}
               </h1>
               
               {brokerageDescription && (
