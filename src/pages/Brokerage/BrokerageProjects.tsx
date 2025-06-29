@@ -1,8 +1,11 @@
+
 import React from 'react';
 import ProjectsFullSection from '@/components/brokerage/ProjectsFullSection';
 import type { Database } from '@/integrations/supabase/types';
+
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
+
 interface BrokerageProjectsProps {
   brokerage: Brokerage;
   projects: Project[];
@@ -10,6 +13,7 @@ interface BrokerageProjectsProps {
   onDeleteProject: (projectId: string) => Promise<void>;
   onOpenProject: (projectId: string) => void;
 }
+
 const BrokerageProjects = ({
   brokerage,
   projects,
@@ -17,17 +21,18 @@ const BrokerageProjects = ({
   onDeleteProject,
   onOpenProject
 }: BrokerageProjectsProps) => {
-  return <div className="flex-1 p-8 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          
-          
-        </div>
-      </div>
-
+  return (
+    <div className="flex-1 p-8">
       {/* Projects Full Section - Shows all projects with New Project button */}
-      <ProjectsFullSection projects={projects} brokerageId={brokerage.id} onCreateProject={onCreateProject} onDeleteProject={onDeleteProject} onOpenProject={onOpenProject} />
-    </div>;
+      <ProjectsFullSection 
+        projects={projects} 
+        brokerageId={brokerage.id} 
+        onCreateProject={onCreateProject} 
+        onDeleteProject={onDeleteProject} 
+        onOpenProject={onOpenProject} 
+      />
+    </div>
+  );
 };
+
 export default BrokerageProjects;
