@@ -49,8 +49,8 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
       {/* Header section matching progetti attivi design */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex items-center gap-3 mb-4">
-          <Building className="h-6 w-6 text-form-green-dark" />
-          <h3 className="font-semibold text-black font-dm-sans text-xl">Organization Details</h3>
+          <Building className="h-7 w-7 text-form-green-dark" />
+          <h3 className="font-semibold text-black font-dm-sans text-2xl">Organization Details</h3>
         </div>
       </div>
 
