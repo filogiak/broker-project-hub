@@ -289,6 +289,30 @@
     @apply solid-shadow-dark press-down-effect-dark;
   }
 
+  /* New Specialized Card Variants */
+  .gomutuo-card-stat {
+    @apply gomutuo-card;
+    @apply hover:shadow-lg hover:-translate-y-1;
+    @apply cursor-pointer;
+  }
+
+  .gomutuo-card-action {
+    @apply gomutuo-card;
+    @apply hover:shadow-md;
+  }
+
+  .gomutuo-card-form {
+    @apply gomutuo-card;
+    @apply p-0; /* Reset padding for CardHeader/CardContent control */
+  }
+
+  /* Display Field for Settings */
+  .gomutuo-display-field {
+    @apply p-3 bg-[hsl(var(--form-beige))] border border-[hsl(var(--form-border))] rounded-[10px];
+    @apply font-dm-sans text-sm;
+    @apply min-h-[42px] flex items-center;
+  }
+
   /* GoMutuo.it specific styles */
   .gomutuo-badge-incomplete {
     @apply bg-[hsl(var(--accent-yellow))] text-[hsl(var(--form-green))] border-[hsl(var(--accent-yellow))] font-medium;
