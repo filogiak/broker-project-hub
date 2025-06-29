@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink, User, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -143,84 +142,82 @@ const ProjectsFullSection = ({
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {sortedProjects.map((project) => (
-                <Card 
-                  key={project.id} 
-                  className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden"
-                >
-                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-form-green rounded-b-[10px]"></div>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-6">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <FolderOpen className="h-9 w-9 text-form-green" />
+            sortedProjects.map((project) => (
+              <Card 
+                key={project.id} 
+                className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden mb-4"
+              >
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-form-green rounded-b-[10px]"></div>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-6">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <FolderOpen className="h-9 w-9 text-form-green" />
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                      <div>
+                        <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
+                          {project.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 font-dm-sans">
+                          {project.description || 'Nessuna descrizione'}
+                        </p>
                       </div>
 
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <div>
-                          <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
-                            {project.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 font-dm-sans">
-                            {project.description || 'Nessuna descrizione'}
-                          </p>
-                        </div>
-
-                        <div className="text-left">
-                          <p className="text-xs text-gray-500 mb-1">Stato</p>
-                          <p className="font-medium text-form-green text-sm">
-                            {project.status === 'active' ? 'Attivo' : 
-                             project.status === 'completed' ? 'Completato' : 
-                             project.status === 'pending_approval' ? 'In attesa' : project.status}
-                          </p>
-                        </div>
-
-                        <div className="text-left">
-                          <p className="text-xs text-gray-500 mb-1">Tipo Progetto</p>
-                          <p className="font-medium text-form-green text-sm">
-                            {project.project_type ? project.project_type.replace('_', ' ') : 'Non specificato'}
-                          </p>
-                        </div>
-
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 mb-1">Data Creazione</p>
-                          <p className="font-medium text-form-green text-sm">{formatDate(project.created_at)}</p>
-                        </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-500 mb-1">Stato</p>
+                        <p className="font-medium text-form-green text-sm">
+                          {project.status === 'active' ? 'Attivo' : 
+                           project.status === 'completed' ? 'Completato' : 
+                           project.status === 'pending_approval' ? 'In attesa' : project.status}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onOpenProject(project.id)}
-                          className="flex items-center gap-1 font-dm-sans"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Apri
-                        </Button>
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="p-2">
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => onDeleteProject(project.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-3 w-3 mr-2" />
-                              Elimina
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-500 mb-1">Tipo Progetto</p>
+                        <p className="font-medium text-form-green text-sm">
+                          {project.project_type ? project.project_type.replace('_', ' ') : 'Non specificato'}
+                        </p>
+                      </div>
+
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Data Creazione</p>
+                        <p className="font-medium text-form-green text-sm">{formatDate(project.created_at)}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenProject(project.id)}
+                        className="flex items-center gap-1 font-dm-sans"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Apri
+                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="p-2">
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => onDeleteProject(project.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Elimina
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </CardContent>
       </Card>
