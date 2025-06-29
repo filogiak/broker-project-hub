@@ -30,7 +30,7 @@ const BrokerageHeaderCard = ({
             
             <div className="ml-6">
               <h1 className="text-3xl font-bold text-black font-dm-sans leading-tight mb-3">
-                {brokerageName}
+                Organizzazione di {brokerageName}
               </h1>
               
               {brokerageDescription && (
@@ -41,8 +41,8 @@ const BrokerageHeaderCard = ({
             </div>
           </div>
 
-          {/* Status Badge - Top Right */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Status Badge - Top Right - Adjusted positioning */}
+          <div className="flex items-center gap-2 flex-shrink-0 mt-1">
             <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
             <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
               {isActive ? 'Attivo' : 'Non Attivo'}
@@ -50,14 +50,14 @@ const BrokerageHeaderCard = ({
           </div>
         </div>
 
-        {/* Last Activity & Created Date - Bottom Right */}
-        <div className="absolute bottom-8 right-8">
+        {/* Last Activity & Created Date - Bottom Right - Adjusted positioning */}
+        <div className="absolute bottom-6 right-8">
           <div className="flex items-center gap-8">
             {/* Last Activity */}
             <div className="flex items-center gap-2">
               <div className="text-right">
                 <p className="text-xs text-gray-500 font-dm-sans leading-none">Ultima attività</p>
-                <div className="flex items-center gap-1 justify-end">
+                <div className="flex items-center gap-1 justify-end mt-1">
                   <Clock className="h-4 w-4 text-form-green" />
                   <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
                 </div>
@@ -68,7 +68,7 @@ const BrokerageHeaderCard = ({
             <div className="flex items-center gap-2">
               <div className="text-right">
                 <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
-                <div className="flex items-center gap-1 justify-end">
+                <div className="flex items-center gap-1 justify-end mt-1">
                   <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
                   <Calendar className="h-4 w-4 text-form-green" />
                 </div>
