@@ -168,14 +168,11 @@ const ProjectsFullSection = ({
 
                         <div className="text-left">
                           <p className="text-xs text-gray-500 mb-1">Stato</p>
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs bg-vibe-green-light text-form-green border-form-green"
-                          >
+                          <p className="font-medium text-form-green text-sm">
                             {project.status === 'active' ? 'Attivo' : 
                              project.status === 'completed' ? 'Completato' : 
                              project.status === 'pending_approval' ? 'In attesa' : project.status}
-                          </Badge>
+                          </p>
                         </div>
 
                         <div className="text-left">
