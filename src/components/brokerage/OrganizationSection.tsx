@@ -45,15 +45,13 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
   };
 
   return (
-    <div className="bg-white rounded-[16px] border-2 border-form-green p-8 relative shadow-lg">
-      {/* Header with Icon and Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-form-green rounded-lg">
-          <Building className="h-5 w-5 text-white" />
-        </div>
+    <div className="bg-white rounded-[16px] p-8 relative">
+      {/* Icon at top left */}
+      <div className="mb-6">
+        <Building className="h-9 w-9 text-form-green mb-4" />
         <div>
-          <h3 className="text-xl font-semibold text-form-green font-dm-sans">Organization Details</h3>
-          <p className="text-sm text-muted-foreground font-dm-sans">Manage your brokerage information and settings</p>
+          <h3 className="text-xl font-semibold text-black font-dm-sans mb-2">Organization Details</h3>
+          <p className="text-gray-600 font-dm-sans">Mutuo di Prova</p>
         </div>
       </div>
 
