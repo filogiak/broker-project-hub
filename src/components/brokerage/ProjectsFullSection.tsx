@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink, User } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink, User, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -31,6 +32,8 @@ const ProjectsFullSection = ({
   onOpenProject 
 }: ProjectsFullSectionProps) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -46,10 +49,27 @@ const ProjectsFullSection = ({
     setIsCreateModalOpen(false);
   };
 
+  // Filter projects based on search query
+  const filteredProjects = projects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.name?.toLowerCase().includes(query) ||
+      project.description?.toLowerCase().includes(query)
+    );
+  });
+
   // Sort projects by creation date (most recent first)
-  const sortedProjects = [...projects].sort((a, b) => 
+  const sortedProjects = [...filteredProjects].sort((a, b) => 
     new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
   );
+
+  const handleSearchToggle = () => {
+    setIsSearchExpanded(!isSearchExpanded);
+    if (isSearchExpanded) {
+      setSearchQuery('');
+    }
+  };
 
   return (
     <div className="flex-1 p-8 space-y-8">
@@ -60,29 +80,67 @@ const ProjectsFullSection = ({
             <CardTitle className="flex items-center justify-between font-dm-sans text-black">
               Progetti Attivi
               <span className="text-sm font-normal text-muted-foreground ml-4">
-                {projects.length} {projects.length === 1 ? 'progetto' : 'progetti'}
+                {filteredProjects.length} {filteredProjects.length === 1 ? 'progetto' : 'progetti'}
               </span>
             </CardTitle>
-            <Button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="gomutuo-button-primary flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Nuovo Progetto
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {sortedProjects.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4 font-dm-sans">Nessun progetto trovato.</p>
+            <div className="flex items-center gap-2">
+              {/* Search functionality */}
+              <div className="flex items-center">
+                {isSearchExpanded && (
+                  <div className="flex items-center mr-2">
+                    <Input
+                      placeholder="Cerca progetti..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-64 h-10"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSearchToggle}
+                      className="ml-1 p-2"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {!isSearchExpanded && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSearchToggle}
+                    className="mr-2 p-2"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <Button 
                 onClick={() => setIsCreateModalOpen(true)}
                 className="gomutuo-button-primary flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Crea Primo Progetto
+                Nuovo Progetto
               </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sortedProjects.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4 font-dm-sans">
+                {searchQuery ? 'Nessun progetto trovato per la ricerca.' : 'Nessun progetto trovato.'}
+              </p>
+              {!searchQuery && (
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="gomutuo-button-primary flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Crea Primo Progetto
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
