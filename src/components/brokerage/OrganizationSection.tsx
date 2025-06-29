@@ -46,11 +46,15 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
 
   return (
     <div className="bg-white rounded-[16px] p-8">
-      {/* Icon at top left */}
-      <div className="mb-6">
-        <Building className="h-9 w-9 text-form-green mb-4" />
-        <div>
-          <h3 className="text-xl font-semibold text-black font-dm-sans">Organization Details</h3>
+      {/* Header section matching dashboard design */}
+      <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <Building className="h-9 w-9 text-form-green" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Organization Details</h3>
+          </div>
         </div>
       </div>
 
@@ -67,7 +71,7 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
               className="mt-1"
             />
           ) : (
-            <div className="gomutuo-display-field mt-1 font-medium">
+            <div className="gomutuo-display-field mt-1 font-medium bg-white">
               {brokerage.name}
             </div>
           )}
@@ -85,7 +89,7 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
               className="gomutuo-form-input mt-1 resize-none"
             />
           ) : (
-            <div className="gomutuo-display-field mt-1 min-h-[80px] items-start">
+            <div className="gomutuo-display-field mt-1 min-h-[80px] items-start bg-white">
               {brokerage.description || 'No description provided'}
             </div>
           )}

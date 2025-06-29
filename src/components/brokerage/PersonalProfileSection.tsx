@@ -48,11 +48,15 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
 
   return (
     <div className="bg-white rounded-[16px] p-8">
-      {/* Icon at top left */}
-      <div className="mb-6">
-        <User className="h-9 w-9 text-form-green mb-4" />
-        <div>
-          <h3 className="text-xl font-semibold text-black font-dm-sans">Personal Profile</h3>
+      {/* Header section matching dashboard design */}
+      <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <User className="h-9 w-9 text-form-green" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Personal Profile</h3>
+          </div>
         </div>
       </div>
 
@@ -70,7 +74,7 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
                 className="mt-1"
               />
             ) : (
-              <div className="gomutuo-display-field mt-1">
+              <div className="gomutuo-display-field mt-1 bg-white">
                 {profile.first_name || 'Not set'}
               </div>
             )}
@@ -87,7 +91,7 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
                 className="mt-1"
               />
             ) : (
-              <div className="gomutuo-display-field mt-1">
+              <div className="gomutuo-display-field mt-1 bg-white">
                 {profile.last_name || 'Not set'}
               </div>
             )}
@@ -111,7 +115,7 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
                 className="mt-1"
               />
             ) : (
-              <div className="gomutuo-display-field mt-1">
+              <div className="gomutuo-display-field mt-1 bg-white">
                 {profile.phone || 'Not set'}
               </div>
             )}
