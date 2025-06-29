@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import CreateProjectModal from './CreateProjectModal';
+import ProjectCreationWizard from './ProjectCreationWizard';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -228,8 +228,8 @@ const ProjectsFullSection = ({
         </CardContent>
       </Card>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
+      {/* Create Project Wizard */}
+      <ProjectCreationWizard
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateProject={handleCreateProject}
