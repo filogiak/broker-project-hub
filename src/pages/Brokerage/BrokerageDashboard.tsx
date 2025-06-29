@@ -1,7 +1,10 @@
 
 import React from 'react';
+import BrokerageHeaderCard from '@/components/brokerage/BrokerageHeaderCard';
 import DashboardStats from '@/components/brokerage/DashboardStats';
 import ProjectsOverview from '@/components/brokerage/ProjectsOverview';
+import BrokerageQuickActions from '@/components/brokerage/BrokerageQuickActions';
+import RecentActivity from '@/components/project/RecentActivity';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -24,25 +27,25 @@ const BrokerageDashboard = ({
 }: BrokerageDashboardProps) => {
   return (
     <div className="flex-1 p-8 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Dashboard Overview</h1>
-          <p className="text-muted-foreground mt-1 font-dm-sans">
-            Monitor your brokerage performance and key metrics
-          </p>
-        </div>
+      {/* Enhanced Brokerage Header with Status */}
+      <BrokerageHeaderCard 
+        brokerageName={brokerage.name} 
+        brokerageDescription={brokerage.description || undefined} 
+        lastActivity="2h" 
+        isActive={true} 
+      />
+
+      {/* Main Action Cards */}
+      <div>
+        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Azioni Principali</h2>
+        <DashboardStats brokerageId={brokerage.id} projects={projects} />
       </div>
 
-      {/* Dashboard Stats */}
-      <DashboardStats brokerageId={brokerage.id} projects={projects} />
-
-      {/* Projects Overview - Shows only 2 recent projects */}
-      <ProjectsOverview 
-        projects={projects}
-        brokerageId={brokerage.id}
-        onOpenProject={onOpenProject}
-      />
+      {/* Recent Activity & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <RecentActivity />
+        <BrokerageQuickActions />
+      </div>
     </div>
   );
 };
