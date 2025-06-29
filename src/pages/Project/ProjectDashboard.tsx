@@ -4,14 +4,15 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
 import ProjectHeaderCard from '@/components/project/ProjectHeaderCard';
 import ProjectOverviewCard from '@/components/project/ProjectOverviewCard';
-import RecentActivity from '@/components/project/RecentActivity';
 import { Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+
 type Project = Database['public']['Tables']['projects']['Row'];
+
 const ProjectDashboard = () => {
   const {
     projectId
@@ -27,6 +28,7 @@ const ProjectDashboard = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   useEffect(() => {
     const loadProject = async () => {
       if (authLoading) return;
@@ -61,6 +63,7 @@ const ProjectDashboard = () => {
     };
     loadProject();
   }, [user, authLoading, projectId, navigate]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -74,6 +77,7 @@ const ProjectDashboard = () => {
       });
     }
   };
+
   if (authLoading || loading) {
     return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
@@ -86,6 +90,7 @@ const ProjectDashboard = () => {
         </div>
       </SidebarProvider>;
   }
+
   if (error || !project) {
     return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
@@ -108,6 +113,7 @@ const ProjectDashboard = () => {
         </div>
       </SidebarProvider>;
   }
+
   return <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background-light">
         <ProjectSidebar />
@@ -137,51 +143,10 @@ const ProjectDashboard = () => {
               }} badge="Beta" />
               </div>
             </div>
-
-            {/* Recent Activity & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <RecentActivity />
-              
-              <div className="space-y-6">
-                <div className="bg-white rounded-[12px] border border-form-border p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-form-green font-dm-sans mb-4">Azioni Rapide</h3>
-                  <div className="space-y-3">
-                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-form-green" />
-                        <div>
-                          <p className="font-medium text-form-green font-dm-sans">Esporta Dati</p>
-                          <p className="text-xs text-gray-500 font-dm-sans">Scarica dati del progetto</p>
-                        </div>
-                      </div>
-                    </button>
-                    
-                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
-                      <div className="flex items-center gap-3">
-                        <BarChart3 className="h-5 w-5 text-form-green" />
-                        <div>
-                          <p className="font-medium text-form-green font-dm-sans">Genera Report</p>
-                          <p className="text-xs text-gray-500 font-dm-sans">Crea report di avanzamento</p>
-                        </div>
-                      </div>
-                    </button>
-                    
-                    <button className="w-full text-left p-4 rounded-[10px] hover:bg-vibe-green-light transition-colors border border-form-border/50">
-                      <div className="flex items-center gap-3">
-                        <MessageSquare className="h-5 w-5 text-form-green" />
-                        <div>
-                          <p className="font-medium text-form-green font-dm-sans">Invia Aggiornamento</p>
-                          <p className="text-xs text-gray-500 font-dm-sans">Notifica membri del team</p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </SidebarInset>
       </div>
     </SidebarProvider>;
 };
+
 export default ProjectDashboard;
