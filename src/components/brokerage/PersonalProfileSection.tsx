@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Edit, Check, X } from 'lucide-react';
-import BrokerageSettingsCard from './BrokerageSettingsCard';
+import StandardCard from '@/components/ui/StandardCard';
 import { updateOwnerProfile } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -47,73 +47,73 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
   };
 
   return (
-    <BrokerageSettingsCard
+    <StandardCard
       title="Personal Profile"
       description="Manage your personal information and contact details"
       icon={User}
-      className="gomutuo-card-form"
+      variant="settings"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <Label htmlFor="first_name" className="font-dm-sans text-form-green font-medium">First Name</Label>
+          <Label htmlFor="first_name" className="gomutuo-subtitle">First Name</Label>
           {isEditing ? (
             <Input
               id="first_name"
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               placeholder="Enter first name"
-              className="gomutuo-form-input mt-1"
+              className="gomutuo-form-input mt-2"
             />
           ) : (
-            <div className="gomutuo-display-field mt-1">
+            <div className="gomutuo-display-field mt-2">
               {profile.first_name || 'Not set'}
             </div>
           )}
         </div>
         
         <div>
-          <Label htmlFor="last_name" className="font-dm-sans text-form-green font-medium">Last Name</Label>
+          <Label htmlFor="last_name" className="gomutuo-subtitle">Last Name</Label>
           {isEditing ? (
             <Input
               id="last_name"
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               placeholder="Enter last name"
-              className="gomutuo-form-input mt-1"
+              className="gomutuo-form-input mt-2"
             />
           ) : (
-            <div className="gomutuo-display-field mt-1">
+            <div className="gomutuo-display-field mt-2">
               {profile.last_name || 'Not set'}
             </div>
           )}
         </div>
         
         <div>
-          <Label htmlFor="email" className="font-dm-sans text-form-green font-medium">Email</Label>
-          <div className="gomutuo-display-field mt-1 bg-gray-100 text-muted-foreground">
+          <Label htmlFor="email" className="gomutuo-subtitle">Email</Label>
+          <div className="gomutuo-display-field mt-2 bg-gray-100 text-muted-foreground">
             {profile.email}
           </div>
         </div>
         
         <div>
-          <Label htmlFor="phone" className="font-dm-sans text-form-green font-medium">Phone</Label>
+          <Label htmlFor="phone" className="gomutuo-subtitle">Phone</Label>
           {isEditing ? (
             <Input
               id="phone"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="Enter phone number"
-              className="gomutuo-form-input mt-1"
+              className="gomutuo-form-input mt-2"
             />
           ) : (
-            <div className="gomutuo-display-field mt-1">
+            <div className="gomutuo-display-field mt-2">
               {profile.phone || 'Not set'}
             </div>
           )}
         </div>
       </div>
       
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-3 pt-6">
         {isEditing ? (
           <>
             <Button 
@@ -144,7 +144,7 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
           </Button>
         )}
       </div>
-    </BrokerageSettingsCard>
+    </StandardCard>
   );
 };
 

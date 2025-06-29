@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Building, Edit, Check, X } from 'lucide-react';
-import BrokerageSettingsCard from './BrokerageSettingsCard';
+import StandardCard from '@/components/ui/StandardCard';
 import { updateBrokerageProfile } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -46,48 +46,50 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
   };
 
   return (
-    <BrokerageSettingsCard
+    <StandardCard
       title="Organization Details"
       description="Manage your brokerage information and settings"
       icon={Building}
-      className="gomutuo-card-form"
+      variant="settings"
     >
-      <div>
-        <Label htmlFor="brokerage_name" className="font-dm-sans text-form-green font-medium">Brokerage Name</Label>
-        {isEditing ? (
-          <Input
-            id="brokerage_name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter brokerage name"
-            className="gomutuo-form-input mt-1"
-          />
-        ) : (
-          <div className="gomutuo-display-field mt-1 font-medium">
-            {brokerage.name}
-          </div>
-        )}
+      <div className="space-y-6">
+        <div>
+          <Label htmlFor="brokerage_name" className="gomutuo-subtitle">Brokerage Name</Label>
+          {isEditing ? (
+            <Input
+              id="brokerage_name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter brokerage name"
+              className="gomutuo-form-input mt-2"
+            />
+          ) : (
+            <div className="gomutuo-display-field mt-2">
+              {brokerage.name}
+            </div>
+          )}
+        </div>
+        
+        <div>
+          <Label htmlFor="brokerage_description" className="gomutuo-subtitle">Description</Label>
+          {isEditing ? (
+            <Textarea
+              id="brokerage_description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter brokerage description"
+              rows={4}
+              className="gomutuo-form-input mt-2 resize-none"
+            />
+          ) : (
+            <div className="gomutuo-display-field mt-2 min-h-[100px] items-start">
+              {brokerage.description || 'No description provided'}
+            </div>
+          )}
+        </div>
       </div>
       
-      <div>
-        <Label htmlFor="brokerage_description" className="font-dm-sans text-form-green font-medium">Description</Label>
-        {isEditing ? (
-          <Textarea
-            id="brokerage_description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Enter brokerage description"
-            rows={3}
-            className="gomutuo-form-input mt-1 resize-none"
-          />
-        ) : (
-          <div className="gomutuo-display-field mt-1 min-h-[80px] items-start">
-            {brokerage.description || 'No description provided'}
-          </div>
-        )}
-      </div>
-      
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-3 pt-6">
         {isEditing ? (
           <>
             <Button 
@@ -118,7 +120,7 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
           </Button>
         )}
       </div>
-    </BrokerageSettingsCard>
+    </StandardCard>
   );
 };
 
