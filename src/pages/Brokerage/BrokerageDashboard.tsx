@@ -1,7 +1,7 @@
 
 import React from 'react';
 import DashboardStats from '@/components/brokerage/DashboardStats';
-import ProjectsSection from '@/components/brokerage/ProjectsSection';
+import ProjectsOverview from '@/components/brokerage/ProjectsOverview';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -37,12 +37,10 @@ const BrokerageDashboard = ({
       {/* Dashboard Stats */}
       <DashboardStats brokerageId={brokerage.id} projects={projects} />
 
-      {/* Projects Section */}
-      <ProjectsSection 
+      {/* Projects Overview - Shows only 2 recent projects */}
+      <ProjectsOverview 
         projects={projects}
         brokerageId={brokerage.id}
-        onCreateProject={onCreateProject}
-        onDeleteProject={onDeleteProject}
         onOpenProject={onOpenProject}
       />
     </div>

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import ProjectsSection from '@/components/brokerage/ProjectsSection';
+import ProjectsFullSection from '@/components/brokerage/ProjectsFullSection';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -33,8 +33,8 @@ const BrokerageProjects = ({
         </div>
       </div>
 
-      {/* Projects Section */}
-      <ProjectsSection 
+      {/* Projects Full Section - Shows all projects with New Project button */}
+      <ProjectsFullSection 
         projects={projects}
         brokerageId={brokerage.id}
         onCreateProject={onCreateProject}
