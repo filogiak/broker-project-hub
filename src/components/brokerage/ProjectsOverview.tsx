@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Plus, FolderOpen, Users, Calendar } from 'lucide-react';
+import { FolderOpen, Users, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -37,11 +37,11 @@ const ProjectsOverview = ({ projects, brokerageId, onOpenProject }: ProjectsOver
 
   return (
     <div className="gomutuo-card">
-      {/* Header */}
+      {/* Header - matching project dashboard box style */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-form-green font-dm-sans flex items-center gap-2">
-            <FolderOpen className="h-6 w-6" />
+            <FolderOpen className="h-6 w-6 text-form-green" />
             Gestione Progetti
           </h2>
           <p className="text-sm text-muted-foreground mt-1 font-dm-sans">
@@ -67,7 +67,7 @@ const ProjectsOverview = ({ projects, brokerageId, onOpenProject }: ProjectsOver
           recentProjects.map((project) => (
             <div
               key={project.id}
-              className="bg-white border border-form-green rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+              className="bg-white border-2 border-form-green rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
               onClick={() => onOpenProject(project.id)}
             >
               <div className="flex items-start justify-between">

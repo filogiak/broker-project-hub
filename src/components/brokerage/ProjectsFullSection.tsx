@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, FolderOpen, Users, Calendar, MoreVertical, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,33 +51,22 @@ const ProjectsFullSection = ({
   );
 
   return (
-    <div className="gomutuo-card">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      {/* Header - matching screenshot 3 style */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-form-green font-dm-sans flex items-center gap-2">
-            <FolderOpen className="h-6 w-6" />
-            Gestione Progetti
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1 font-dm-sans">
-            Gestisci tutti i progetti del mutuo per la tua agenzia
-          </p>
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Projects Management</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge className="bg-accent-yellow text-form-green border-accent-yellow hover:bg-accent-yellow-alt font-dm-sans">
-            {projects.length} progetti
-          </Badge>
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-form-green text-white hover:bg-form-green-hover flex items-center gap-2 font-dm-sans font-medium"
-          >
-            <Plus className="h-4 w-4" />
-            Nuovo Progetto
-          </Button>
-        </div>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-form-green text-white hover:bg-form-green-hover flex items-center gap-2 font-dm-sans font-medium"
+        >
+          <Plus className="h-4 w-4" />
+          Nuovo Progetto
+        </Button>
       </div>
 
-      {/* Projects Grid */}
+      {/* Projects Grid - no outer container borders */}
       <div className="space-y-4">
         {sortedProjects.length === 0 ? (
           <div className="text-center py-12">
@@ -100,12 +89,12 @@ const ProjectsFullSection = ({
           sortedProjects.map((project) => (
             <div
               key={project.id}
-              className="bg-white border border-form-green rounded-lg p-4 hover:shadow-md transition-all duration-200"
+              className="bg-white border-2 border-form-green rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-form-green font-dm-sans">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-lg font-semibold text-form-green font-dm-sans">
                       {project.name}
                     </h3>
                     <Badge 
@@ -119,14 +108,14 @@ const ProjectsFullSection = ({
                   </div>
                   
                   {project.description && (
-                    <p className="text-sm text-muted-foreground mb-3 font-dm-sans">
+                    <p className="text-sm text-muted-foreground mb-4 font-dm-sans">
                       {project.description}
                     </p>
                   )}
                   
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
                       <span className="font-dm-sans">
                         Creato il {formatDate(project.created_at)}
                       </span>
@@ -180,7 +169,6 @@ const ProjectsFullSection = ({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateProject={handleCreateProject}
-        brokerageId={brokerageId}
       />
     </div>
   );
