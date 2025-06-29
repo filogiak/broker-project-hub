@@ -76,7 +76,6 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateProject }: CreateProjectM
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter project description (optional)"
-              rows={3}
               disabled={isSubmitting}
             />
           </div>
@@ -89,7 +88,11 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateProject }: CreateProjectM
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
+            <Button 
+              type="submit" 
+              className="gomutuo-button-primary"
+              disabled={isSubmitting || !name.trim()}
+            >
               {isSubmitting ? 'Creating...' : 'Create Project'}
             </Button>
           </div>

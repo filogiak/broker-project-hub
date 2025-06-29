@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "form-input",
+          "gomutuo-form-input",
           className
         )}
         ref={ref}

@@ -46,7 +46,6 @@ const NumberQuestion = ({
       min={min}
       max={max}
       step={step}
-      className="w-full"
       required={required}
     />
   );

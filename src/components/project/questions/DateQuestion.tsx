@@ -24,7 +24,6 @@ const DateQuestion = ({
       onChange={(e) => onChange(e.target.value)}
       min={min}
       max={max}
-      className="w-full"
       required={required}
     />
   );

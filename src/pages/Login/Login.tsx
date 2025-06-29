@@ -31,7 +31,7 @@ const Login = () => {
           <p className="text-muted-foreground">AI-powered mortgage intermediation platform</p>
         </div>
         
-        <Card className="card-primary">
+        <Card className="gomutuo-card">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
             <CardDescription className="text-center">
@@ -64,7 +64,7 @@ const Login = () => {
               </div>
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="gomutuo-button-primary w-full" 
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}

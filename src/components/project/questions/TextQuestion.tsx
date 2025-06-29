@@ -24,7 +24,6 @@ const TextQuestion = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full min-h-[100px]"
         required={required}
       />
     );
@@ -35,7 +34,6 @@ const TextQuestion = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full"
       required={required}
     />
   );

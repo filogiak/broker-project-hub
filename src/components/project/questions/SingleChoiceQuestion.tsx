@@ -31,11 +31,10 @@ const SingleChoiceQuestion = React.memo(({
       required={required}
       disabled={disabled}
     >
-      <SelectTrigger className="w-full bg-white border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20">
+      <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent 
-        className="bg-white border border-gray-200 shadow-lg z-[200] max-h-60 overflow-y-auto"
         position="popper"
         sideOffset={4}
         align="start"
@@ -45,7 +44,6 @@ const SingleChoiceQuestion = React.memo(({
             <SelectItem 
               key={option.value} 
               value={option.value}
-              className="cursor-pointer hover:bg-gray-50 focus:bg-blue-50 focus:text-blue-900 px-3 py-2"
             >
               {option.label}
             </SelectItem>
