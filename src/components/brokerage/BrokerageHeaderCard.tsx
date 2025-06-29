@@ -44,34 +44,31 @@ const BrokerageHeaderCard = ({
             </div>
           </div>
 
-          {/* Status Badge - Top Right - Adjusted positioning */}
-          <div className="flex items-center gap-2 flex-shrink-0 mt-1">
-            <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-            <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
-              {isActive ? 'Attivo' : 'Non Attivo'}
-            </span>
-          </div>
-        </div>
-
-        {/* Last Activity & Created Date - Bottom Right - Adjusted positioning */}
-        <div className="absolute bottom-6 right-8">
-          <div className="flex items-center gap-8">
-            {/* Last Activity */}
+          {/* Right side content */}
+          <div className="flex flex-col items-end gap-4 flex-shrink-0">
+            {/* Status Badge - Top */}
             <div className="flex items-center gap-2">
+              <Circle className={`h-3 w-3 fill-current ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+              <span className={`text-sm font-semibold ${isActive ? 'text-green-700' : 'text-gray-600'}`}>
+                {isActive ? 'Attivo' : 'Non Attivo'}
+              </span>
+            </div>
+
+            {/* Last Activity & Created Date - Bottom */}
+            <div className="flex items-center gap-8">
+              {/* Last Activity */}
               <div className="text-right">
-                <p className="text-xs text-gray-500 font-dm-sans leading-none">Ultima attività</p>
-                <div className="flex items-center gap-1 justify-end mt-1">
+                <p className="text-xs text-gray-500 font-dm-sans leading-none mb-1">Ultima attività</p>
+                <div className="flex items-center gap-1 justify-end">
                   <Clock className="h-4 w-4 text-form-green" />
                   <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
                 </div>
               </div>
-            </div>
 
-            {/* Brokerage Date */}
-            <div className="flex items-center gap-2">
+              {/* Brokerage Date */}
               <div className="text-right">
-                <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
-                <div className="flex items-center gap-1 justify-end mt-1">
+                <p className="text-xs text-gray-500 font-dm-sans leading-none mb-1">Creato</p>
+                <div className="flex items-center gap-1 justify-end">
                   <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
                   <Calendar className="h-4 w-4 text-form-green" />
                 </div>
