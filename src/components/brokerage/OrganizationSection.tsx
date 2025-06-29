@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Building, Edit, Check, X } from 'lucide-react';
-import BrokerageSettingsCard from './BrokerageSettingsCard';
 import { updateBrokerageProfile } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -46,79 +45,91 @@ const OrganizationSection = ({ brokerage, onBrokerageUpdate }: OrganizationSecti
   };
 
   return (
-    <BrokerageSettingsCard
-      title="Organization Details"
-      description="Manage your brokerage information and settings"
-      icon={Building}
-      className="gomutuo-card-form"
-    >
-      <div>
-        <Label htmlFor="brokerage_name" className="font-dm-sans text-form-green font-medium">Brokerage Name</Label>
-        {isEditing ? (
-          <Input
-            id="brokerage_name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter brokerage name"
-            className="gomutuo-form-input mt-1"
-          />
-        ) : (
-          <div className="gomutuo-display-field mt-1 font-medium">
-            {brokerage.name}
-          </div>
-        )}
+    <div className="bg-white rounded-[16px] border-2 border-form-green p-8 relative shadow-lg">
+      {/* Header with Icon and Title */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-form-green rounded-lg">
+          <Building className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold text-form-green font-dm-sans">Organization Details</h3>
+          <p className="text-sm text-muted-foreground font-dm-sans">Manage your brokerage information and settings</p>
+        </div>
       </div>
-      
-      <div>
-        <Label htmlFor="brokerage_description" className="font-dm-sans text-form-green font-medium">Description</Label>
-        {isEditing ? (
-          <Textarea
-            id="brokerage_description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Enter brokerage description"
-            rows={3}
-            className="gomutuo-form-input mt-1 resize-none"
-          />
-        ) : (
-          <div className="gomutuo-display-field mt-1 min-h-[80px] items-start">
-            {brokerage.description || 'No description provided'}
-          </div>
-        )}
-      </div>
-      
-      <div className="flex gap-2 pt-4">
-        {isEditing ? (
-          <>
+
+      {/* Form Content */}
+      <div className="space-y-6">
+        <div>
+          <Label htmlFor="brokerage_name" className="font-dm-sans text-form-green font-medium">Brokerage Name</Label>
+          {isEditing ? (
+            <Input
+              id="brokerage_name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter brokerage name"
+              className="mt-1"
+            />
+          ) : (
+            <div className="gomutuo-display-field mt-1 font-medium">
+              {brokerage.name}
+            </div>
+          )}
+        </div>
+        
+        <div>
+          <Label htmlFor="brokerage_description" className="font-dm-sans text-form-green font-medium">Description</Label>
+          {isEditing ? (
+            <Textarea
+              id="brokerage_description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter brokerage description"
+              rows={3}
+              className="gomutuo-form-input mt-1 resize-none"
+            />
+          ) : (
+            <div className="gomutuo-display-field mt-1 min-h-[80px] items-start">
+              {brokerage.description || 'No description provided'}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex gap-2 pt-4">
+          {isEditing ? (
+            <>
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading}
+                className="gomutuo-button-primary"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCancel} 
+                disabled={isLoading}
+                className="gomutuo-button-secondary"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </>
+          ) : (
             <Button 
-              onClick={handleSave} 
-              disabled={isLoading}
+              onClick={() => setIsEditing(true)}
               className="gomutuo-button-primary"
             >
-              <Check className="h-4 w-4 mr-2" />
-              Save Changes
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Organization
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleCancel} 
-              disabled={isLoading}
-              className="gomutuo-button-secondary"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <Button 
-            onClick={() => setIsEditing(true)}
-            className="gomutuo-button-primary"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Organization
-          </Button>
-        )}
+          )}
+        </div>
       </div>
-    </BrokerageSettingsCard>
+
+      {/* Bottom accent line */}
+      <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
+    </div>
   );
 };
 

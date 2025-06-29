@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { User, Edit, Check, X } from 'lucide-react';
-import BrokerageSettingsCard from './BrokerageSettingsCard';
 import { updateOwnerProfile } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -47,104 +47,116 @@ const PersonalProfileSection = ({ profile, onProfileUpdate }: PersonalProfileSec
   };
 
   return (
-    <BrokerageSettingsCard
-      title="Personal Profile"
-      description="Manage your personal information and contact details"
-      icon={User}
-      className="gomutuo-card-form"
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="first_name" className="font-dm-sans text-form-green font-medium">First Name</Label>
-          {isEditing ? (
-            <Input
-              id="first_name"
-              value={formData.first_name}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              placeholder="Enter first name"
-              className="gomutuo-form-input mt-1"
-            />
-          ) : (
-            <div className="gomutuo-display-field mt-1">
-              {profile.first_name || 'Not set'}
-            </div>
-          )}
+    <div className="bg-white rounded-[16px] border-2 border-form-green p-8 relative shadow-lg">
+      {/* Header with Icon and Title */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-form-green rounded-lg">
+          <User className="h-5 w-5 text-white" />
         </div>
-        
         <div>
-          <Label htmlFor="last_name" className="font-dm-sans text-form-green font-medium">Last Name</Label>
-          {isEditing ? (
-            <Input
-              id="last_name"
-              value={formData.last_name}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              placeholder="Enter last name"
-              className="gomutuo-form-input mt-1"
-            />
-          ) : (
-            <div className="gomutuo-display-field mt-1">
-              {profile.last_name || 'Not set'}
-            </div>
-          )}
+          <h3 className="text-xl font-semibold text-form-green font-dm-sans">Personal Profile</h3>
+          <p className="text-sm text-muted-foreground font-dm-sans">Manage your personal information and contact details</p>
         </div>
-        
-        <div>
-          <Label htmlFor="email" className="font-dm-sans text-form-green font-medium">Email</Label>
-          <div className="gomutuo-display-field mt-1 bg-gray-100 text-muted-foreground">
-            {profile.email}
+      </div>
+
+      {/* Form Content */}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="first_name" className="font-dm-sans text-form-green font-medium">First Name</Label>
+            {isEditing ? (
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                placeholder="Enter first name"
+                className="mt-1"
+              />
+            ) : (
+              <div className="gomutuo-display-field mt-1">
+                {profile.first_name || 'Not set'}
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="last_name" className="font-dm-sans text-form-green font-medium">Last Name</Label>
+            {isEditing ? (
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                placeholder="Enter last name"
+                className="mt-1"
+              />
+            ) : (
+              <div className="gomutuo-display-field mt-1">
+                {profile.last_name || 'Not set'}
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="email" className="font-dm-sans text-form-green font-medium">Email</Label>
+            <div className="gomutuo-display-field mt-1 bg-gray-100 text-muted-foreground">
+              {profile.email}
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="phone" className="font-dm-sans text-form-green font-medium">Phone</Label>
+            {isEditing ? (
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="Enter phone number"
+                className="mt-1"
+              />
+            ) : (
+              <div className="gomutuo-display-field mt-1">
+                {profile.phone || 'Not set'}
+              </div>
+            )}
           </div>
         </div>
         
-        <div>
-          <Label htmlFor="phone" className="font-dm-sans text-form-green font-medium">Phone</Label>
+        <div className="flex gap-2 pt-4">
           {isEditing ? (
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="Enter phone number"
-              className="gomutuo-form-input mt-1"
-            />
+            <>
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading}
+                className="gomutuo-button-primary"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCancel} 
+                disabled={isLoading}
+                className="gomutuo-button-secondary"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </>
           ) : (
-            <div className="gomutuo-display-field mt-1">
-              {profile.phone || 'Not set'}
-            </div>
+            <Button 
+              onClick={() => setIsEditing(true)}
+              className="gomutuo-button-primary"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
           )}
         </div>
       </div>
-      
-      <div className="flex gap-2 pt-4">
-        {isEditing ? (
-          <>
-            <Button 
-              onClick={handleSave} 
-              disabled={isLoading}
-              className="gomutuo-button-primary"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Save Changes
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleCancel} 
-              disabled={isLoading}
-              className="gomutuo-button-secondary"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <Button 
-            onClick={() => setIsEditing(true)}
-            className="gomutuo-button-primary"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Profile
-          </Button>
-        )}
-      </div>
-    </BrokerageSettingsCard>
+
+      {/* Bottom accent line */}
+      <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-form-green rounded-b-[14px]"></div>
+    </div>
   );
 };
 
