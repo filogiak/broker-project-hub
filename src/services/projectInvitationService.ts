@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -128,6 +128,25 @@ export const cancelInvitation = async (invitationId: string): Promise<void> => {
   } catch (error) {
     console.error('❌ [PROJECT INVITATION SERVICE] Failed to cancel invitation:', error);
     throw error;
+  }
+};
+
+// Create invitation using the unified service
+export const createProjectInvitation = async (
+  projectId: string,
+  role: 'real_estate_agent' | 'broker_assistant' | 'mortgage_applicant',
+  email: string
+): Promise<{ success: boolean; error?: string }> => {
+  console.log('📧 [PROJECT INVITATION SERVICE] Creating invitation via unified service');
+  
+  try {
+    return await UnifiedInvitationService.createInvitation(projectId, role, email);
+  } catch (error) {
+    console.error('❌ [PROJECT INVITATION SERVICE] Failed to create invitation:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 };
 

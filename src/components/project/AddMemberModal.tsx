@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { createProjectInvitation } from '@/services/invitationService';
+import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import { supabase } from '@/integrations/supabase/client';
 import { Mail, CheckCircle, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -100,7 +99,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🚀 [ADD MEMBER MODAL] Form submission started (email-based)');
+    console.log('🚀 [ADD MEMBER MODAL] Form submission started (unified service)');
     console.log('🚀 [ADD MEMBER MODAL] Form data:', { email: email.trim(), role, projectId });
     
     if (!email.trim()) {
@@ -140,15 +139,15 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
     setIsLoading(true);
 
     try {
-      console.log('📞 [ADD MEMBER MODAL] Calling createProjectInvitation service...');
-      const { success } = await createProjectInvitation(projectId, role, email.trim());
+      console.log('📞 [ADD MEMBER MODAL] Calling UnifiedInvitationService.createInvitation...');
+      const result = await UnifiedInvitationService.createInvitation(projectId, role, email.trim());
       
-      console.log('🎉 [ADD MEMBER MODAL] Invitation creation completed, success:', success);
+      console.log('🎉 [ADD MEMBER MODAL] Invitation creation completed, success:', result.success);
       
       setEmailSent(true);
-      setInvitationSuccess(success);
+      setInvitationSuccess(result.success);
       
-      if (success) {
+      if (result.success) {
         toast({
           title: "Invitation Sent",
           description: `Invitation email has been sent to ${email}`,
@@ -156,7 +155,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
       } else {
         toast({
           title: "Invitation Created",
-          description: `Invitation created but email failed to send. Please contact ${email} directly.`,
+          description: result.error || `Invitation created but email failed to send. Please contact ${email} directly.`,
           variant: "destructive",
         });
       }
