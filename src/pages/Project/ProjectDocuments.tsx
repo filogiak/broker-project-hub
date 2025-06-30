@@ -16,21 +16,14 @@ import { CategoryScopeService } from '@/services/categoryScopeService';
 import { useCategoryCompletion } from '@/hooks/useCategoryCompletion';
 import { populateApplicantNamesInChecklist } from '@/services/applicantNameService';
 import { getApplicantDisplayNames } from '@/utils/applicantHelpers';
+import type { Database } from '@/integrations/supabase/types';
 
 type ViewState = 
   | { type: 'categories' }
   | { type: 'applicant_selection'; categoryId: string; categoryName: string }
   | { type: 'questions'; categoryId: string; categoryName: string; applicant?: 'applicant_1' | 'applicant_2' };
 
-interface ProjectData {
-  id: string;
-  name: string;
-  applicant_count: 'one_applicant' | 'two_applicants' | 'three_or_more_applicants';
-  applicant_one_first_name: string | null;
-  applicant_one_last_name: string | null;
-  applicant_two_first_name: string | null;
-  applicant_two_last_name: string | null;
-}
+type Project = Database['public']['Tables']['projects']['Row'];
 
 interface Category {
   id: string;
@@ -44,7 +37,7 @@ const ProjectDocuments = () => {
   const { toast } = useToast();
   
   const [viewState, setViewState] = useState<ViewState>({ type: 'categories' });
-  const [projectData, setProjectData] = useState<ProjectData | null>(null);
+  const [projectData, setProjectData] = useState<Project | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +66,7 @@ const ProjectDocuments = () => {
         
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
-          .select('id, name, applicant_count, applicant_one_first_name, applicant_one_last_name, applicant_two_first_name, applicant_two_last_name')
+          .select('*')
           .eq('id', projectId)
           .single();
 
@@ -105,7 +98,7 @@ const ProjectDocuments = () => {
         console.log('Project data loaded:', projectData);
         console.log('Categories loaded:', categoriesData);
         
-        setProjectData(projectData as ProjectData);
+        setProjectData(projectData);
         setCategories(categoriesData || []);
         setError(null);
 
@@ -266,7 +259,7 @@ const ProjectDocuments = () => {
     );
   }
 
-  // Get applicant names for the header
+  // Get applicant names for the header - BANNER FORMAT: Project name as title, applicant names as subtitle
   const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(projectData);
   let applicantNames = primaryApplicant;
   if (secondaryApplicant && projectData.applicant_count !== 'one_applicant') {
@@ -278,10 +271,10 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Project Header Card with Applicant Names as Title */}
+            {/* Project Header Card - Banner format: Project name as title, applicant names as subtitle */}
             <ProjectHeaderCard 
-              applicantNames={applicantNames}
-              projectName={projectData.name}
+              applicantNames={projectData.name}
+              projectName={applicantNames}
               lastActivity="2h"
               isActive={true}
             />

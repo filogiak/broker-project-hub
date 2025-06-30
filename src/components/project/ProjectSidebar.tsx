@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -78,14 +79,16 @@ const ProjectSidebar = () => {
   const getProjectDisplayInfo = () => {
     if (projectLoading) {
       return {
-        mainTitle: 'Loading...',
+        primaryApplicant: 'Loading...',
+        secondaryApplicant: null,
         subtitle: 'Loading project data...'
       };
     }
 
     if (!project) {
       return {
-        mainTitle: 'Project',
+        primaryApplicant: 'Project',
+        secondaryApplicant: null,
         subtitle: 'Management Hub'
       };
     }
@@ -93,19 +96,15 @@ const ProjectSidebar = () => {
     const projectName = project.name;
     const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(project);
     
-    // Main title: applicant names
-    let mainTitle = primaryApplicant;
-    if (secondaryApplicant && project.applicant_count !== 'one_applicant') {
-      mainTitle = `${primaryApplicant} & ${secondaryApplicant}`;
-    }
-
-    // Subtitle: project name
-    const subtitle = projectName;
-
-    return { mainTitle, subtitle };
+    // For sidebar: applicant names on separate lines, project name as subtitle
+    return { 
+      primaryApplicant, 
+      secondaryApplicant: project.applicant_count !== 'one_applicant' ? secondaryApplicant : null, 
+      subtitle: projectName 
+    };
   };
 
-  const { mainTitle, subtitle } = getProjectDisplayInfo();
+  const { primaryApplicant, secondaryApplicant, subtitle } = getProjectDisplayInfo();
 
   return (
     <Sidebar className="border-r border-form-border bg-white">
@@ -120,9 +119,12 @@ const ProjectSidebar = () => {
             <ArrowLeft className="h-4 w-4 text-form-green" />
           </Button>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-form-green font-dm-sans truncate">
-              {mainTitle}
-            </h2>
+            <div className="text-lg font-semibold text-form-green font-dm-sans">
+              <div className="truncate">{primaryApplicant}</div>
+              {secondaryApplicant && (
+                <div className="truncate">{secondaryApplicant}</div>
+              )}
+            </div>
             <p className="text-sm text-gray-500 break-words">
               {subtitle}
             </p>

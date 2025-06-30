@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -108,7 +109,7 @@ const ProjectDashboard = () => {
       </SidebarProvider>;
   }
 
-  // Get applicant names for the header
+  // Get applicant names for the header - Banner format: Project name as title, applicant names as subtitle
   const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(project);
   let applicantNames = primaryApplicant;
   if (secondaryApplicant && project.applicant_count !== 'one_applicant') {
@@ -120,10 +121,10 @@ const ProjectDashboard = () => {
         <ProjectSidebar />
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
-            {/* Enhanced Project Header with Applicant Names as Title */}
+            {/* Enhanced Project Header - Banner format: Project name as title, applicant names as subtitle */}
             <ProjectHeaderCard 
-              applicantNames={applicantNames}
-              projectName={project.name}
+              applicantNames={project.name}
+              projectName={applicantNames}
               lastActivity="2h" 
               isActive={true} 
             />
