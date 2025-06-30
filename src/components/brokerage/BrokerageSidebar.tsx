@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -13,6 +12,7 @@ import {
 import { LayoutDashboard, FileText, Users, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UserProfileBox from '@/components/ui/user-profile-box';
+import { Logo } from '@/components/ui/logo';
 
 const BrokerageSidebar = () => {
   const navigate = useNavigate();
@@ -53,11 +53,8 @@ const BrokerageSidebar = () => {
   return (
     <Sidebar className="border-r border-form-border bg-white">
       <SidebarHeader className="p-6 border-b border-form-border">
-        <div className="flex items-center gap-3 mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-form-green font-dm-sans">Brokerage</h2>
-            <p className="text-sm text-gray-500">Management Hub</p>
-          </div>
+        <div className="flex items-center justify-center mb-4">
+          <Logo />
         </div>
       </SidebarHeader>
 
