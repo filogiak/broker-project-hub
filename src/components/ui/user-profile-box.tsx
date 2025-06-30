@@ -38,7 +38,7 @@ const UserProfileBox = ({
     <div className="p-4 bg-white/50 border border-form-border/10 rounded-lg mx-2 mb-4">
       <div className="space-y-3">
         <div className="text-center">
-          <p className="text-gray-900 font-inter leading-tight font-medium text-base">
+          <p className="text-gray-900 font-inter leading-tight font-medium text-sm">
             {displayName}
           </p>
         </div>
