@@ -44,15 +44,15 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
         </Button>
       </div>
       
-      <h2 className="text-2xl font-bold text-center mb-6 font-dm-sans text-form-green">Seleziona Richiedente</h2>
+      <h2 className="text-2xl font-bold text-center mb-6 font-dm-sans text-black">Seleziona Richiedente</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         <Card 
           className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
           onClick={() => onSelectApplicant('applicant_1')}
         >
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <User className="h-16 w-16 text-form-green mb-4" />
-            <h3 className="text-xl font-semibold font-dm-sans text-black mb-2">
+          <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+            <User className="h-12 w-12 text-form-green mb-3" />
+            <h3 className="text-lg font-semibold font-dm-sans text-black mb-1">
               {primaryApplicant || 'Richiedente 1'}
             </h3>
             <p className="text-sm text-gray-600 font-dm-sans">Richiedente Principale</p>
@@ -63,9 +63,9 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
           className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
           onClick={() => onSelectApplicant('applicant_2')}
         >
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <Users className="h-16 w-16 text-form-green mb-4" />
-            <h3 className="text-xl font-semibold font-dm-sans text-black mb-2">
+          <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+            <Users className="h-12 w-12 text-form-green mb-3" />
+            <h3 className="text-lg font-semibold font-dm-sans text-black mb-1">
               {secondaryApplicant || 'Richiedente 2'}
             </h3>
             <p className="text-sm text-gray-600 font-dm-sans">Secondo Richiedente</p>
