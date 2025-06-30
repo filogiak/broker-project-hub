@@ -55,7 +55,7 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
             <h3 className="text-lg font-semibold font-dm-sans text-black mb-1">
               {primaryApplicant || 'Richiedente 1'}
             </h3>
-            <p className="text-sm text-gray-600 font-dm-sans">Richiedente Principale</p>
+            <p className="text-sm text-gray-600 font-dm-sans">Primo Richiedente</p>
           </CardContent>
         </Card>
         
