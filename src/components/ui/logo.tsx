@@ -13,7 +13,7 @@ export function Logo({ onClick }: LogoProps) {
     >
       <div className="rounded-md p-1">
         <img 
-          src="/lovable-uploads/ac73d514-2e24-4f50-a73c-47a17175b731.png"
+          src="/lovable-uploads/77a4b68c-11b7-421f-8852-3b62b878199c.png"
           alt="GoMutuo Logo"
           width="32" 
           height="32"
