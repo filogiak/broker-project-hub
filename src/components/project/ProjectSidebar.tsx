@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -13,8 +12,6 @@ import {
 import { Users, FileText, MessageSquare, Bell, Settings, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import GoMutuoLogo from '@/components/ui/gomutuo-logo';
-import UserProfileBox from '@/components/ui/user-profile-box';
 
 const ProjectSidebar = () => {
   const navigate = useNavigate();
@@ -75,16 +72,19 @@ const ProjectSidebar = () => {
   return (
     <Sidebar className="border-r border-form-border bg-white">
       <SidebarHeader className="p-6 border-b border-form-border">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={handleBackToBrokerage}
-            className="p-2 h-8 w-8 hover:bg-vibe-green-light flex-shrink-0"
+            className="p-2 h-8 w-8 hover:bg-vibe-green-light"
           >
             <ArrowLeft className="h-4 w-4 text-form-green" />
           </Button>
-          <GoMutuoLogo />
+          <div>
+            <h2 className="text-lg font-semibold text-form-green font-dm-sans">Project</h2>
+            <p className="text-sm text-gray-500">Management Hub</p>
+          </div>
         </div>
       </SidebarHeader>
 
@@ -110,7 +110,6 @@ const ProjectSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-form-border">
-        <UserProfileBox />
         <div className="text-xs text-gray-500 text-center">
           GoMutuo.it Project Hub
         </div>

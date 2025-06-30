@@ -12,8 +12,6 @@ import {
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, FileText, Users, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import GoMutuoLogo from '@/components/ui/gomutuo-logo';
-import UserProfileBox from '@/components/ui/user-profile-box';
 
 const BrokerageSidebar = () => {
   const navigate = useNavigate();
@@ -54,7 +52,12 @@ const BrokerageSidebar = () => {
   return (
     <Sidebar className="border-r border-form-border bg-white">
       <SidebarHeader className="p-6 border-b border-form-border">
-        <GoMutuoLogo />
+        <div className="flex items-center gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-form-green font-dm-sans">Brokerage</h2>
+            <p className="text-sm text-gray-500">Management Hub</p>
+          </div>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="p-4">
@@ -79,7 +82,6 @@ const BrokerageSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-form-border">
-        <UserProfileBox />
         <div className="text-xs text-gray-500 text-center">
           GoMutuo.it Brokerage Hub
         </div>
