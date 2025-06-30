@@ -13,7 +13,7 @@ export function Logo({ onClick }: LogoProps) {
 
   return (
     <div 
-      className={`flex items-center justify-start gap-2 pl-2 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`flex items-center justify-start gap-2 pl-4 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-center">
