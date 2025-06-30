@@ -47,7 +47,7 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
       <h2 className="text-2xl font-bold text-center mb-6 font-dm-sans text-form-green">Seleziona Richiedente</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         <Card 
-          className="gomutuo-card hover:shadow-lg cursor-pointer hover:border-form-green"
+          className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
           onClick={() => onSelectApplicant('applicant_1')}
         >
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
@@ -60,7 +60,7 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
         </Card>
         
         <Card 
-          className="gomutuo-card hover:shadow-lg cursor-pointer hover:border-form-green"
+          className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
           onClick={() => onSelectApplicant('applicant_2')}
         >
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
