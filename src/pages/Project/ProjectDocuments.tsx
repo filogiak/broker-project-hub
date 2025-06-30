@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
-import ProjectHeaderCard from '@/components/project/ProjectHeaderCard';
 import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
@@ -271,14 +270,6 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Project Header Card - Banner format: Project name as title, applicant names as subtitle */}
-            <ProjectHeaderCard 
-              applicantNames={projectData.name}
-              projectName={applicantNames}
-              lastActivity="2h"
-              isActive={true}
-            />
-            
             {/* Categories Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {categories.map((category) => (
@@ -296,12 +287,6 @@ const ProjectDocuments = () => {
       case 'applicant_selection':
         return (
           <div className="space-y-6">
-            <ProjectHeaderCard 
-              applicantNames={viewState.categoryName}
-              projectName="Questa categoria richiede informazioni specifiche per richiedente"
-              lastActivity="2h"
-              isActive={true}
-            />
             <ApplicantSelector 
               onSelectApplicant={handleApplicantSelect}
               onBack={handleBackToCategories}
