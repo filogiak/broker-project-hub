@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CategoryBox from '@/components/project/CategoryBox';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
@@ -270,17 +272,27 @@ const ProjectDocuments = () => {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((category) => (
-                <CategoryBox
-                  key={category.id}
-                  name={category.name}
-                  onClick={() => handleCategoryClick(category.id, category.name)}
-                  completion={getCompletionForCategory(category.id)}
-                />
-              ))}
-            </div>
+            {/* Section Banner */}
+            <Card className="bg-white border-0 shadow-none">
+              <CardHeader>
+                <CardTitle className="font-dm-sans text-black">
+                  Dati e Documenti
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Categories Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {categories.map((category) => (
+                    <CategoryBox
+                      key={category.id}
+                      name={category.name}
+                      onClick={() => handleCategoryClick(category.id, category.name)}
+                      completion={getCompletionForCategory(category.id)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
