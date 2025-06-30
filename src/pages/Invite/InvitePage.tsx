@@ -1,218 +1,131 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Mail, User, Building2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationToken } from '@/services/invitationService';
-import EmailVerificationScreen from '@/components/auth/EmailVerificationScreen';
-import type { Database } from '@/integrations/supabase/types';
-
-type Invitation = Database['public']['Tables']['invitations']['Row'];
+import { useAuth } from '@/hooks/useAuth';
+import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
+import type { InvitationStatusResult, PendingInvitation } from '@/services/unifiedInvitationService';
 
 const InvitePage = () => {
-  const [invitationToken, setInvitationToken] = useState('');
-  const [invitation, setInvitation] = useState<Invitation | null>(null);
-  const [userDetails, setUserDetails] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'token' | 'register' | 'verify'>('token');
+  const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [invitationStatus, setInvitationStatus] = useState<InvitationStatusResult | null>(null);
+  const [step, setStep] = useState<'enter_email' | 'show_status' | 'processing'>('enter_email');
 
-  const handleTokenSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log('🚀 [INVITE PAGE] Form submission started with token:', invitationToken.substring(0, 10) + '...');
-    
-    if (!invitationToken.trim()) {
-      console.warn('⚠️ [INVITE PAGE] Empty token provided');
+  useEffect(() => {
+    if (!token) {
       toast({
-        title: "Invalid Token",
-        description: "Please enter a valid invitation token",
-        variant: "destructive",
+        title: "Invalid Invitation",
+        description: "The invitation link is missing required information.",
+        variant: "destructive"
       });
-      return;
+      navigate('/');
     }
+  }, [token, navigate, toast]);
 
-    setIsLoading(true);
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
 
+    setChecking(true);
     try {
-      console.log('📞 [INVITE PAGE] Calling validateInvitationToken service...');
-      const validInvitation = await validateInvitationToken(invitationToken);
-      
-      if (!validInvitation) {
-        console.warn('⚠️ [INVITE PAGE] Invitation validation failed for token:', invitationToken.substring(0, 10) + '...');
-        toast({
-          title: "Invalid Token",
-          description: "The invitation token is invalid, expired, or has already been used",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('✅ [INVITE PAGE] Invitation validation successful:', {
-        id: validInvitation.id,
-        email: validInvitation.email,
-        role: validInvitation.role
-      });
-
-      setInvitation(validInvitation);
-      setUserDetails(prev => ({ ...prev, email: validInvitation.email }));
-      setStep('register');
-
-      toast({
-        title: "Token Validated",
-        description: `Welcome! Please complete your registration for ${validInvitation.email}`,
-      });
-
+      const status = await UnifiedInvitationService.checkInvitationStatus(email);
+      setInvitationStatus(status);
+      setStep('show_status');
     } catch (error) {
-      console.error('❌ [INVITE PAGE] Error validating token:', {
-        error,
-        token: invitationToken.substring(0, 10) + '...',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
-      });
-      
       toast({
-        title: "Validation Error",
-        description: "Failed to validate invitation token. Please try again.",
-        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to check invitation status",
+        variant: "destructive"
       });
     } finally {
-      console.log('🏁 [INVITE PAGE] Token validation completed');
-      setIsLoading(false);
+      setChecking(false);
     }
   };
 
-  const handleRegistration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log('📝 [INVITE PAGE] Registration form submission started');
-    
-    if (!invitation) {
-      console.error('❌ [INVITE PAGE] No invitation available for registration');
-      return;
-    }
+  const handleAcceptInvitations = async () => {
+    if (!invitationStatus || !token) return;
 
-    console.log('📝 [INVITE PAGE] Registration details:', {
-      email: userDetails.email,
-      firstName: userDetails.firstName,
-      lastName: userDetails.lastName,
-      invitationId: invitation.id
-    });
-
-    setIsLoading(true);
+    setStep('processing');
+    setLoading(true);
 
     try {
-      console.log('📧 [INVITE PAGE] Creating user account...');
-      
-      // Create user account - the database trigger will handle invitation acceptance automatically
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userDetails.email,
-        password: userDetails.password,
-        options: {
-          data: {
-            first_name: userDetails.firstName,
-            last_name: userDetails.lastName,
-          },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
+      // If user exists and is logged in, accept directly
+      if (invitationStatus.user_exists && user) {
+        const result = await UnifiedInvitationService.processInvitationAcceptance(
+          email,
+          token,
+          user.id
+        );
 
-      if (authError) {
-        console.error('❌ [INVITE PAGE] Auth error during registration:', authError);
-        
-        let errorMessage = authError.message;
-        if (authError.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Please try logging in instead.';
-        }
-        
-        toast({
-          title: "Registration Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!authData.user) {
-        console.error('❌ [INVITE PAGE] No user returned from registration');
-        toast({
-          title: "Registration Failed",
-          description: "Failed to create user account",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('✅ [INVITE PAGE] User account created successfully:', {
-        userId: authData.user.id,
-        email: authData.user.email,
-        needsConfirmation: !authData.session
-      });
-
-      // If the user needs to confirm email, show verification screen
-      if (!authData.session) {
-        console.log('📧 [INVITE PAGE] Email confirmation required, showing verification screen');
-        setStep('verify');
-        
-        toast({
-          title: "Check Your Email",
-          description: "We've sent a verification link to complete your account setup.",
-        });
-      } else {
-        // If no confirmation is needed, the trigger has already processed the invitation
-        console.log('🎉 [INVITE PAGE] No email confirmation needed, invitation processed automatically');
-        
-        toast({
-          title: "Welcome!",
-          description: "Your account has been created and you've been added to the project!",
-        });
-
-        if (invitation.project_id) {
-          navigate(`/project/${invitation.project_id}`);
+        if (result.success) {
+          toast({
+            title: "Success",
+            description: result.message || "Invitations accepted successfully",
+            variant: "default"
+          });
+          
+          if (result.project_id) {
+            navigate(`/project/${result.project_id}`);
+          } else {
+            navigate('/dashboard');
+          }
         } else {
+          throw new Error(result.error || 'Failed to accept invitations');
+        }
+      } else if (invitationStatus.user_exists && !user) {
+        // User exists but not logged in - redirect to login
+        toast({
+          title: "Please Log In",
+          description: "You need to log in to accept this invitation",
+          variant: "default"
+        });
+        navigate('/auth');
+      } else {
+        // User doesn't exist - process for registration requirement
+        const result = await UnifiedInvitationService.processInvitationAcceptance(
+          email,
+          token
+        );
+
+        if (result.requires_registration) {
+          toast({
+            title: "Account Required",
+            description: "Please create an account to accept this invitation",
+            variant: "default"
+          });
+          navigate('/auth');
+        } else if (result.success) {
+          toast({
+            title: "Success", 
+            description: result.message || "Invitation processed successfully",
+            variant: "default"
+          });
           navigate('/dashboard');
+        } else {
+          throw new Error(result.error || 'Failed to process invitation');
         }
       }
-
     } catch (error) {
-      console.error('❌ [INVITE PAGE] Error during registration process:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        invitationId: invitation.id
-      });
-      
       toast({
-        title: "Registration Error",
-        description: error instanceof Error ? error.message : "Failed to complete registration",
-        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to accept invitations",
+        variant: "destructive"
       });
+      setStep('show_status');
     } finally {
-      console.log('🏁 [INVITE PAGE] Registration process completed');
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerificationComplete = () => {
-    console.log('✅ [INVITE PAGE] Email verification completed, redirecting...');
-    
-    toast({
-      title: "Welcome!",
-      description: "Your account has been verified and you've been added to the project!",
-    });
-    
-    if (invitation?.project_id) {
-      navigate(`/project/${invitation.project_id}`);
-    } else {
-      navigate('/dashboard');
+      setLoading(false);
     }
   };
 
@@ -220,140 +133,169 @@ const InvitePage = () => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  console.log('🎨 [INVITE PAGE] Rendering with state:', {
-    step,
-    isLoading,
-    hasInvitation: !!invitation,
-    tokenLength: invitationToken.length
-  });
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Join Project</CardTitle>
-          <p className="text-muted-foreground">
-            {step === 'token' 
-              ? 'Enter your invitation token to get started'
-              : step === 'register'
-              ? 'Complete your account setup'
-              : 'Verify your email address'
-            }
-          </p>
-        </CardHeader>
-        <CardContent>
-          {step === 'token' ? (
-            <form onSubmit={handleTokenSubmit} className="space-y-4">
+  if (step === 'enter_email') {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-form-green rounded-full flex items-center justify-center mb-4">
+              <Mail className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-dm-sans">Project Invitation</CardTitle>
+            <p className="text-muted-foreground">
+              Enter your email address to check your invitation status
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="token">Invitation Token</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
-                  id="token"
-                  type="text"
-                  value={invitationToken}
-                  onChange={(e) => setInvitationToken(e.target.value.trim())}
-                  placeholder="Enter your invitation token"
-                  className="text-center text-sm font-mono"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Enter the token you received in the invitation email
-                </p>
               </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading || !invitationToken.trim()}>
-                {isLoading ? 'Validating...' : 'Continue'}
+              <Button 
+                type="submit" 
+                className="w-full gomutuo-button-primary" 
+                disabled={checking || !email.trim()}
+              >
+                {checking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  'Check Invitation'
+                )}
               </Button>
             </form>
-          ) : step === 'register' ? (
-            <div className="space-y-4">
-              {invitation && (
-                <div className="bg-muted p-3 rounded-lg text-sm">
-                  <p><strong>Email:</strong> {invitation.email}</p>
-                  <p><strong>Role:</strong> {formatRole(invitation.role)}</p>
-                  {invitation.project_id && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      You'll be added to the project automatically
-                    </p>
-                  )}
-                </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'show_status' && invitationStatus) {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-form-green rounded-full flex items-center justify-center mb-4">
+              {invitationStatus.invitation_count > 0 ? (
+                <CheckCircle className="h-6 w-6 text-white" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-white" />
               )}
-
-              <form onSubmit={handleRegistration} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={userDetails.firstName}
-                      onChange={(e) => setUserDetails(prev => ({ ...prev, firstName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={userDetails.lastName}
-                      onChange={(e) => setUserDetails(prev => ({ ...prev, lastName: e.target.value }))}
-                      required
-                    />
-                  </div>
+            </div>
+            <CardTitle className="text-2xl font-dm-sans">
+              {invitationStatus.invitation_count > 0 
+                ? `${invitationStatus.invitation_count} Invitation${invitationStatus.invitation_count > 1 ? 's' : ''} Found`
+                : 'No Pending Invitations'
+              }
+            </CardTitle>
+            <p className="text-muted-foreground">
+              {invitationStatus.user_exists 
+                ? 'Account found for this email address'
+                : 'No account found - you can create one after accepting'
+              }
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {invitationStatus.invitation_count > 0 ? (
+              <>
+                <div className="space-y-4">
+                  {invitationStatus.pending_invitations.map((invitation: PendingInvitation) => (
+                    <div key={invitation.id} className="border border-border rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-form-green/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-5 w-5 text-form-green" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <h3 className="font-semibold text-lg">
+                            {invitation.project_name || 'Project Invitation'}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            <span>Role: {formatRole(invitation.role)}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Invited by {invitation.inviter_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Expires in {Math.ceil(invitation.days_remaining)} days
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={userDetails.email}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This email was specified in your invitation
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={userDetails.password}
-                    onChange={(e) => setUserDetails(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Create a password"
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Minimum 6 characters
-                  </p>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setStep('token')}
-                    className="flex-1"
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleAcceptInvitations}
+                    className="flex-1 gomutuo-button-primary"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Accept ${invitationStatus.invitation_count > 1 ? 'All ' : ''}Invitation${invitationStatus.invitation_count > 1 ? 's' : ''}`
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep('enter_email')}
+                    disabled={loading}
                   >
                     Back
                   </Button>
-                  <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
-                  </Button>
                 </div>
-              </form>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No pending invitations found for this email address.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('enter_email')}
+                >
+                  Try Different Email
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'processing') {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center py-8">
+            <div className="mx-auto w-12 h-12 bg-form-green rounded-full flex items-center justify-center mb-4">
+              <Loader2 className="h-6 w-6 text-white animate-spin" />
             </div>
-          ) : (
-            <EmailVerificationScreen
-              email={userDetails.email}
-              onVerificationComplete={handleVerificationComplete}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+            <h2 className="text-xl font-semibold font-dm-sans mb-2">Processing Invitation...</h2>
+            <p className="text-muted-foreground">Please wait while we set up your access.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default InvitePage;

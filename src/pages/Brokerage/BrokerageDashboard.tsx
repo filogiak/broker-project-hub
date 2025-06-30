@@ -2,7 +2,7 @@
 import React from 'react';
 import BrokerageHeaderCard from '@/components/brokerage/BrokerageHeaderCard';
 import DashboardStats from '@/components/brokerage/DashboardStats';
-import ProjectsOverview from '@/components/brokerage/ProjectsOverview';
+import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -37,6 +37,12 @@ const BrokerageDashboard = ({
       <div>
         <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Azioni Principali</h2>
         <DashboardStats brokerageId={brokerage.id} projects={projects} />
+      </div>
+
+      {/* Pending Invitations Widget */}
+      <div>
+        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">I Tuoi Inviti</h2>
+        <PendingInvitationsWidget />
       </div>
     </div>
   );

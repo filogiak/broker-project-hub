@@ -1070,6 +1070,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation_by_id: {
+        Args: { p_invitation_id: string; p_user_id?: string }
+        Returns: Json
+      }
+      check_invitation_status: {
+        Args: { p_email: string }
+        Returns: Json
+      }
       create_project_safe: {
         Args: {
           project_name: string
@@ -1137,6 +1145,10 @@ export type Database = {
           completed_items: number
         }[]
       }
+      get_my_pending_invitations: {
+        Args: { p_user_id?: string }
+        Returns: Json
+      }
       get_user_roles: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"][]
@@ -1151,6 +1163,10 @@ export type Database = {
       is_superadmin: {
         Args: { user_uuid?: string }
         Returns: boolean
+      }
+      process_invitation_acceptance: {
+        Args: { p_email: string; p_encrypted_token: string; p_user_id?: string }
+        Returns: Json
       }
       safe_create_project: {
         Args:
