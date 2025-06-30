@@ -13,6 +13,12 @@ export interface CategoryCompletionInfo {
   isComplete: boolean;
 }
 
+interface CategoryCompletionRow {
+  category_id: string;
+  total_items: number;
+  completed_items: number;
+}
+
 export class CategoryCompletionService {
   /**
    * Get completion info for all categories in a single optimized query
@@ -29,60 +35,35 @@ export class CategoryCompletionService {
 
       const categoryIds = categories.map(cat => cat.id);
       
-      // Single optimized query to get all completion data
-      const completionQuery = `
-        WITH completion_data AS (
-          SELECT 
-            ri.category_id,
-            ri.id as item_id,
-            CASE 
-              WHEN (pci.id IS NOT NULL AND pci.status IN ('submitted', 'approved')) 
-                OR pd.id IS NOT NULL 
-              THEN 1 
-              ELSE 0 
-            END as is_completed
-          FROM required_items ri
-          LEFT JOIN project_checklist_items pci ON ri.id = pci.item_id 
-            AND pci.project_id = $1
-            ${participantDesignation ? 'AND pci.participant_designation = $3' : ''}
-          LEFT JOIN project_documents pd ON ri.id = pd.item_id 
-            AND pd.project_id = $1
-            ${participantDesignation ? 'AND pd.participant_designation = $3' : ''}
-          WHERE ri.category_id = ANY($2)
-        )
-        SELECT 
-          category_id,
-          COUNT(*) as total_items,
-          SUM(is_completed) as completed_items
-        FROM completion_data
-        GROUP BY category_id
-      `;
-
-      const queryParams = participantDesignation 
-        ? [projectId, categoryIds, participantDesignation]
-        : [projectId, categoryIds];
-
-      const { data: completionData, error } = await supabase.rpc('exec_sql', {
-        query: completionQuery,
-        params: queryParams
-      });
+      console.log('🔄 Fetching completion data with new optimized RPC function');
+      
+      // Use the new RPC function for batch completion data
+      const { data: completionData, error } = await supabase.rpc(
+        'get_categories_completion_batch',
+        {
+          p_project_id: projectId,
+          p_category_ids: categoryIds,
+          p_participant_designation: participantDesignation || null
+        }
+      );
 
       if (error) {
-        console.error('Error fetching completion data:', error);
+        console.error('Error fetching completion data with RPC:', error);
         // Fallback to individual queries if the optimized query fails
         return this.getFallbackCompletion(projectId, categories, participantDesignation);
       }
 
       // Transform the results into CategoryCompletionInfo
-      const completionMap = new Map(
-        completionData?.map((row: any) => [
-          row.category_id,
-          {
-            totalItems: parseInt(row.total_items),
-            completedItems: parseInt(row.completed_items)
-          }
-        ]) || []
-      );
+      const completionMap = new Map<string, { totalItems: number; completedItems: number }>();
+      
+      if (completionData && Array.isArray(completionData)) {
+        completionData.forEach((row: CategoryCompletionRow) => {
+          completionMap.set(row.category_id, {
+            totalItems: Number(row.total_items) || 0,
+            completedItems: Number(row.completed_items) || 0
+          });
+        });
+      }
 
       return categories.map(category => {
         const completion = completionMap.get(category.id);
@@ -115,6 +96,8 @@ export class CategoryCompletionService {
     categories: Array<{ id: string; name: string }>,
     participantDesignation?: ParticipantDesignation
   ): Promise<CategoryCompletionInfo[]> {
+    console.log('🔄 Using fallback completion method');
+    
     const completionPromises = categories.map(async (category) => {
       // Get all required items for this category
       const { data: requiredItems, error: requiredError } = await supabase
