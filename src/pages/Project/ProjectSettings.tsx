@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -12,14 +11,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
-
 type Project = Database['public']['Tables']['projects']['Row'];
-
 const ProjectSettings = () => {
-  const { projectId } = useParams();
+  const {
+    projectId
+  } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    loading: authLoading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,7 +32,6 @@ const ProjectSettings = () => {
     name: '',
     description: ''
   });
-
   useEffect(() => {
     const loadProject = async () => {
       if (authLoading) return;
@@ -41,23 +44,18 @@ const ProjectSettings = () => {
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
         setError(null);
-
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', projectId)
-          .single();
-
+        const {
+          data: projectData,
+          error: projectError
+        } = await supabase.from('projects').select('*').eq('id', projectId).single();
         if (projectError) {
           console.error('Error loading project:', projectError);
           setError('Failed to load project details');
           return;
         }
-
         setProject(projectData);
         setFormData({
           name: projectData.name || '',
@@ -70,25 +68,19 @@ const ProjectSettings = () => {
         setLoading(false);
       }
     };
-
     loadProject();
   }, [user, authLoading, projectId, navigate]);
-
   const handleSave = async () => {
     if (!projectId || !project) return;
-
     try {
       setSaving(true);
-
-      const { error: updateError } = await supabase
-        .from('projects')
-        .update({
-          name: formData.name.trim(),
-          description: formData.description.trim() || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projectId);
-
+      const {
+        error: updateError
+      } = await supabase.from('projects').update({
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', projectId);
       if (updateError) {
         console.error('Error updating project:', updateError);
         toast({
@@ -105,10 +97,9 @@ const ProjectSettings = () => {
         name: formData.name.trim(),
         description: formData.description.trim() || null
       });
-
       toast({
         title: "Success",
-        description: "Project settings updated successfully.",
+        description: "Project settings updated successfully."
       });
     } catch (error) {
       console.error('Error saving project:', error);
@@ -121,18 +112,12 @@ const ProjectSettings = () => {
       setSaving(false);
     }
   };
-
   const hasChanges = () => {
     if (!project) return false;
-    return (
-      formData.name.trim() !== (project.name || '') ||
-      formData.description.trim() !== (project.description || '')
-    );
+    return formData.name.trim() !== (project.name || '') || formData.description.trim() !== (project.description || '');
   };
-
   if (authLoading || loading) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -141,13 +126,10 @@ const ProjectSettings = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
   if (error || !project) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
           <ProjectSidebar />
           <SidebarInset>
@@ -166,12 +148,9 @@ const ProjectSettings = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background-light">
         <ProjectSidebar />
         <SidebarInset>
@@ -180,7 +159,7 @@ const ProjectSettings = () => {
             <Card className="bg-white border-0 shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 font-dm-sans text-black">
-                  <Settings className="h-6 w-6 text-form-green" />
+                  
                   Impostazioni Progetto
                 </CardTitle>
               </CardHeader>
@@ -190,13 +169,10 @@ const ProjectSettings = () => {
                   <label className="text-sm font-medium text-form-green font-dm-sans">
                     Nome Progetto *
                   </label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Inserisci il nome del progetto"
-                    className="flex w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium font-dm-sans placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light"
-                    required
-                  />
+                  <Input value={formData.name} onChange={e => setFormData({
+                  ...formData,
+                  name: e.target.value
+                })} placeholder="Inserisci il nome del progetto" className="flex w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium font-dm-sans placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light" required />
                 </div>
 
                 {/* Project Description */}
@@ -204,22 +180,15 @@ const ProjectSettings = () => {
                   <label className="text-sm font-medium text-form-green font-dm-sans">
                     Descrizione Progetto
                   </label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Inserisci una descrizione del progetto (opzionale)"
-                    className="flex min-h-[100px] w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light resize-none font-dm-sans"
-                    rows={4}
-                  />
+                  <Textarea value={formData.description} onChange={e => setFormData({
+                  ...formData,
+                  description: e.target.value
+                })} placeholder="Inserisci una descrizione del progetto (opzionale)" className="flex min-h-[100px] w-full rounded-[10px] border border-[hsl(var(--form-border))] bg-white px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--form-green))] focus-visible:ring-offset-2 focus-visible:border-[hsl(var(--form-green))] focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 solid-shadow-light resize-none font-dm-sans" rows={4} />
                 </div>
 
                 {/* Save Button */}
                 <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={handleSave}
-                    disabled={!hasChanges() || saving || !formData.name.trim()}
-                    className="gomutuo-button-primary flex items-center gap-2"
-                  >
+                  <Button onClick={handleSave} disabled={!hasChanges() || saving || !formData.name.trim()} className="gomutuo-button-primary flex items-center gap-2">
                     <Save className="h-4 w-4" />
                     {saving ? 'Salvataggio...' : 'Salva Modifiche'}
                   </Button>
@@ -229,8 +198,6 @@ const ProjectSettings = () => {
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default ProjectSettings;
