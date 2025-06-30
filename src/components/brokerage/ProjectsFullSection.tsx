@@ -79,9 +79,15 @@ const ProjectsFullSection = ({
   const filteredProjects = projects.filter((project) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
+    
+    // Get applicant names for search
+    const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(project);
+    
     return (
       project.name?.toLowerCase().includes(query) ||
-      project.description?.toLowerCase().includes(query)
+      project.description?.toLowerCase().includes(query) ||
+      primaryApplicant?.toLowerCase().includes(query) ||
+      (secondaryApplicant && secondaryApplicant.toLowerCase().includes(query))
     );
   });
 
