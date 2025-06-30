@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, FileText, Users, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import UserProfileBox from '@/components/ui/user-profile-box';
 
 const BrokerageSidebar = () => {
   const navigate = useNavigate();
@@ -82,6 +83,7 @@ const BrokerageSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-form-border">
+        <UserProfileBox user={user} />
         <div className="text-xs text-gray-500 text-center">
           GoMutuo.it Brokerage Hub
         </div>
