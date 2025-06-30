@@ -24,37 +24,37 @@ const ProjectSidebar = () => {
 
   const menuItems = [
     {
-      title: 'Project Overview',
+      title: 'Panoramica Progetto',
       icon: FileText,
       path: `/project/${projectId}`,
       isActive: window.location.pathname === `/project/${projectId}`,
     },
     {
-      title: 'Project Members',
+      title: 'Membri Progetto',
       icon: Users,
       path: `/project/${projectId}/members`,
       isActive: window.location.pathname === `/project/${projectId}/members`,
     },
     {
-      title: 'Data & Documents',
+      title: 'Dati e Documenti',
       icon: FileText,
       path: `/project/${projectId}/documents`,
       isActive: window.location.pathname === `/project/${projectId}/documents`,
     },
     {
-      title: 'Communications',
+      title: 'Comunicazioni',
       icon: MessageSquare,
       path: '#',
       isActive: false,
     },
     {
-      title: 'Notifications',
+      title: 'Notifiche',
       icon: Bell,
       path: '#',
       isActive: false,
     },
     {
-      title: 'Settings',
+      title: 'Impostazioni',
       icon: Settings,
       path: `/project/${projectId}/settings`,
       isActive: window.location.pathname === `/project/${projectId}/settings`,

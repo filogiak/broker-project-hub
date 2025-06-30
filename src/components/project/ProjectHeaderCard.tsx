@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, Circle, Calendar } from 'lucide-react';
+import { Circle, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProjectHeaderCardProps {
@@ -49,28 +49,14 @@ const ProjectHeaderCard = ({
           </div>
         </div>
 
-        {/* Last Activity & Created Date - Bottom Right */}
+        {/* Project Date - Bottom Right */}
         <div className="absolute bottom-8 right-8">
-          <div className="flex items-center gap-8">
-            {/* Last Activity */}
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs text-gray-500 font-dm-sans leading-none">Ultima attività</p>
-                <div className="flex items-center gap-1 justify-end">
-                  <Clock className="h-4 w-4 text-form-green" />
-                  <span className="text-sm font-semibold text-form-green font-dm-sans">{lastActivity}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Project Date */}
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
-                <div className="flex items-center gap-1 justify-end">
-                  <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
-                  <Calendar className="h-4 w-4 text-form-green" />
-                </div>
+          <div className="flex items-center gap-2">
+            <div className="text-right">
+              <p className="text-xs text-gray-500 font-dm-sans leading-none">Creato</p>
+              <div className="flex items-center gap-1 justify-end">
+                <span className="text-sm font-semibold text-form-green font-dm-sans">15 Giu</span>
+                <Calendar className="h-4 w-4 text-form-green" />
               </div>
             </div>
           </div>

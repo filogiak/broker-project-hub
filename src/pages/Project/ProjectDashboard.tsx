@@ -66,7 +66,7 @@ const ProjectDashboard = () => {
           setMemberCount(membersData.length);
         }
         
-        // Load document progress
+        // Load document progress - fix the status comparison
         const { data: checklistData, error: checklistError } = await supabase
           .from('project_checklist_items')
           .select('status')
@@ -74,7 +74,7 @@ const ProjectDashboard = () => {
           
         if (!checklistError && checklistData) {
           const totalItems = checklistData.length;
-          const completedItems = checklistData.filter(item => item.status === 'completed').length;
+          const completedItems = checklistData.filter(item => item.status === 'approved').length;
           const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
           setDocumentProgress(progress);
         }
@@ -173,7 +173,7 @@ const ProjectDashboard = () => {
                 />
 
                 <ProjectOverviewCard 
-                  title="Hub Documenti" 
+                  title="Dati e Documenti" 
                   description="Carica, organizza e monitora il completamento di tutti i documenti e moduli del progetto" 
                   icon={FileText} 
                   onClick={() => navigate(`/project/${projectId}/documents`)} 
