@@ -12,6 +12,7 @@ export const useCategoryCompletion = (
 ) => {
   const [completionData, setCompletionData] = useState<CategoryCompletionInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCompletionData = async () => {
@@ -22,14 +23,24 @@ export const useCategoryCompletion = (
 
       try {
         setLoading(true);
+        setError(null);
+        
+        console.log('🚀 Fetching completion data for', categories.length, 'categories');
+        const startTime = performance.now();
+        
         const data = await CategoryCompletionService.getAllCategoriesCompletion(
           projectId,
           categories,
           participantDesignation
         );
+        
+        const endTime = performance.now();
+        console.log(`✅ Completion data fetched in ${Math.round(endTime - startTime)}ms`);
+        
         setCompletionData(data);
       } catch (error) {
         console.error('Error fetching category completion data:', error);
+        setError('Failed to load completion data');
         setCompletionData([]);
       } finally {
         setLoading(false);
@@ -55,6 +66,7 @@ export const useCategoryCompletion = (
   return {
     completionData,
     loading,
+    error,
     getCompletionForCategory,
     overallCompletion
   };

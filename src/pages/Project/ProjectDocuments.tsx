@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CategoryBox from '@/components/project/CategoryBox';
+import CategoryBoxSkeleton from '@/components/project/CategoryBoxSkeleton';
 import ApplicantSelector from '@/components/project/ApplicantSelector';
 import CategoryQuestions from '@/components/project/CategoryQuestions';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ const ProjectDocuments = () => {
   const { 
     completionData, 
     loading: completionLoading, 
+    error: completionError,
     getCompletionForCategory,
     overallCompletion 
   } = useCategoryCompletion(
@@ -282,15 +283,35 @@ const ProjectDocuments = () => {
               <CardContent>
                 {/* Categories Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {categories.map((category) => (
-                    <CategoryBox
-                      key={category.id}
-                      name={category.name}
-                      onClick={() => handleCategoryClick(category.id, category.name)}
-                      completion={getCompletionForCategory(category.id)}
-                    />
-                  ))}
+                  {categories.map((category) => {
+                    const completion = getCompletionForCategory(category.id);
+                    
+                    // Show skeleton if still loading and no completion data yet
+                    if (completionLoading && !completion) {
+                      return (
+                        <CategoryBoxSkeleton key={`${category.id}-skeleton`} />
+                      );
+                    }
+                    
+                    return (
+                      <CategoryBox
+                        key={category.id}
+                        name={category.name}
+                        onClick={() => handleCategoryClick(category.id, category.name)}
+                        completion={completion}
+                        isLoading={completionLoading}
+                      />
+                    );
+                  })}
                 </div>
+                
+                {completionError && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm font-dm-sans">
+                      {completionError}. I dati potrebbero non essere aggiornati.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
