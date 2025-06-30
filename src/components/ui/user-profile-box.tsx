@@ -33,16 +33,18 @@ const UserProfileBox = ({ user }: UserProfileBoxProps) => {
   const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
   return (
-    <div className="p-3 bg-gray-50/50 rounded-lg mx-2 mb-4">
+    <div className="p-4 bg-white border border-form-border/20 rounded-lg mx-2 mb-4 shadow-sm">
       <div className="space-y-3">
-        <p className="text-sm font-medium text-gray-900 font-dm-sans text-center">
-          {displayName}
-        </p>
+        <div className="text-center">
+          <p className="text-base font-medium text-gray-900 font-inter leading-tight">
+            {displayName}
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={handleSignOut}
-          className="w-full gap-2 text-xs"
+          className="w-full gap-2 text-xs font-inter hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
         >
           <LogOut className="h-3 w-3" />
           Esci
