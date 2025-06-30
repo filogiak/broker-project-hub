@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CategoryScopeService } from '@/services/categoryScopeService';
 import { useCategoryCompletion } from '@/hooks/useCategoryCompletion';
+import { populateApplicantNamesInChecklist } from '@/services/applicantNameService';
 
 type ViewState = 
   | { type: 'categories' }
@@ -24,6 +25,10 @@ interface ProjectData {
   id: string;
   name: string;
   applicant_count: 'one_applicant' | 'two_applicants' | 'three_or_more_applicants';
+  applicant_one_first_name: string | null;
+  applicant_one_last_name: string | null;
+  applicant_two_first_name: string | null;
+  applicant_two_last_name: string | null;
 }
 
 interface Category {
@@ -67,7 +72,7 @@ const ProjectDocuments = () => {
         
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
-          .select('id, name, applicant_count')
+          .select('id, name, applicant_count, applicant_one_first_name, applicant_one_last_name, applicant_two_first_name, applicant_two_last_name')
           .eq('id', projectId)
           .single();
 
@@ -106,6 +111,17 @@ const ProjectDocuments = () => {
         if (categoriesData && categoriesData.length > 0) {
           const categoryIds = categoriesData.map(cat => cat.id);
           await CategoryScopeService.preloadCategoryScopes(categoryIds, projectId);
+        }
+
+        // Auto-populate applicant names if they exist but checklist items are empty
+        if (projectData.applicant_one_first_name || projectData.applicant_one_last_name || 
+            projectData.applicant_two_first_name || projectData.applicant_two_last_name) {
+          console.log('🔧 Checking if applicant names need to be populated in checklist...');
+          
+          // Run this in the background, don't block the UI
+          populateApplicantNamesInChecklist(projectId).catch(error => {
+            console.error('⚠️ Failed to populate applicant names (non-critical):', error);
+          });
         }
 
       } catch (err) {

@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { populateApplicantNamesInChecklist } from './applicantNameService';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectType = Database['public']['Enums']['project_type'];
@@ -105,6 +105,21 @@ export const createProject = async (projectData: {
     if (!createdProject) {
       console.error('❌ Created project not found');
       throw new Error('Project was created but could not be retrieved. Please refresh the page.');
+    }
+
+    // Auto-populate applicant names in checklist items after project creation
+    if (projectData.applicantOneFirstName || projectData.applicantOneLastName || 
+        projectData.applicantTwoFirstName || projectData.applicantTwoLastName) {
+      console.log('🔧 Auto-populating applicant names in checklist...');
+      
+      // Add a small delay to ensure checklist items are created by the trigger
+      setTimeout(async () => {
+        try {
+          await populateApplicantNamesInChecklist(projectId);
+        } catch (populateError) {
+          console.error('⚠️ Failed to auto-populate applicant names (non-critical):', populateError);
+        }
+      }, 1000);
     }
 
     console.log('🎉 Project creation completed successfully:', createdProject);

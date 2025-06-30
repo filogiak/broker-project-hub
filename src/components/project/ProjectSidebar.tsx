@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -12,11 +13,13 @@ import {
 import { Users, FileText, MessageSquare, Bell, Settings, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useProjectData } from '@/hooks/useProjectData';
 
 const ProjectSidebar = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const { user } = useAuth();
+  const { project, loading: projectLoading } = useProjectData(projectId);
 
   const menuItems = [
     {
@@ -64,10 +67,57 @@ const ProjectSidebar = () => {
   };
 
   const handleBackToBrokerage = () => {
-    // Navigate to brokerage dashboard - we'll use the user's brokerage ID if available
-    // For now, navigate to the base brokerage route which will handle the routing
-    navigate('/brokerage');
+    if (project?.brokerage_id) {
+      navigate(`/brokerage/${project.brokerage_id}`);
+    } else {
+      // Fallback to generic brokerage route
+      navigate('/brokerage');
+    }
   };
+
+  const getProjectDisplayInfo = () => {
+    if (projectLoading) {
+      return {
+        projectName: 'Loading...',
+        applicantInfo: 'Loading project data...'
+      };
+    }
+
+    if (!project) {
+      return {
+        projectName: 'Project',
+        applicantInfo: 'Management Hub'
+      };
+    }
+
+    const projectName = project.name;
+    let applicantInfo = '';
+
+    if (project.applicant_count === 'one_applicant') {
+      // Single applicant - show first and last name on one line
+      const firstName = project.applicant_one_first_name || '';
+      const lastName = project.applicant_one_last_name || '';
+      applicantInfo = `${firstName} ${lastName}`.trim() || 'Single Applicant';
+    } else {
+      // Multiple applicants - show both names
+      const applicant1 = `${project.applicant_one_first_name || ''} ${project.applicant_one_last_name || ''}`.trim();
+      const applicant2 = `${project.applicant_two_first_name || ''} ${project.applicant_two_last_name || ''}`.trim();
+      
+      if (applicant1 && applicant2) {
+        applicantInfo = `${applicant1} & ${applicant2}`;
+      } else if (applicant1) {
+        applicantInfo = applicant1;
+      } else if (applicant2) {
+        applicantInfo = applicant2;
+      } else {
+        applicantInfo = 'Multiple Applicants';
+      }
+    }
+
+    return { projectName, applicantInfo };
+  };
+
+  const { projectName, applicantInfo } = getProjectDisplayInfo();
 
   return (
     <Sidebar className="border-r border-form-border bg-white">
@@ -81,9 +131,13 @@ const ProjectSidebar = () => {
           >
             <ArrowLeft className="h-4 w-4 text-form-green" />
           </Button>
-          <div>
-            <h2 className="text-lg font-semibold text-form-green font-dm-sans">Project</h2>
-            <p className="text-sm text-gray-500">Management Hub</p>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-form-green font-dm-sans truncate">
+              {projectName}
+            </h2>
+            <p className="text-sm text-gray-500 break-words">
+              {applicantInfo}
+            </p>
           </div>
         </div>
       </SidebarHeader>
