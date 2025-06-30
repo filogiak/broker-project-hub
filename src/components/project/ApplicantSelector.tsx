@@ -47,12 +47,12 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
       <h2 className="text-2xl font-bold text-center mb-6 font-dm-sans text-form-green">Seleziona Richiedente</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         <Card 
-          className="hover:shadow-lg transition-all cursor-pointer border-2 border-form-border hover:border-form-green bg-white rounded-[16px]"
+          className="gomutuo-card hover:shadow-lg cursor-pointer hover:border-form-green"
           onClick={() => onSelectApplicant('applicant_1')}
         >
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
             <User className="h-16 w-16 text-form-green mb-4" />
-            <h3 className="text-xl font-semibold font-dm-sans text-form-green mb-2">
+            <h3 className="text-xl font-semibold font-dm-sans text-black mb-2">
               {primaryApplicant || 'Richiedente 1'}
             </h3>
             <p className="text-sm text-gray-600 font-dm-sans">Richiedente Principale</p>
@@ -60,12 +60,12 @@ const ApplicantSelector = ({ onSelectApplicant, onBack }: ApplicantSelectorProps
         </Card>
         
         <Card 
-          className="hover:shadow-lg transition-all cursor-pointer border-2 border-form-border hover:border-form-green bg-white rounded-[16px]"
+          className="gomutuo-card hover:shadow-lg cursor-pointer hover:border-form-green"
           onClick={() => onSelectApplicant('applicant_2')}
         >
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
             <Users className="h-16 w-16 text-form-green mb-4" />
-            <h3 className="text-xl font-semibold font-dm-sans text-form-green mb-2">
+            <h3 className="text-xl font-semibold font-dm-sans text-black mb-2">
               {secondaryApplicant || 'Richiedente 2'}
             </h3>
             <p className="text-sm text-gray-600 font-dm-sans">Secondo Richiedente</p>
