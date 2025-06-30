@@ -56,13 +56,20 @@ export class UnifiedInvitationService {
         throw new Error('No data returned from invitation status check');
       }
 
-      console.log('✅ Invitation status checked successfully:', data);
+      // Type assertion with runtime validation
+      const result = data as any;
+      
+      if (typeof result !== 'object' || result === null) {
+        throw new Error('Invalid response format from invitation status check');
+      }
+
+      console.log('✅ Invitation status checked successfully:', result);
       
       return {
-        user_exists: data.user_exists,
-        user_id: data.user_id,
-        pending_invitations: data.pending_invitations || [],
-        invitation_count: data.invitation_count || 0
+        user_exists: Boolean(result.user_exists),
+        user_id: result.user_id || null,
+        pending_invitations: Array.isArray(result.pending_invitations) ? result.pending_invitations : [],
+        invitation_count: Number(result.invitation_count) || 0
       };
 
     } catch (error) {
@@ -97,8 +104,15 @@ export class UnifiedInvitationService {
         throw new Error('No data returned from invitation processing');
       }
 
-      console.log('✅ Invitation processed successfully:', data);
-      return data;
+      // Type assertion with runtime validation
+      const result = data as any;
+      
+      if (typeof result !== 'object' || result === null) {
+        throw new Error('Invalid response format from invitation processing');
+      }
+
+      console.log('✅ Invitation processed successfully:', result);
+      return result as InvitationAcceptanceResult;
 
     } catch (error) {
       console.error('❌ Failed to process invitation acceptance:', error);
@@ -125,12 +139,20 @@ export class UnifiedInvitationService {
         return [];
       }
 
-      if (data.error) {
-        throw new Error(data.error);
+      // Type assertion with runtime validation
+      const result = data as any;
+      
+      if (typeof result !== 'object' || result === null) {
+        console.log('ℹ️ Invalid response format, returning empty array');
+        return [];
       }
 
-      console.log('✅ Pending invitations retrieved:', data.count || 0);
-      return data.invitations || [];
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      console.log('✅ Pending invitations retrieved:', result.count || 0);
+      return Array.isArray(result.invitations) ? result.invitations : [];
 
     } catch (error) {
       console.error('❌ Failed to get pending invitations:', error);
@@ -158,8 +180,15 @@ export class UnifiedInvitationService {
         throw new Error('No data returned from invitation acceptance');
       }
 
-      console.log('✅ Invitation accepted successfully by ID:', data);
-      return data;
+      // Type assertion with runtime validation
+      const result = data as any;
+      
+      if (typeof result !== 'object' || result === null) {
+        throw new Error('Invalid response format from invitation acceptance');
+      }
+
+      console.log('✅ Invitation accepted successfully by ID:', result);
+      return result as InvitationAcceptanceResult;
 
     } catch (error) {
       console.error('❌ Failed to accept invitation by ID:', error);
