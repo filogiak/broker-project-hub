@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
+
 interface ProjectOverviewCardProps {
   title: string;
   description: string;
@@ -10,6 +12,7 @@ interface ProjectOverviewCardProps {
   progress?: number;
   count?: number;
 }
+
 const ProjectOverviewCard = ({
   title,
   description,
@@ -48,12 +51,15 @@ const ProjectOverviewCard = ({
               </div>
             </div>}
 
-          {count !== undefined && <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">Items</span>
+          {count !== undefined && title === "Gestione Team" && (
+            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+              <span className="text-gray-500">Utenti</span>
               <span className="font-semibold text-form-green">{count}</span>
-            </div>}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>;
 };
+
 export default ProjectOverviewCard;

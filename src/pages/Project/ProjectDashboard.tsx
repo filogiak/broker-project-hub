@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ProjectSidebar from '@/components/project/ProjectSidebar';
 import ProjectHeaderCard from '@/components/project/ProjectHeaderCard';
 import ProjectOverviewCard from '@/components/project/ProjectOverviewCard';
-import { Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
+import { Users, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,8 @@ const ProjectDashboard = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [memberCount, setMemberCount] = useState<number>(0);
+  const [documentProgress, setDocumentProgress] = useState<number>(0);
   
   useEffect(() => {
     const loadProject = async () => {
@@ -39,16 +41,44 @@ const ProjectDashboard = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // Load project data
         const {
           data: projectData,
           error: projectError
         } = await supabase.from('projects').select('*').eq('id', projectId).single();
+        
         if (projectError) {
           console.error('Error loading project:', projectError);
           setError('Failed to load project details');
           return;
         }
+        
         setProject(projectData);
+        
+        // Load project members count
+        const { data: membersData, error: membersError } = await supabase
+          .from('project_members')
+          .select('id')
+          .eq('project_id', projectId);
+          
+        if (!membersError && membersData) {
+          setMemberCount(membersData.length);
+        }
+        
+        // Load document progress
+        const { data: checklistData, error: checklistError } = await supabase
+          .from('project_checklist_items')
+          .select('status')
+          .eq('project_id', projectId);
+          
+        if (!checklistError && checklistData) {
+          const totalItems = checklistData.length;
+          const completedItems = checklistData.filter(item => item.status === 'completed').length;
+          const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+          setDocumentProgress(progress);
+        }
+        
       } catch (error) {
         console.error('Error loading project:', error);
         setError('An unexpected error occurred');
@@ -132,17 +162,23 @@ const ProjectDashboard = () => {
             {/* Main Action Cards */}
             <div>
               <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Azioni Principali</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <ProjectOverviewCard title="Gestione Team" description="Aggiungi membri, assegna ruoli e monitora la partecipazione del team al progetto" icon={Users} onClick={() => navigate(`/project/${projectId}/members`)} badge="4 membri" count={4} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ProjectOverviewCard 
+                  title="Gestione Team" 
+                  description="Aggiungi membri, assegna ruoli e monitora la partecipazione del team al progetto" 
+                  icon={Users} 
+                  onClick={() => navigate(`/project/${projectId}/members`)} 
+                  badge={`${memberCount} membri`} 
+                  count={memberCount}
+                />
 
-                <ProjectOverviewCard title="Hub Documenti" description="Carica, organizza e monitora il completamento di tutti i documenti e moduli del progetto" icon={FileText} onClick={() => navigate(`/project/${projectId}/documents`)} progress={65} count={12} />
-
-                <ProjectOverviewCard title="Analytics Progetto" description="Visualizza report dettagliati, monitoraggio progressi e metriche di performance" icon={BarChart3} onClick={() => {
-                toast({
-                  title: "Prossimamente",
-                  description: "La dashboard analytics è in fase di sviluppo."
-                });
-              }} badge="Beta" />
+                <ProjectOverviewCard 
+                  title="Hub Documenti" 
+                  description="Carica, organizza e monitora il completamento di tutti i documenti e moduli del progetto" 
+                  icon={FileText} 
+                  onClick={() => navigate(`/project/${projectId}/documents`)} 
+                  progress={documentProgress}
+                />
               </div>
             </div>
           </div>
