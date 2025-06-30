@@ -1125,6 +1125,18 @@ export type Database = {
           roles: Database["public"]["Enums"]["user_role"][]
         }[]
       }
+      get_categories_completion_batch: {
+        Args: {
+          p_project_id: string
+          p_category_ids: string[]
+          p_participant_designation?: Database["public"]["Enums"]["participant_designation"]
+        }
+        Returns: {
+          category_id: string
+          total_items: number
+          completed_items: number
+        }[]
+      }
       get_user_roles: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"][]

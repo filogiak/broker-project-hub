@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -38,8 +37,9 @@ export class CategoryCompletionService {
       console.log('🔄 Fetching completion data with new optimized RPC function');
       
       // Use the new RPC function for batch completion data
+      // We'll use a direct RPC call since the types haven't been regenerated yet
       const { data: completionData, error } = await supabase.rpc(
-        'get_categories_completion_batch',
+        'get_categories_completion_batch' as any,
         {
           p_project_id: projectId,
           p_category_ids: categoryIds,
@@ -57,7 +57,7 @@ export class CategoryCompletionService {
       const completionMap = new Map<string, { totalItems: number; completedItems: number }>();
       
       if (completionData && Array.isArray(completionData)) {
-        completionData.forEach((row: CategoryCompletionRow) => {
+        (completionData as CategoryCompletionRow[]).forEach((row) => {
           completionMap.set(row.category_id, {
             totalItems: Number(row.total_items) || 0,
             completedItems: Number(row.completed_items) || 0
