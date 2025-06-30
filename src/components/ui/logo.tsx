@@ -13,7 +13,7 @@ export function Logo({ onClick }: LogoProps) {
 
   return (
     <div 
-      className={`flex items-center justify-center gap-2 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`flex items-center justify-start gap-2 pl-2 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-center">
@@ -29,7 +29,7 @@ export function Logo({ onClick }: LogoProps) {
           />
         )}
       </div>
-      <h1 className="font-bold text-xl">GoMutuo<span className="text-form-green">.it</span></h1>
+      <h1 className="font-bold text-xl">GoMutuo</h1>
     </div>
   );
 }
