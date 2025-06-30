@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInvitationToken } from '@/services/invitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invitation = Database['public']['Tables']['invitations']['Row'];
@@ -27,6 +26,42 @@ const InviteJoinPage = () => {
     confirmPassword: '',
   });
 
+  const validateInvitationToken = async (token: string): Promise<Invitation | null> => {
+    console.log('🔍 [INVITE JOIN] Validating invitation token:', token.substring(0, 10) + '...');
+    
+    try {
+      const { data: invitation, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('encrypted_token', token)
+        .eq('accepted_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ [INVITE JOIN] Database error validating token:', error);
+        return null;
+      }
+
+      if (!invitation) {
+        console.log('❌ [INVITE JOIN] No valid invitation found for token');
+        return null;
+      }
+
+      console.log('✅ [INVITE JOIN] Valid invitation found:', {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        projectId: invitation.project_id
+      });
+
+      return invitation;
+    } catch (error) {
+      console.error('❌ [INVITE JOIN] Error validating invitation token:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const validateToken = async () => {
       console.log('🔍 [INVITE JOIN] Starting token validation process');
@@ -38,12 +73,12 @@ const InviteJoinPage = () => {
       }
 
       try {
-        console.log('🔍 [INVITE JOIN] Validating invitation token with service...');
+        console.log('🔍 [INVITE JOIN] Validating invitation token...');
         
         const validInvitation = await validateInvitationToken(token);
         
         if (!validInvitation) {
-          console.error('❌ [INVITE JOIN] Invalid or expired token returned from service');
+          console.error('❌ [INVITE JOIN] Invalid or expired token returned from validation');
           toast({
             title: "Invalid Invitation",
             description: "This invitation link is invalid, expired, or has already been used.",

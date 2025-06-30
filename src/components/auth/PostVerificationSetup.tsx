@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Loader2, XCircle, User, Users, UserCheck, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { acceptInvitation, debugInvitationState } from '@/services/invitationService';
+import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import { debugAuthState, validateSessionBeforeOperation } from '@/services/authDebugService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -98,6 +98,48 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
     return false;
   };
 
+  const debugInvitationState = async (email: string) => {
+    console.log('🔍 [POST-VERIFICATION] Debugging invitation state for:', email);
+    
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Get profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      // Get invitation
+      const { data: invitationData } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      return {
+        userExists: !!user,
+        profileExists: !!profile,
+        invitationExists: !!invitationData,
+        details: {
+          currentUser: user,
+          profile,
+          invitation: invitationData
+        }
+      };
+    } catch (error) {
+      console.error('❌ [POST-VERIFICATION] Debug state error:', error);
+      return {
+        userExists: false,
+        profileExists: false,
+        invitationExists: false,
+        details: {}
+      };
+    }
+  };
+
   const runSetup = async () => {
     try {
       console.log('🔄 [POST-VERIFICATION] Starting enhanced setup process...');
@@ -181,13 +223,21 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       updateStepStatus('profile', 'complete');
       await delay(300);
 
-      // Step 2: Process invitation
+      // Step 2: Process invitation using unified service
       updateStepStatus('invitation', 'loading');
       setCurrentStep(2);
 
       console.log('🤝 [POST-VERIFICATION] Processing invitation...');
       
-      await acceptInvitation(invitation.id, userId);
+      const result = await UnifiedInvitationService.processInvitationAcceptance(
+        invitation.email,
+        invitation.encrypted_token || '',
+        userId
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to process invitation');
+      }
 
       updateStepStatus('invitation', 'complete');
       await delay(300);
