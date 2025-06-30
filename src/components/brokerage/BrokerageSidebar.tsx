@@ -82,10 +82,12 @@ const BrokerageSidebar = () => {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-form-border">
+      <SidebarFooter className="p-4">
         <UserProfileBox user={user} />
-        <div className="text-xs text-gray-500 text-center">
-          GoMutuo.it Brokerage Hub
+        <div className="border-t border-form-border pt-4">
+          <div className="text-xs text-gray-500 text-center">
+            GoMutuo.it Brokerage Hub
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
