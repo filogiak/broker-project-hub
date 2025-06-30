@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -53,7 +54,7 @@ const BrokerageSidebar = () => {
   return (
     <Sidebar className="border-r border-form-border bg-white">
       <SidebarHeader className="p-6 border-b border-form-border">
-        <div className="flex items-center justify-center mb-4">
+        <div className="flex items-center justify-center h-16">
           <Logo />
         </div>
       </SidebarHeader>
