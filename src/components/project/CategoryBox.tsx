@@ -20,7 +20,7 @@ const CategoryBox = ({ name, onClick, completion }: CategoryBoxProps) => {
 
   return (
     <Card 
-      className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] solid-shadow-light press-down-effect hover:shadow-md transition-shadow"
+      className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] solid-shadow-green press-down-effect-green hover:shadow-md transition-shadow"
       onClick={onClick}
     >
       <CardContent className="p-6">
