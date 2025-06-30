@@ -9,22 +9,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getApplicantDisplayNames } from '@/utils/applicantHelpers';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 
 const ProjectDashboard = () => {
-  const {
-    projectId
-  } = useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
-  const {
-    user,
-    loading: authLoading
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,15 +108,22 @@ const ProjectDashboard = () => {
       </SidebarProvider>;
   }
 
+  // Get applicant names for the header
+  const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(project);
+  let applicantNames = primaryApplicant;
+  if (secondaryApplicant && project.applicant_count !== 'one_applicant') {
+    applicantNames = `${primaryApplicant} & ${secondaryApplicant}`;
+  }
+
   return <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background-light">
         <ProjectSidebar />
         <SidebarInset>
           <div className="flex-1 p-8 space-y-8">
-            {/* Enhanced Project Header with Status */}
+            {/* Enhanced Project Header with Applicant Names as Title */}
             <ProjectHeaderCard 
-              projectName={project.name} 
-              projectDescription={project.description || undefined} 
+              applicantNames={applicantNames}
+              projectName={project.name}
               lastActivity="2h" 
               isActive={true} 
             />

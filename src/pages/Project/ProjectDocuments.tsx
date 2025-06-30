@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CategoryScopeService } from '@/services/categoryScopeService';
 import { useCategoryCompletion } from '@/hooks/useCategoryCompletion';
 import { populateApplicantNamesInChecklist } from '@/services/applicantNameService';
+import { getApplicantDisplayNames } from '@/utils/applicantHelpers';
 
 type ViewState = 
   | { type: 'categories' }
@@ -265,15 +266,22 @@ const ProjectDocuments = () => {
     );
   }
 
+  // Get applicant names for the header
+  const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(projectData);
+  let applicantNames = primaryApplicant;
+  if (secondaryApplicant && projectData.applicant_count !== 'one_applicant') {
+    applicantNames = `${primaryApplicant} & ${secondaryApplicant}`;
+  }
+
   const renderContent = () => {
     switch (viewState.type) {
       case 'categories':
         return (
           <div className="space-y-8">
-            {/* Project Header Card */}
+            {/* Project Header Card with Applicant Names as Title */}
             <ProjectHeaderCard 
+              applicantNames={applicantNames}
               projectName={projectData.name}
-              projectDescription="Gestione documenti e informazioni del progetto"
               lastActivity="2h"
               isActive={true}
             />
@@ -296,8 +304,8 @@ const ProjectDocuments = () => {
         return (
           <div className="space-y-6">
             <ProjectHeaderCard 
-              projectName={viewState.categoryName}
-              projectDescription="Questa categoria richiede informazioni specifiche per richiedente"
+              applicantNames={viewState.categoryName}
+              projectName="Questa categoria richiede informazioni specifiche per richiedente"
               lastActivity="2h"
               isActive={true}
             />

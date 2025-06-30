@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -14,6 +13,7 @@ import { Users, FileText, MessageSquare, Bell, Settings, ArrowLeft } from 'lucid
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectData } from '@/hooks/useProjectData';
+import { getApplicantDisplayNames } from '@/utils/applicantHelpers';
 
 const ProjectSidebar = () => {
   const navigate = useNavigate();
@@ -78,46 +78,34 @@ const ProjectSidebar = () => {
   const getProjectDisplayInfo = () => {
     if (projectLoading) {
       return {
-        projectName: 'Loading...',
-        applicantInfo: 'Loading project data...'
+        mainTitle: 'Loading...',
+        subtitle: 'Loading project data...'
       };
     }
 
     if (!project) {
       return {
-        projectName: 'Project',
-        applicantInfo: 'Management Hub'
+        mainTitle: 'Project',
+        subtitle: 'Management Hub'
       };
     }
 
     const projectName = project.name;
-    let applicantInfo = '';
-
-    if (project.applicant_count === 'one_applicant') {
-      // Single applicant - show first and last name on one line
-      const firstName = project.applicant_one_first_name || '';
-      const lastName = project.applicant_one_last_name || '';
-      applicantInfo = `${firstName} ${lastName}`.trim() || 'Single Applicant';
-    } else {
-      // Multiple applicants - show both names
-      const applicant1 = `${project.applicant_one_first_name || ''} ${project.applicant_one_last_name || ''}`.trim();
-      const applicant2 = `${project.applicant_two_first_name || ''} ${project.applicant_two_last_name || ''}`.trim();
-      
-      if (applicant1 && applicant2) {
-        applicantInfo = `${applicant1} & ${applicant2}`;
-      } else if (applicant1) {
-        applicantInfo = applicant1;
-      } else if (applicant2) {
-        applicantInfo = applicant2;
-      } else {
-        applicantInfo = 'Multiple Applicants';
-      }
+    const { primaryApplicant, secondaryApplicant } = getApplicantDisplayNames(project);
+    
+    // Main title: applicant names
+    let mainTitle = primaryApplicant;
+    if (secondaryApplicant && project.applicant_count !== 'one_applicant') {
+      mainTitle = `${primaryApplicant} & ${secondaryApplicant}`;
     }
 
-    return { projectName, applicantInfo };
+    // Subtitle: project name
+    const subtitle = projectName;
+
+    return { mainTitle, subtitle };
   };
 
-  const { projectName, applicantInfo } = getProjectDisplayInfo();
+  const { mainTitle, subtitle } = getProjectDisplayInfo();
 
   return (
     <Sidebar className="border-r border-form-border bg-white">
@@ -133,10 +121,10 @@ const ProjectSidebar = () => {
           </Button>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold text-form-green font-dm-sans truncate">
-              {projectName}
+              {mainTitle}
             </h2>
             <p className="text-sm text-gray-500 break-words">
-              {applicantInfo}
+              {subtitle}
             </p>
           </div>
         </div>

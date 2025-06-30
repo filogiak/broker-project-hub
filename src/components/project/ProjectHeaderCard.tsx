@@ -5,15 +5,15 @@ import { Clock, Circle, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProjectHeaderCardProps {
+  applicantNames: string;
   projectName: string;
-  projectDescription?: string;
   lastActivity: string;
   isActive?: boolean;
 }
 
 const ProjectHeaderCard = ({ 
+  applicantNames, 
   projectName, 
-  projectDescription, 
   lastActivity,
   isActive = true
 }: ProjectHeaderCardProps) => {
@@ -31,14 +31,12 @@ const ProjectHeaderCard = ({
             
             <div className="ml-6">
               <h1 className="text-3xl font-bold text-black font-dm-sans leading-tight mb-3">
-                {projectName}
+                {applicantNames}
               </h1>
               
-              {projectDescription && (
-                <p className="text-gray-700 font-dm-sans text-lg leading-relaxed font-medium">
-                  {projectDescription}
-                </p>
-              )}
+              <p className="text-gray-700 font-dm-sans text-lg leading-relaxed font-medium">
+                {projectName}
+              </p>
             </div>
           </div>
 
