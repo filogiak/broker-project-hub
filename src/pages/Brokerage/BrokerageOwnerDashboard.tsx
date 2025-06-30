@@ -193,6 +193,10 @@ const BrokerageOwnerDashboard = () => {
     projectType: any;
     applicantCount: any;
     hasGuarantor: boolean;
+    applicantOneFirstName?: string;
+    applicantOneLastName?: string;
+    applicantTwoFirstName?: string;
+    applicantTwoLastName?: string;
   }) => {
     if (!brokerage) {
       toast({
@@ -213,6 +217,10 @@ const BrokerageOwnerDashboard = () => {
         projectType: projectData.projectType,
         applicantCount: projectData.applicantCount,
         hasGuarantor: projectData.hasGuarantor,
+        applicantOneFirstName: projectData.applicantOneFirstName,
+        applicantOneLastName: projectData.applicantOneLastName,
+        applicantTwoFirstName: projectData.applicantTwoFirstName,
+        applicantTwoLastName: projectData.applicantTwoLastName,
       });
 
       setProjects(prev => [newProject, ...prev]);

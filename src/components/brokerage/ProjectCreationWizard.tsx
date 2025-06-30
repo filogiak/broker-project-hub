@@ -20,6 +20,10 @@ interface ProjectData {
   projectType: ProjectType | null;
   applicantCount: ApplicantCount;
   hasGuarantor: boolean;
+  applicantOneFirstName: string;
+  applicantOneLastName: string;
+  applicantTwoFirstName: string;
+  applicantTwoLastName: string;
 }
 
 interface ProjectCreationWizardProps {
@@ -52,9 +56,13 @@ const ProjectCreationWizard = ({ isOpen, onClose, onCreateProject }: ProjectCrea
     projectType: null,
     applicantCount: 'one_applicant',
     hasGuarantor: false,
+    applicantOneFirstName: '',
+    applicantOneLastName: '',
+    applicantTwoFirstName: '',
+    applicantTwoLastName: '',
   });
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -91,6 +99,10 @@ const ProjectCreationWizard = ({ isOpen, onClose, onCreateProject }: ProjectCrea
         projectType: null,
         applicantCount: 'one_applicant',
         hasGuarantor: false,
+        applicantOneFirstName: '',
+        applicantOneLastName: '',
+        applicantTwoFirstName: '',
+        applicantTwoLastName: '',
       });
       onClose();
     }
@@ -105,6 +117,18 @@ const ProjectCreationWizard = ({ isOpen, onClose, onCreateProject }: ProjectCrea
       case 3:
         return true; // hasGuarantor is boolean, always valid
       case 4:
+        // Validate applicant names based on count
+        if (projectData.applicantCount === 'one_applicant') {
+          return projectData.applicantOneFirstName.trim().length > 0 && 
+                 projectData.applicantOneLastName.trim().length > 0;
+        } else {
+          const app1Valid = projectData.applicantOneFirstName.trim().length > 0 && 
+                           projectData.applicantOneLastName.trim().length > 0;
+          const app2Valid = projectData.applicantTwoFirstName.trim().length > 0 && 
+                           projectData.applicantTwoLastName.trim().length > 0;
+          return app1Valid && app2Valid;
+        }
+      case 5:
         return projectData.name.trim().length > 0;
       default:
         return false;
@@ -234,6 +258,93 @@ const ProjectCreationWizard = ({ isOpen, onClose, onCreateProject }: ProjectCrea
         return (
           <div className="space-y-4">
             <div>
+              <h3 className="text-lg font-medium mb-2">Applicant Information</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Enter the names of the mortgage applicants.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {/* First Applicant */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">
+                    {projectData.applicantCount === 'one_applicant' ? 'Applicant' : 'First Applicant'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="app1-first">First Name *</Label>
+                      <Input
+                        id="app1-first"
+                        value={projectData.applicantOneFirstName}
+                        onChange={(e) => setProjectData(prev => ({ 
+                          ...prev, 
+                          applicantOneFirstName: e.target.value 
+                        }))}
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app1-last">Last Name *</Label>
+                      <Input
+                        id="app1-last"
+                        value={projectData.applicantOneLastName}
+                        onChange={(e) => setProjectData(prev => ({ 
+                          ...prev, 
+                          applicantOneLastName: e.target.value 
+                        }))}
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Second Applicant - only show for multi-applicant projects */}
+              {projectData.applicantCount !== 'one_applicant' && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Second Applicant</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="app2-first">First Name *</Label>
+                        <Input
+                          id="app2-first"
+                          value={projectData.applicantTwoFirstName}
+                          onChange={(e) => setProjectData(prev => ({ 
+                            ...prev, 
+                            applicantTwoFirstName: e.target.value 
+                          }))}
+                          placeholder="Enter first name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="app2-last">Last Name *</Label>
+                        <Input
+                          id="app2-last"
+                          value={projectData.applicantTwoLastName}
+                          onChange={(e) => setProjectData(prev => ({ 
+                            ...prev, 
+                            applicantTwoLastName: e.target.value 
+                          }))}
+                          placeholder="Enter last name"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-4">
+            <div>
               <h3 className="text-lg font-medium mb-2">Project Details</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Provide basic information about your project.
@@ -286,6 +397,19 @@ const ProjectCreationWizard = ({ isOpen, onClose, onCreateProject }: ProjectCrea
                     <Badge variant={projectData.hasGuarantor ? "default" : "outline"}>
                       {projectData.hasGuarantor ? 'Yes' : 'No'}
                     </Badge>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Applicant Names:</span>
+                    <div className="mt-1 space-y-1">
+                      <div className="text-sm">
+                        • {projectData.applicantOneFirstName} {projectData.applicantOneLastName}
+                      </div>
+                      {projectData.applicantCount !== 'one_applicant' && (
+                        <div className="text-sm">
+                          • {projectData.applicantTwoFirstName} {projectData.applicantTwoLastName}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

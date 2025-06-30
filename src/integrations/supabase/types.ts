@@ -791,6 +791,10 @@ export type Database = {
       projects: {
         Row: {
           applicant_count: Database["public"]["Enums"]["applicant_count"] | null
+          applicant_one_first_name: string | null
+          applicant_one_last_name: string | null
+          applicant_two_first_name: string | null
+          applicant_two_last_name: string | null
           brokerage_id: string
           checklist_generated_at: string | null
           created_at: string | null
@@ -807,6 +811,10 @@ export type Database = {
           applicant_count?:
             | Database["public"]["Enums"]["applicant_count"]
             | null
+          applicant_one_first_name?: string | null
+          applicant_one_last_name?: string | null
+          applicant_two_first_name?: string | null
+          applicant_two_last_name?: string | null
           brokerage_id: string
           checklist_generated_at?: string | null
           created_at?: string | null
@@ -823,6 +831,10 @@ export type Database = {
           applicant_count?:
             | Database["public"]["Enums"]["applicant_count"]
             | null
+          applicant_one_first_name?: string | null
+          applicant_one_last_name?: string | null
+          applicant_two_first_name?: string | null
+          applicant_two_last_name?: string | null
           brokerage_id?: string
           checklist_generated_at?: string | null
           created_at?: string | null
@@ -1138,6 +1150,18 @@ export type Database = {
               p_project_type?: Database["public"]["Enums"]["project_type"]
               p_applicant_count?: Database["public"]["Enums"]["applicant_count"]
               p_has_guarantor?: boolean
+            }
+          | {
+              p_name: string
+              p_brokerage_id: string
+              p_description?: string
+              p_project_type?: Database["public"]["Enums"]["project_type"]
+              p_applicant_count?: Database["public"]["Enums"]["applicant_count"]
+              p_has_guarantor?: boolean
+              p_applicant_one_first_name?: string
+              p_applicant_one_last_name?: string
+              p_applicant_two_first_name?: string
+              p_applicant_two_last_name?: string
             }
         Returns: string
       }

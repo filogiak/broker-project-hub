@@ -12,6 +12,10 @@ interface ProjectCreationData {
   projectType: ProjectType | null;
   applicantCount: ApplicantCount;
   hasGuarantor: boolean;
+  applicantOneFirstName?: string;
+  applicantOneLastName?: string;
+  applicantTwoFirstName?: string;
+  applicantTwoLastName?: string;
 }
 
 export const createProject = async (projectData: {
@@ -21,6 +25,10 @@ export const createProject = async (projectData: {
   projectType?: ProjectType | null;
   applicantCount?: ApplicantCount;
   hasGuarantor?: boolean;
+  applicantOneFirstName?: string;
+  applicantOneLastName?: string;
+  applicantTwoFirstName?: string;
+  applicantTwoLastName?: string;
 }): Promise<Project> => {
   console.log('🚀 Starting project creation with data:', projectData);
   
@@ -40,10 +48,9 @@ export const createProject = async (projectData: {
   console.log('✅ User authenticated:', session.user.id);
 
   try {
-    // Use the updated safe database function
+    // Use the updated safe database function with applicant names
     console.log('🛡️ Creating project using safe database function...');
     
-    // Call the function with proper typing including new parameters
     const { data: projectId, error: functionError } = await supabase
       .rpc('safe_create_project', {
         p_name: projectData.name,
@@ -51,7 +58,11 @@ export const createProject = async (projectData: {
         p_description: projectData.description || null,
         p_project_type: projectData.projectType || null,
         p_applicant_count: projectData.applicantCount || 'one_applicant',
-        p_has_guarantor: projectData.hasGuarantor || false
+        p_has_guarantor: projectData.hasGuarantor || false,
+        p_applicant_one_first_name: projectData.applicantOneFirstName || null,
+        p_applicant_one_last_name: projectData.applicantOneLastName || null,
+        p_applicant_two_first_name: projectData.applicantTwoFirstName || null,
+        p_applicant_two_last_name: projectData.applicantTwoLastName || null
       });
 
     if (functionError) {
