@@ -8,7 +8,7 @@ interface LogoProps {
 export function Logo({ onClick }: LogoProps) {
   return (
     <div 
-      className={`flex items-center justify-center gap-2 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`flex items-center justify-center gap-2 w-full ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-center">
