@@ -1149,6 +1149,10 @@ export type Database = {
         Args: { p_user_id?: string }
         Returns: Json
       }
+      get_my_sent_invitations: {
+        Args: { p_user_id?: string }
+        Returns: Json
+      }
       get_user_roles: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"][]
