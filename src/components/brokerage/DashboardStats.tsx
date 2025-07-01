@@ -101,32 +101,7 @@ const DashboardStats = ({
         </CardContent>
       </Card>
 
-      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleApprovalsClick}>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <Clock className="h-9 w-9 text-form-green-dark" />
-            </div>
-            <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
-              {approvalsDue} in attesa
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Approvazioni Pending</h3>
-              <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
-                Progetti che richiedono la tua approvazione
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">In attesa</span>
-              <span className="font-semibold text-form-green">{approvalsDue}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleUsersClick}>
         <CardContent className="p-6">
