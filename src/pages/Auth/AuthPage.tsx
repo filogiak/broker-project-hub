@@ -72,14 +72,35 @@ const AuthPage = () => {
     console.log('📝 [SIGNUP] Has invitation:', hasInvitation);
     
     try {
-      await signUp(
+      const signupResult = await signUp(
         signupForm.email, 
         signupForm.password, 
         signupForm.firstName, 
         signupForm.lastName
       );
+      
       console.log('✅ [SIGNUP] Signup successful');
-      toast.success('Account created successfully! Please check your email to verify your account.');
+      
+      // If coming from invitation and we have a session, the user is already logged in
+      if (hasInvitation && signupResult.data?.session) {
+        console.log('🎯 [SIGNUP] User from invitation logged in automatically');
+        toast.success('Account created and logged in successfully! Welcome to the project!');
+        // Navigation will be handled by the auth state change
+      } else if (hasInvitation && !signupResult.data?.session) {
+        // For invitation users, try to log them in immediately after signup
+        console.log('🔄 [SIGNUP] Auto-logging in invitation user...');
+        try {
+          await login(signupForm.email, signupForm.password);
+          toast.success('Account created and logged in successfully! Welcome to the project!');
+        } catch (loginError: any) {
+          console.error('❌ [SIGNUP] Auto-login failed:', loginError);
+          toast.success('Account created successfully! Please sign in to continue.');
+          setActiveTab('login');
+        }
+      } else {
+        // Regular signup - requires email verification
+        toast.success('Account created successfully! Please check your email to verify your account.');
+      }
     } catch (error: any) {
       console.error('❌ [SIGNUP] Signup error:', error);
       toast.error(error.message || 'Failed to create account');
