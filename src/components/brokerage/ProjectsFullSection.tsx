@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, FolderOpen, Calendar, MoreVertical, Trash2, ExternalLink, User, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -105,15 +104,15 @@ const ProjectsFullSection = ({
 
   return (
     <div className="flex-1 p-8">
-      <Card className="bg-white border border-form-border rounded-[12px] shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center justify-between font-dm-sans text-black">
+      <div className="bg-white rounded-[12px] shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="flex items-center justify-between font-dm-sans text-black text-2xl font-semibold">
               Progetti Attivi
               <span className="text-sm font-normal text-muted-foreground ml-4">
                 {filteredProjects.length} {filteredProjects.length === 1 ? 'progetto' : 'progetti'}
               </span>
-            </CardTitle>
+            </h2>
             <div className="flex items-center gap-2">
               {/* Search functionality */}
               <div className="flex items-center">
@@ -156,8 +155,7 @@ const ProjectsFullSection = ({
               </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
+
           {/* Projects List */}
           {sortedProjects.length === 0 ? (
             <div className="text-center py-8">
@@ -271,8 +269,8 @@ const ProjectsFullSection = ({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
