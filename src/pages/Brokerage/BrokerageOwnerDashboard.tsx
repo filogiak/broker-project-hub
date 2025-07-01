@@ -1,11 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
 import BrokerageDashboard from './BrokerageDashboard';
-import BrokerageProjects from './BrokerageProjects';
-import BrokerageUsers from './BrokerageUsers';
-import BrokerageSettings from './BrokerageSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { getBrokerageByOwner } from '@/services/brokerageService';
@@ -179,14 +177,6 @@ const BrokerageOwnerDashboard = () => {
     }
   };
 
-  const handleProfileUpdate = (updatedProfile: Profile) => {
-    setUserProfile(updatedProfile);
-  };
-
-  const handleBrokerageUpdate = (updatedBrokerage: Brokerage) => {
-    setBrokerage(updatedBrokerage);
-  };
-
   const handleCreateProject = async (projectData: { 
     name: string; 
     description: string;
@@ -274,27 +264,19 @@ const BrokerageOwnerDashboard = () => {
   const renderCurrentPage = () => {
     const currentPath = location.pathname;
     
+    // For other routes, redirect to the specific page components
     if (currentPath.endsWith('/projects')) {
-      return (
-        <BrokerageProjects
-          brokerage={brokerage!}
-          projects={projects}
-          onCreateProject={handleCreateProject}
-          onDeleteProject={handleDeleteProject}
-          onOpenProject={handleOpenProject}
-        />
-      );
+      navigate(`/brokerage/${brokerageId}/projects`);
+      return null;
     } else if (currentPath.endsWith('/users')) {
-      return <BrokerageUsers />;
+      navigate(`/brokerage/${brokerageId}/users`);
+      return null;
     } else if (currentPath.endsWith('/settings')) {
-      return (
-        <BrokerageSettings
-          brokerage={brokerage!}
-          userProfile={userProfile!}
-          onProfileUpdate={handleProfileUpdate}
-          onBrokerageUpdate={handleBrokerageUpdate}
-        />
-      );
+      navigate(`/brokerage/${brokerageId}/settings`);
+      return null;
+    } else if (currentPath.endsWith('/simulations')) {
+      navigate(`/brokerage/${brokerageId}/simulations`);
+      return null;
     } else {
       // Default to dashboard
       return (
