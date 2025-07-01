@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import type { Database } from '@/integrations/supabase/types';
@@ -115,13 +114,20 @@ export const cancelInvitation = async (invitationId: string): Promise<void> => {
   
   try {
     // Mark invitation as expired by setting expires_at to now
-    const { error } = await supabase
+    const { data, error, count } = await supabase
       .from('invitations')
       .update({ expires_at: new Date().toISOString() })
-      .eq('id', invitationId);
+      .eq('id', invitationId)
+      .select();
 
     if (error) {
-      throw error;
+      console.error('❌ [PROJECT INVITATION SERVICE] Database error cancelling invitation:', error);
+      throw new Error(`Failed to cancel invitation: ${error.message}`);
+    }
+
+    // Check if any rows were actually updated
+    if (!data || data.length === 0) {
+      throw new Error('Invitation not found or you do not have permission to cancel it');
     }
 
     console.log('✅ [PROJECT INVITATION SERVICE] Invitation cancelled successfully');
@@ -137,13 +143,20 @@ export const deleteInvitation = async (invitationId: string): Promise<void> => {
   
   try {
     // Actually delete the invitation record
-    const { error } = await supabase
+    const { data, error, count } = await supabase
       .from('invitations')
       .delete()
-      .eq('id', invitationId);
+      .eq('id', invitationId)
+      .select();
 
     if (error) {
-      throw error;
+      console.error('❌ [PROJECT INVITATION SERVICE] Database error deleting invitation:', error);
+      throw new Error(`Failed to delete invitation: ${error.message}`);
+    }
+
+    // Check if any rows were actually deleted
+    if (!data || data.length === 0) {
+      throw new Error('Invitation not found or you do not have permission to delete it');
     }
 
     console.log('✅ [PROJECT INVITATION SERVICE] Invitation deleted successfully');

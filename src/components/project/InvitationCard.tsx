@@ -57,9 +57,11 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
       });
       onInvitationUpdated();
     } catch (error) {
+      console.error('Error resending invitation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
       toast({
-        title: "Errore",
-        description: "Impossibile reinviare l'invito. Riprova più tardi.",
+        title: "Errore nel Reinvio",
+        description: `Impossibile reinviare l'invito: ${errorMessage}`,
         variant: "destructive"
       });
     } finally {
@@ -77,9 +79,11 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
       });
       onInvitationUpdated();
     } catch (error) {
+      console.error('Error cancelling invitation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
       toast({
-        title: "Errore",
-        description: "Impossibile annullare l'invito. Riprova più tardi.",
+        title: "Errore nell'Annullamento",
+        description: `Impossibile annullare l'invito: ${errorMessage}`,
         variant: "destructive"
       });
     } finally {
@@ -97,9 +101,11 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
       });
       onInvitationUpdated();
     } catch (error) {
+      console.error('Error deleting invitation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
       toast({
-        title: "Errore",
-        description: "Impossibile eliminare l'invito. Riprova più tardi.",
+        title: "Errore nell'Eliminazione",
+        description: `Impossibile eliminare l'invito: ${errorMessage}`,
         variant: "destructive"
       });
     } finally {
@@ -150,33 +156,33 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
                 <>
                   <Button
                     onClick={handleResend}
-                    disabled={isResending}
+                    disabled={isResending || isCancelling || isDeleting}
                     size="sm"
                     variant="outline"
                     className="flex items-center gap-1"
                   >
                     <RotateCcw className={`h-3 w-3 ${isResending ? 'animate-spin' : ''}`} />
-                    Reinvia
+                    {isResending ? 'Invio...' : 'Reinvia'}
                   </Button>
                   <Button
                     onClick={handleCancel}
-                    disabled={isCancelling}
+                    disabled={isCancelling || isResending || isDeleting}
                     size="sm"
                     variant="outline"
                     className="flex items-center gap-1 text-orange-600 hover:text-orange-700"
                   >
                     <X className="h-3 w-3" />
-                    Annulla
+                    {isCancelling ? 'Annullo...' : 'Annulla'}
                   </Button>
                   <Button
                     onClick={handleDelete}
-                    disabled={isDeleting}
+                    disabled={isDeleting || isResending || isCancelling}
                     size="sm"
                     variant="destructive"
                     className="flex items-center gap-1"
                   >
                     <Trash2 className="h-3 w-3" />
-                    Elimina
+                    {isDeleting ? 'Elimino...' : 'Elimina'}
                   </Button>
                 </>
               )}
@@ -189,7 +195,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
                   className="flex items-center gap-1 text-gray-600 hover:text-gray-700"
                 >
                   <Trash2 className="h-3 w-3" />
-                  Elimina
+                  {isDeleting ? 'Elimino...' : 'Elimina'}
                 </Button>
               )}
             </div>
