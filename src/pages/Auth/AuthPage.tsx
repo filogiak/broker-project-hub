@@ -82,11 +82,11 @@ const AuthPage = () => {
       console.log('✅ [SIGNUP] Signup successful');
       
       // If coming from invitation and we have a session, the user is already logged in
-      if (hasInvitation && signupResult.data?.session) {
+      if (hasInvitation && signupResult.session) {
         console.log('🎯 [SIGNUP] User from invitation logged in automatically');
         toast.success('Account created and logged in successfully! Welcome to the project!');
         // Navigation will be handled by the auth state change
-      } else if (hasInvitation && !signupResult.data?.session) {
+      } else if (hasInvitation && !signupResult.session) {
         // For invitation users, try to log them in immediately after signup
         console.log('🔄 [SIGNUP] Auto-logging in invitation user...');
         try {
