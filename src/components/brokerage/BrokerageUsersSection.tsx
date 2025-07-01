@@ -105,6 +105,7 @@ const BrokerageUsersSection = () => {
       case 'brokerage_owner': return 'Proprietario';
       case 'simulation_collaborator': return 'Collaboratore Simulazioni';
       case 'broker_assistant': return 'Assistente Broker';
+      case 'real_estate_agent': return 'Agente Immobiliare';
       default: return role;
     }
   };
@@ -114,6 +115,7 @@ const BrokerageUsersSection = () => {
       case 'brokerage_owner': return 'bg-purple-100 text-purple-800';
       case 'simulation_collaborator': return 'bg-blue-100 text-blue-800';
       case 'broker_assistant': return 'bg-green-100 text-green-800';
+      case 'real_estate_agent': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -177,6 +179,7 @@ const BrokerageUsersSection = () => {
                   <SelectContent>
                     <SelectItem value="simulation_collaborator">Collaboratore Simulazioni</SelectItem>
                     <SelectItem value="broker_assistant">Assistente Broker</SelectItem>
+                    <SelectItem value="real_estate_agent">Agente Immobiliare</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
