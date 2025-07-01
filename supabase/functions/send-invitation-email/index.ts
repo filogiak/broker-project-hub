@@ -13,10 +13,11 @@ const corsHeaders = {
 interface InvitationEmailRequest {
   invitationId: string;
   email: string;
-  projectName: string;
+  projectName?: string | null;
   role: string;
   inviterName: string;
-  encryptedToken: string;
+  encryptedToken?: string;
+  brokerageId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,9 +31,37 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { invitationId, email, projectName, role, inviterName, encryptedToken }: InvitationEmailRequest = await req.json();
+    const { 
+      invitationId, 
+      email, 
+      projectName, 
+      role, 
+      inviterName, 
+      encryptedToken,
+      brokerageId 
+    }: InvitationEmailRequest = await req.json();
 
-    console.log("📧 Sending invitation email:", { invitationId, email, projectName, role });
+    console.log("📧 Sending invitation email:", { 
+      invitationId, 
+      email, 
+      projectName, 
+      role, 
+      isBrokerageInvitation: !!brokerageId 
+    });
+
+    // Get the invitation details if encryptedToken is not provided
+    let finalEncryptedToken = encryptedToken;
+    if (!finalEncryptedToken) {
+      const { data: invitation } = await supabase
+        .from('invitations')
+        .select('encrypted_token')
+        .eq('id', invitationId)
+        .single();
+      
+      if (invitation) {
+        finalEncryptedToken = invitation.encrypted_token;
+      }
+    }
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -45,30 +74,58 @@ const handler = async (req: Request): Promise<Response> => {
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000";
 
-    // Simplified link - always direct to login/auth with invitation info
+    // Determine the invitation type and content
+    const isBrokerageInvitation = !!brokerageId && !projectName;
     const inviteUrl = `${baseUrl}/auth?invitation=true&email=${encodeURIComponent(email)}`;
+    
+    let subject: string;
+    let mainMessage: string;
+    let instructions: string;
+
+    if (isBrokerageInvitation) {
+      // Get brokerage name
+      const { data: brokerage } = await supabase
+        .from('brokerages')
+        .select('name')
+        .eq('id', brokerageId)
+        .single();
+
+      const brokerageName = brokerage?.name || 'a brokerage';
+      
+      subject = `You're invited to join ${brokerageName}`;
+      mainMessage = `You've been invited to join <strong>${brokerageName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      instructions = userExists 
+        ? "Login to your account and check your dashboard to accept this invitation."
+        : "Create your account to join the brokerage. After signup, check your dashboard to accept the invitation.";
+    } else {
+      // Project invitation
+      subject = `You're invited to join ${projectName}`;
+      mainMessage = `You've been invited to join the project <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      instructions = userExists 
+        ? "Login to your account and check your dashboard to accept this invitation."
+        : "Create your account to join the project. After signup, check your dashboard to accept the invitation.";
+    }
+
     const buttonText = userExists ? "Login & View Invitation" : "Create Account & View Invitation";
-    const mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
-    const instructions = userExists 
-      ? "Login to your account and check your dashboard to accept this invitation."
-      : "Create your account to join the project. After signup, check your dashboard to accept the invitation.";
 
     const emailResponse = await resend.emails.send({
       from: "Invitations <noreply@gomutuo.it>",
       to: [email],
-      subject: `You're invited to join ${projectName}`,
+      subject,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Project Invitation</title>
+          <title>Invitation</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
             <h1 style="margin: 0; font-size: 28px;">You're Invited!</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Join ${projectName} as ${roleDisplayName}</p>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
+              ${isBrokerageInvitation ? `Join as ${roleDisplayName}` : `Join ${projectName} as ${roleDisplayName}`}
+            </p>
           </div>
           
           <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -77,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              <strong>${inviterName}</strong> has invited you to join the project <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.
+              <strong>${inviterName}</strong> has invited you to ${isBrokerageInvitation ? 'join their brokerage' : `join the project <strong>${projectName}</strong>`} as a <strong>${roleDisplayName}</strong>.
             </p>
 
             <p style="font-size: 16px; margin-bottom: 20px; color: #666;">
