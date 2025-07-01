@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      brokerage_members: {
+        Row: {
+          brokerage_id: string
+          id: string
+          invited_at: string
+          invited_by: string
+          joined_at: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          brokerage_id: string
+          id?: string
+          invited_at?: string
+          invited_by: string
+          joined_at?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          brokerage_id?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brokerage_members_brokerage_id_fkey"
+            columns: ["brokerage_id"]
+            isOneToOne: false
+            referencedRelation: "brokerages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brokerages: {
         Row: {
           created_at: string | null
@@ -1227,6 +1265,10 @@ export type Database = {
         Args: { p_user_id?: string }
         Returns: Json
       }
+      get_user_brokerage_roles: {
+        Args: { brokerage_uuid: string; user_uuid?: string }
+        Returns: Database["public"]["Enums"]["user_role"][]
+      }
       get_user_roles: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"][]
@@ -1281,6 +1323,10 @@ export type Database = {
       }
       user_can_view_project_members: {
         Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_is_brokerage_member: {
+        Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean
       }
       user_is_project_member: {

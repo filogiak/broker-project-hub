@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -24,21 +23,48 @@ export const createBrokerageInvitation = async (
       throw new Error('Authentication required');
     }
 
+    // Check if user already exists and is a member of this brokerage
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUser) {
+      // Check if user is already a member of this brokerage with this role
+      const { data: existingMember } = await supabase
+        .from('brokerage_members')
+        .select('id')
+        .eq('user_id', existingUser.id)
+        .eq('brokerage_id', brokerageId)
+        .eq('role', role)
+        .maybeSingle();
+
+      if (existingMember) {
+        console.log('⚠️ [BROKERAGE INVITATION] User already has this role in brokerage');
+        return {
+          success: false,
+          error: 'User already has this role in the brokerage'
+        };
+      }
+    }
+
     // Check for existing pending invitation
     const { data: existingInvitation } = await supabase
       .from('invitations')
       .select('id, accepted_at, expires_at')
       .eq('email', email)
       .eq('brokerage_id', brokerageId)
+      .eq('role', role)
       .eq('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
-      .single();
+      .maybeSingle();
 
     if (existingInvitation) {
       console.log('⚠️ [BROKERAGE INVITATION] Pending invitation already exists:', existingInvitation.id);
       return {
         success: false,
-        error: 'A pending invitation already exists for this email'
+        error: 'A pending invitation already exists for this email and role'
       };
     }
 

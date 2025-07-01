@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserPlus, Users, Mail, Info, Clock, CheckCircle, XCircle, Send } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { createBrokerageInvitation, resendBrokerageInvitation, cancelBrokerageInvitation } from '@/services/brokerageInvitationService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -61,7 +61,7 @@ const BrokerageUsersSection = () => {
     try {
       setLoading(true);
       
-      // Load users
+      // Load users using the updated function that queries brokerage_members
       const { data: usersData, error: usersError } = await supabase.rpc('get_brokerage_users', {
         brokerage_uuid: brokerageId
       });
@@ -121,74 +121,25 @@ const BrokerageUsersSection = () => {
     try {
       setInviting(true);
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const result = await createBrokerageInvitation(brokerageId, inviteForm.email, inviteForm.role);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.error || "Invitation sent successfully.",
+          variant: result.error ? "default" : "default",
+        });
 
-      // Generate encrypted token
-      const { data: encryptedToken, error: tokenError } = await supabase
-        .rpc('generate_encrypted_invitation_token');
-
-      if (tokenError || !encryptedToken) {
-        throw new Error('Failed to generate invitation token');
+        setInviteModalOpen(false);
+        setInviteForm({ email: '', role: 'simulation_collaborator' });
+        loadBrokerageData(); // Refresh data
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to send invitation.",
+          variant: "destructive",
+        });
       }
-
-      // Create invitation record
-      const { data: invitation, error: invitationError } = await supabase
-        .from('invitations')
-        .insert({
-          email: inviteForm.email,
-          role: inviteForm.role,
-          brokerage_id: brokerageId,
-          invited_by: user.id,
-          encrypted_token: encryptedToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        })
-        .select()
-        .single();
-
-      if (invitationError) throw invitationError;
-
-      // Get inviter profile
-      const { data: inviterProfile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('id', user.id)
-        .single();
-
-      const inviterName = inviterProfile 
-        ? `${inviterProfile.first_name || ''} ${inviterProfile.last_name || ''}`.trim() || inviterProfile.email
-        : user.email || 'Someone';
-
-      // Send invitation email
-      const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          invitationId: invitation.id,
-          email: inviteForm.email,
-          projectName: null, // This is a brokerage invitation
-          role: inviteForm.role,
-          inviterName,
-          encryptedToken,
-          brokerageId
-        },
-      });
-
-      if (emailError) {
-        console.error('Failed to send email:', emailError);
-        // Don't throw here - invitation was created, just email failed
-      }
-
-      toast({
-        title: "Success",
-        description: emailError 
-          ? "Invitation created but email failed to send. User can still accept from their dashboard."
-          : "Invitation sent successfully.",
-        variant: emailError ? "default" : "default",
-      });
-
-      setInviteModalOpen(false);
-      setInviteForm({ email: '', role: 'simulation_collaborator' });
-      loadBrokerageData(); // Refresh data
     } catch (error) {
       console.error('Error sending invitation:', error);
       toast({
@@ -203,29 +154,21 @@ const BrokerageUsersSection = () => {
 
   const handleResendInvitation = async (invitationId: string) => {
     try {
-      const invitation = invitations.find(inv => inv.id === invitationId);
-      if (!invitation) return;
-
-      const { error } = await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          invitationId: invitation.id,
-          email: invitation.email,
-          projectName: null,
-          role: invitation.role,
-          inviterName: invitation.inviter_name,
-          encryptedToken: '', // Will be fetched by the function
-          brokerageId
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Invitation resent successfully.",
-      });
-
-      loadBrokerageData();
+      const result = await resendBrokerageInvitation(invitationId);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Invitation resent successfully.",
+        });
+        loadBrokerageData();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to resend invitation.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error resending invitation:', error);
       toast({
@@ -238,19 +181,21 @@ const BrokerageUsersSection = () => {
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', invitationId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Invitation cancelled successfully.",
-      });
-
-      loadBrokerageData();
+      const result = await cancelBrokerageInvitation(invitationId);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Invitation cancelled successfully.",
+        });
+        loadBrokerageData();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to cancel invitation.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error cancelling invitation:', error);
       toast({
