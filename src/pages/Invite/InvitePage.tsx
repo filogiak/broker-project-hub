@@ -54,36 +54,21 @@ const InvitePage = () => {
     }
   };
 
-  const handleAcceptInvitations = async () => {
-    if (!invitationStatus || !token) return;
+  const handleProceedToAuth = () => {
+    if (!invitationStatus) return;
 
     setStep('processing');
     setLoading(true);
 
     try {
-      // If user exists and is logged in, accept directly
       if (invitationStatus.user_exists && user) {
-        const result = await UnifiedInvitationService.processInvitationAcceptance(
-          email,
-          token,
-          user.id
-        );
-
-        if (result.success) {
-          toast({
-            title: "Success",
-            description: result.message || "Invitations accepted successfully",
-            variant: "default"
-          });
-          
-          if (result.project_id) {
-            navigate(`/project/${result.project_id}`);
-          } else {
-            navigate('/dashboard');
-          }
-        } else {
-          throw new Error(result.error || 'Failed to accept invitations');
-        }
+        // User exists and is logged in - go to dashboard
+        toast({
+          title: "Redirecting",
+          description: "Please check your dashboard for pending invitations",
+          variant: "default"
+        });
+        navigate('/dashboard');
       } else if (invitationStatus.user_exists && !user) {
         // User exists but not logged in - redirect to login
         toast({
@@ -93,34 +78,18 @@ const InvitePage = () => {
         });
         navigate('/auth');
       } else {
-        // User doesn't exist - process for registration requirement
-        const result = await UnifiedInvitationService.processInvitationAcceptance(
-          email,
-          token
-        );
-
-        if (result.requires_registration) {
-          toast({
-            title: "Account Required",
-            description: "Please create an account to accept this invitation",
-            variant: "default"
-          });
-          navigate('/auth');
-        } else if (result.success) {
-          toast({
-            title: "Success", 
-            description: result.message || "Invitation processed successfully",
-            variant: "default"
-          });
-          navigate('/dashboard');
-        } else {
-          throw new Error(result.error || 'Failed to process invitation');
-        }
+        // User doesn't exist - redirect to signup
+        toast({
+          title: "Account Required",
+          description: "Please create an account to accept this invitation",
+          variant: "default"
+        });
+        navigate('/auth');
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to accept invitations",
+        description: error instanceof Error ? error.message : "Failed to process invitation",
         variant: "destructive"
       });
       setStep('show_status');
@@ -201,7 +170,7 @@ const InvitePage = () => {
             <p className="text-muted-foreground">
               {invitationStatus.user_exists 
                 ? 'Account found for this email address'
-                : 'No account found - you can create one after accepting'
+                : 'No account found - you can create one after signing up'
               }
             </p>
           </CardHeader>
@@ -235,19 +204,25 @@ const InvitePage = () => {
                   ))}
                 </div>
 
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    To accept your invitation{invitationStatus.invitation_count > 1 ? 's' : ''}, please {invitationStatus.user_exists ? 'log in' : 'create an account'} and check your dashboard.
+                  </p>
+                </div>
+
                 <div className="flex gap-3">
                   <Button
-                    onClick={handleAcceptInvitations}
+                    onClick={handleProceedToAuth}
                     className="flex-1 gomutuo-button-primary"
                     disabled={loading}
                   >
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
+                        Redirecting...
                       </>
                     ) : (
-                      `Accept ${invitationStatus.invitation_count > 1 ? 'All ' : ''}Invitation${invitationStatus.invitation_count > 1 ? 's' : ''}`
+                      invitationStatus.user_exists ? 'Log In to Accept' : 'Sign Up to Accept'
                     )}
                   </Button>
                   <Button
@@ -287,8 +262,8 @@ const InvitePage = () => {
             <div className="mx-auto w-12 h-12 bg-form-green rounded-full flex items-center justify-center mb-4">
               <Loader2 className="h-6 w-6 text-white animate-spin" />
             </div>
-            <h2 className="text-xl font-semibold font-dm-sans mb-2">Processing Invitation...</h2>
-            <p className="text-muted-foreground">Please wait while we set up your access.</p>
+            <h2 className="text-xl font-semibold font-dm-sans mb-2">Redirecting...</h2>
+            <p className="text-muted-foreground">Taking you to the authentication page.</p>
           </CardContent>
         </Card>
       </div>

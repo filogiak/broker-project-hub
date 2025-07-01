@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Calendar, User, Building2, CheckCircle, RefreshCw, AlertCircle } from 'lucide-react';
+import { Mail, Calendar, User, Building2, CheckCircle, RefreshCw, AlertCircle, Bug } from 'lucide-react';
 import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const PendingInvitationsWidget = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { invitations, loading, error, acceptInvitation, forceRefresh } = usePendingInvitations();
   const { toast } = useToast();
 
@@ -48,6 +50,26 @@ const PendingInvitationsWidget = () => {
     forceRefresh();
   };
 
+  const handleDebugInfo = () => {
+    console.log('🐛 [DEBUG] Current state:', {
+      user: user ? {
+        id: user.id,
+        email: user.email,
+        roles: user.roles
+      } : null,
+      invitations: invitations,
+      loading,
+      error,
+      invitationCount: invitations.length
+    });
+    
+    toast({
+      title: "Debug Info",
+      description: `User: ${user?.email || 'None'}, Invitations: ${invitations.length}, Loading: ${loading}, Error: ${error || 'None'}`,
+      variant: "default",
+    });
+  };
+
   if (loading) {
     return (
       <Card>
@@ -61,6 +83,9 @@ const PendingInvitationsWidget = () => {
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-form-green mx-auto"></div>
             <p className="text-sm text-muted-foreground mt-2">Caricamento inviti...</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              User: {user?.email || 'Loading...'}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -80,15 +105,26 @@ const PendingInvitationsWidget = () => {
           <div className="text-center py-8">
             <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
             <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">{error}</p>
-            <Button
-              onClick={handleForceRefresh}
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Riprova
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button
+                onClick={handleForceRefresh}
+                size="sm"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Riprova
+              </Button>
+              <Button
+                onClick={handleDebugInfo}
+                size="sm"
+                variant="ghost"
+                className="flex items-center gap-2"
+              >
+                <Bug className="h-4 w-4" />
+                Debug
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -108,15 +144,29 @@ const PendingInvitationsWidget = () => {
           <div className="text-center py-8">
             <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nessun invito in sospeso</p>
-            <Button
-              onClick={handleForceRefresh}
-              size="sm"
-              variant="ghost"
-              className="mt-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Controlla Aggiornamenti
-            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              User: {user?.email || 'Unknown'}
+            </p>
+            <div className="flex gap-2 justify-center mt-2">
+              <Button
+                onClick={handleForceRefresh}
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Controlla Aggiornamenti
+              </Button>
+              <Button
+                onClick={handleDebugInfo}
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Bug className="h-3 w-3 mr-1" />
+                Debug Info
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -174,15 +224,26 @@ const PendingInvitationsWidget = () => {
         ))}
         
         <div className="pt-2 border-t">
-          <Button
-            onClick={handleForceRefresh}
-            size="sm"
-            variant="ghost"
-            className="w-full flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Aggiorna Inviti
-          </Button>
+          <div className="flex gap-2 justify-center">
+            <Button
+              onClick={handleForceRefresh}
+              size="sm"
+              variant="ghost"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Aggiorna Inviti
+            </Button>
+            <Button
+              onClick={handleDebugInfo}
+              size="sm"
+              variant="ghost"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <Bug className="h-4 w-4" />
+              Debug
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

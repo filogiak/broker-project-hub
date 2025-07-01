@@ -7,10 +7,12 @@ import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageFor
 import MainLayout from '@/components/layout/MainLayout';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import { toast } from 'sonner';
+import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 
 const Dashboard = () => {
   const { user, loading, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { invitations, loading: invitationsLoading, invitationCount } = usePendingInvitations();
 
   const handleLogout = async () => {
     try {
@@ -41,6 +43,19 @@ const Dashboard = () => {
       }
     }
   }, [user, searchParams, setSearchParams]);
+
+  // Debug logging for invitation status
+  useEffect(() => {
+    if (user && !invitationsLoading) {
+      console.log('🔍 [DASHBOARD] Debug info:', {
+        userEmail: user.email,
+        invitationCount,
+        invitations: invitations.length,
+        userRoles: user.roles,
+        invitationsList: invitations
+      });
+    }
+  }, [user, invitations, invitationCount, invitationsLoading]);
 
   if (loading) {
     return (
@@ -88,6 +103,9 @@ const Dashboard = () => {
       break;
   }
 
+  // Show prominent invitation section if user has pending invitations
+  const showInvitationPrompt = invitationCount > 0;
+
   // Fallback dashboard view with pending invitations
   return (
     <MainLayout 
@@ -98,11 +116,34 @@ const Dashboard = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Dashboard</h1>
         
+        {showInvitationPrompt && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">{invitationCount}</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-blue-900">
+                  You have {invitationCount} pending invitation{invitationCount > 1 ? 's' : ''}!
+                </h2>
+                <p className="text-blue-700 text-sm">
+                  Accept your invitation{invitationCount > 1 ? 's' : ''} below to join project{invitationCount > 1 ? 's' : ''}.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-background rounded-lg shadow-sm p-6">
             <p className="text-muted-foreground">
               Welcome {user.firstName} {user.lastName}! Your role: {user.roles.join(', ')}
             </p>
+            {!showInvitationPrompt && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No pending invitations at the moment.
+              </p>
+            )}
           </div>
           
           <PendingInvitationsWidget />

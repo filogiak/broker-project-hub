@@ -11,6 +11,7 @@ export const usePendingInvitations = () => {
 
   const loadInvitations = async () => {
     if (!user) {
+      console.log('🔍 [PENDING INVITATIONS] No user found, skipping invitation load');
       setInvitations([]);
       setLoading(false);
       return;
@@ -19,15 +20,23 @@ export const usePendingInvitations = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Loading pending invitations for user:', user.id);
+      console.log('🔄 [PENDING INVITATIONS] Loading invitations for user:', {
+        userId: user.id,
+        userEmail: user.email,
+        userRoles: user.roles
+      });
       
       const pendingInvitations = await UnifiedInvitationService.getMyPendingInvitations();
       
-      console.log('✅ Successfully loaded invitations:', pendingInvitations);
+      console.log('✅ [PENDING INVITATIONS] Successfully loaded invitations:', {
+        count: pendingInvitations.length,
+        invitations: pendingInvitations
+      });
+      
       setInvitations(pendingInvitations);
       
     } catch (err) {
-      console.error('❌ Error loading pending invitations:', err);
+      console.error('❌ [PENDING INVITATIONS] Error loading invitations:', err);
       
       // Provide more specific error messages
       let errorMessage = 'Failed to load invitations';
@@ -41,6 +50,7 @@ export const usePendingInvitations = () => {
         }
       }
       
+      console.error('❌ [PENDING INVITATIONS] Final error message:', errorMessage);
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -49,12 +59,12 @@ export const usePendingInvitations = () => {
 
   const acceptInvitation = async (invitationId: string) => {
     try {
-      console.log('🎯 Accepting invitation:', invitationId);
+      console.log('🎯 [PENDING INVITATIONS] Accepting invitation:', invitationId);
       
       const result = await UnifiedInvitationService.acceptInvitationById(invitationId);
       
       if (result.success) {
-        console.log('✅ Invitation accepted successfully:', result);
+        console.log('✅ [PENDING INVITATIONS] Invitation accepted successfully:', result);
         // Refresh invitations list after successful acceptance
         await loadInvitations();
         return result;
@@ -62,14 +72,14 @@ export const usePendingInvitations = () => {
         throw new Error(result.error || 'Failed to accept invitation');
       }
     } catch (error) {
-      console.error('❌ Error accepting invitation:', error);
+      console.error('❌ [PENDING INVITATIONS] Error accepting invitation:', error);
       throw error;
     }
   };
 
   // Force refresh function that clears cache
   const forceRefresh = async () => {
-    console.log('🔄 Force refreshing invitations...');
+    console.log('🔄 [PENDING INVITATIONS] Force refreshing invitations...');
     setError(null);
     setLoading(true);
     
@@ -79,7 +89,11 @@ export const usePendingInvitations = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 usePendingInvitations: User changed, loading invitations');
+    console.log('🚀 [PENDING INVITATIONS] Hook effect triggered, user changed:', {
+      hasUser: !!user,
+      userEmail: user?.email,
+      userId: user?.id
+    });
     loadInvitations();
   }, [user]);
 

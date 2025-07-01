@@ -43,8 +43,8 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       icon: <User className="h-4 w-4" />
     },
     {
-      id: 'invitation',
-      label: 'Processing invitation and assigning roles',
+      id: 'redirect',
+      label: 'Redirecting to dashboard',
       status: 'pending',
       icon: <UserCheck className="h-4 w-4" />
     }
@@ -53,7 +53,6 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
   const [hasError, setHasError] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
   const updateStepStatus = (stepId: string, status: SetupStep['status']) => {
@@ -98,54 +97,11 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
     return false;
   };
 
-  const debugInvitationState = async (email: string) => {
-    console.log('🔍 [POST-VERIFICATION] Debugging invitation state for:', email);
-    
-    try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Get profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-      
-      // Get invitation
-      const { data: invitationData } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-      
-      return {
-        userExists: !!user,
-        profileExists: !!profile,
-        invitationExists: !!invitationData,
-        details: {
-          currentUser: user,
-          profile,
-          invitation: invitationData
-        }
-      };
-    } catch (error) {
-      console.error('❌ [POST-VERIFICATION] Debug state error:', error);
-      return {
-        userExists: false,
-        profileExists: false,
-        invitationExists: false,
-        details: {}
-      };
-    }
-  };
-
   const runSetup = async () => {
     try {
-      console.log('🔄 [POST-VERIFICATION] Starting enhanced setup process...');
+      console.log('🔄 [POST-VERIFICATION] Starting simplified setup process...');
       setHasError(false);
       setErrorMessage('');
-      setDebugInfo('');
       setRetryAttempt(prev => prev + 1);
 
       // Step 0: Validate authentication state
@@ -176,10 +132,6 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       setCurrentStep(1);
 
       console.log('📝 [POST-VERIFICATION] Waiting for profile creation...');
-      
-      // Run initial debug check
-      const initialDebug = await debugInvitationState(invitation.email);
-      console.log('🔍 [POST-VERIFICATION] Initial state:', initialDebug);
       
       // Wait for profile creation with extended timeout
       let profileFound = false;
@@ -223,30 +175,20 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       updateStepStatus('profile', 'complete');
       await delay(300);
 
-      // Step 2: Process invitation using unified service
-      updateStepStatus('invitation', 'loading');
+      // Step 2: Redirect to dashboard
+      updateStepStatus('redirect', 'loading');
       setCurrentStep(2);
 
-      console.log('🤝 [POST-VERIFICATION] Processing invitation...');
+      console.log('🎯 [POST-VERIFICATION] Redirecting to dashboard for invitation acceptance...');
       
-      const result = await UnifiedInvitationService.processInvitationAcceptance(
-        invitation.email,
-        invitation.encrypted_token || '',
-        userId
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to process invitation');
-      }
-
-      updateStepStatus('invitation', 'complete');
+      updateStepStatus('redirect', 'complete');
       await delay(300);
 
       console.log('🎉 [POST-VERIFICATION] Setup completed successfully');
 
       toast({
         title: "Account Setup Complete!",
-        description: "Welcome! Your account has been configured and you've joined the project.",
+        description: "Welcome! Please check your pending invitations on the dashboard.",
       });
 
       setTimeout(() => {
@@ -258,24 +200,6 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during setup';
       setErrorMessage(errorMessage);
-      
-      // Enhanced debug info on error
-      try {
-        const debugResult = await debugInvitationState(invitation.email);
-        const debugText = `
-Debug Information:
-- User exists: ${debugResult.userExists}
-- Profile exists: ${debugResult.profileExists}
-- Invitation exists: ${debugResult.invitationExists}
-- Current user: ${debugResult.details.currentUser?.email || 'None'}
-- Profile email: ${debugResult.details.profile?.email || 'None'}
-- Invitation status: ${debugResult.details.invitation ? 'Found' : 'Not found'}
-        `.trim();
-        setDebugInfo(debugText);
-      } catch (debugError) {
-        console.error('❌ [POST-VERIFICATION] Debug info generation failed:', debugError);
-        setDebugInfo('Debug information unavailable');
-      }
       
       // Mark current step as error
       if (currentStep < steps.length) {
@@ -300,7 +224,6 @@ Debug Information:
     setCurrentStep(0);
     setHasError(false);
     setErrorMessage('');
-    setDebugInfo('');
     runSetup();
   };
 
@@ -358,12 +281,6 @@ Debug Information:
               <strong>Setup Error:</strong> {errorMessage}
             </div>
             
-            {debugInfo && (
-              <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md max-h-32 overflow-y-auto whitespace-pre-line">
-                {debugInfo}
-              </div>
-            )}
-            
             <Button onClick={handleRetry} className="w-full" variant="default">
               Try Again
             </Button>
@@ -371,7 +288,7 @@ Debug Information:
         )}
 
         <div className="text-xs text-muted-foreground text-center">
-          This process may take a few moments. Please wait...
+          You will be redirected to the dashboard to accept invitations.
         </div>
       </CardContent>
     </Card>
