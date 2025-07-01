@@ -1,13 +1,15 @@
 
 import React, { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageForm';
 import MainLayout from '@/components/layout/MainLayout';
+import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 
 const Dashboard = () => {
   const { user, loading, refreshUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const handleLogout = async () => {
     try {
@@ -18,6 +20,14 @@ const Dashboard = () => {
       console.error('Logout error:', error);
     }
   };
+
+  // Clean up URL parameters after successful auth/invitation processing
+  useEffect(() => {
+    if (user && (searchParams.get('accept_invitation') || searchParams.get('redirect'))) {
+      // Clear URL parameters while preserving the current route
+      setSearchParams({});
+    }
+  }, [user, searchParams, setSearchParams]);
 
   if (loading) {
     return (
@@ -65,19 +75,24 @@ const Dashboard = () => {
       break;
   }
 
-  // Fallback dashboard view
+  // Fallback dashboard view with pending invitations
   return (
     <MainLayout 
       title="Dashboard" 
       userEmail={user.email}
       onLogout={handleLogout}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Dashboard</h1>
-        <div className="bg-background rounded-lg shadow-sm p-6">
-          <p className="text-muted-foreground">
-            Welcome {user.firstName} {user.lastName}! Your role: {user.roles.join(', ')}
-          </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-background rounded-lg shadow-sm p-6">
+            <p className="text-muted-foreground">
+              Welcome {user.firstName} {user.lastName}! Your role: {user.roles.join(', ')}
+            </p>
+          </div>
+          
+          <PendingInvitationsWidget />
         </div>
       </div>
     </MainLayout>

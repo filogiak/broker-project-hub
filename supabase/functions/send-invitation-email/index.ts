@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { Resend } from "npm:resend@2.0.0";
@@ -34,9 +33,35 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("📧 Sending invitation email:", { invitationId, email, projectName, role });
 
-    const inviteUrl = `${Deno.env.get("SITE_URL") || "http://localhost:3000"}/invite/join/${encryptedToken}`;
-    
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('email', email)
+      .single();
+
+    const userExists = !!existingUser;
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000";
+
+    let inviteUrl: string;
+    let buttonText: string;
+    let mainMessage: string;
+    let instructions: string;
+
+    if (userExists) {
+      // Existing user - direct them to login with invitation acceptance
+      inviteUrl = `${baseUrl}/auth?redirect=/dashboard&accept_invitation=${encryptedToken}`;
+      buttonText = "Login & Accept Invitation";
+      mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      instructions = "Since you already have an account, simply login to accept this invitation and join the project.";
+    } else {
+      // New user - direct them to the signup flow
+      inviteUrl = `${baseUrl}/invite/join/${encryptedToken}`;
+      buttonText = "Create Account & Accept Invitation";
+      mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      instructions = "Create your account to join the project and start collaborating with the team.";
+    }
 
     const emailResponse = await resend.emails.send({
       from: "Invitations <noreply@gomutuo.it>",
@@ -64,6 +89,10 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="font-size: 16px; margin-bottom: 20px;">
               <strong>${inviterName}</strong> has invited you to join the project <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.
             </p>
+
+            <p style="font-size: 16px; margin-bottom: 20px; color: #666;">
+              ${instructions}
+            </p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${inviteUrl}" 
@@ -76,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
                         font-size: 16px; 
                         display: inline-block;
                         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                Accept Invitation & Create Account
+                ${buttonText}
               </a>
             </div>
             
@@ -99,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("✅ Email sent successfully:", emailResponse);
+    console.log(`✅ Email sent successfully to ${userExists ? 'existing' : 'new'} user:`, emailResponse);
 
     // Update invitation record to mark email as sent
     const { error: updateError } = await supabase

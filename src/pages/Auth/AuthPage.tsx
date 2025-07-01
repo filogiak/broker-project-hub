@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { login, signUp } from '@/services/authService';
+import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
   const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
@@ -21,9 +22,51 @@ const AuthPage = () => {
     lastName: '' 
   });
 
-  // Redirect if already authenticated
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
+  const acceptInvitationToken = searchParams.get('accept_invitation');
+
+  // Handle invitation acceptance after successful login
+  useEffect(() => {
+    const handleInvitationAcceptance = async () => {
+      if (user && acceptInvitationToken && !loading) {
+        console.log('🎯 Processing invitation acceptance after login:', acceptInvitationToken);
+        
+        try {
+          // Small delay to ensure user data is fully loaded
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const result = await UnifiedInvitationService.processInvitationAcceptance(
+            user.email,
+            acceptInvitationToken,
+            user.id
+          );
+
+          if (result.success) {
+            toast.success(
+              result.duplicate_membership 
+                ? result.message 
+                : 'Invitation accepted successfully!'
+            );
+            
+            // Clear the URL parameter and redirect
+            window.history.replaceState({}, '', redirectPath);
+          } else {
+            console.error('Failed to process invitation:', result.error);
+            toast.error(result.error || 'Failed to process invitation');
+          }
+        } catch (error) {
+          console.error('Error processing invitation:', error);
+          toast.error('Failed to process invitation');
+        }
+      }
+    };
+
+    handleInvitationAcceptance();
+  }, [user, acceptInvitationToken, loading, redirectPath]);
+
+  // Redirect if already authenticated (after invitation processing if needed)
   if (user && !loading) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={redirectPath} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -33,7 +76,7 @@ const AuthPage = () => {
     try {
       await login(loginForm.email, loginForm.password);
       toast.success('Logged in successfully!');
-      // Navigation will be handled by the auth state change
+      // Navigation and invitation processing will be handled by useEffect
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Failed to log in');
@@ -76,13 +119,21 @@ const AuthPage = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Broker Project Hub</h1>
           <p className="text-muted-foreground">AI-powered mortgage intermediation platform</p>
+          {acceptInvitationToken && (
+            <p className="text-sm text-blue-600 mt-2 font-medium">
+              🎯 Login to accept your project invitation
+            </p>
+          )}
         </div>
         
         <Card className="card-primary">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
-              Sign in to your account or create a new one
+              {acceptInvitationToken 
+                ? "Sign in to accept your invitation and join the project"
+                : "Sign in to your account or create a new one"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
