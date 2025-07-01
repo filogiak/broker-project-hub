@@ -233,27 +233,27 @@ const ProjectMembersDashboard = () => {
                               <User className="h-9 w-9 text-form-green" />
                             </div>
 
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                              <div>
-                                <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                              <div className="min-w-0">
+                                <h3 className="font-semibold text-black font-dm-sans text-lg mb-1 truncate">
                                   {formatUserName(member)}
                                 </h3>
-                                <p className="text-sm text-gray-600 font-dm-sans">
+                                <p className="text-sm text-gray-600 font-dm-sans truncate">
                                   {member.profiles?.email || 'Sconosciuto'}
                                 </p>
                               </div>
 
-                              <div className="text-left">
+                              <div className="text-left min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Ruolo</p>
-                                <p className="font-medium text-form-green text-sm">{formatRole(member.role)}</p>
+                                <p className="font-medium text-form-green text-sm truncate">{formatRole(member.role)}</p>
                               </div>
 
-                              <div className="text-left">
+                              <div className="text-left min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Tipo Partecipante</p>
-                                <p className="font-medium text-form-green text-sm">{formatParticipantDesignation(member.participant_designation)}</p>
+                                <p className="font-medium text-form-green text-sm truncate">{formatParticipantDesignation(member.participant_designation)}</p>
                               </div>
 
-                              <div className="text-center">
+                              <div className="text-left min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Data Ingresso</p>
                                 <p className="font-medium text-form-green text-sm">{formatDate(member.joined_at)}</p>
                               </div>
