@@ -16,6 +16,7 @@ const AuthPage = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingInvitation, setIsProcessingInvitation] = useState(false);
+  const [invitationProcessingAttempts, setInvitationProcessingAttempts] = useState(0);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
@@ -27,14 +28,21 @@ const AuthPage = () => {
   const redirectPath = searchParams.get('redirect') || '/dashboard';
   const acceptInvitationToken = searchParams.get('accept_invitation');
 
-  // Enhanced invitation acceptance with comprehensive logging and retry mechanism
+  // Enhanced invitation acceptance with comprehensive diagnostics
   useEffect(() => {
     const handleInvitationAcceptance = async () => {
       if (!user || !acceptInvitationToken || loading || isProcessingInvitation) {
         return;
       }
 
+      // Prevent multiple simultaneous attempts
+      if (invitationProcessingAttempts >= 3) {
+        console.log('🛑 [INVITATION DEBUG] Maximum attempts reached, skipping');
+        return;
+      }
+
       console.log('🎯 [INVITATION DEBUG] Starting invitation acceptance process');
+      console.log('🎯 [INVITATION DEBUG] Attempt:', invitationProcessingAttempts + 1);
       console.log('🎯 [INVITATION DEBUG] User:', { 
         id: user.id, 
         email: user.email,
@@ -45,86 +53,102 @@ const AuthPage = () => {
       console.log('🎯 [INVITATION DEBUG] Redirect path:', redirectPath);
 
       setIsProcessingInvitation(true);
+      setInvitationProcessingAttempts(prev => prev + 1);
 
       try {
-        // Phase 1: Validate token format
+        // PHASE 1: Pre-processing Validation
         if (!acceptInvitationToken || acceptInvitationToken.length < 10) {
           throw new Error('Invalid invitation token format');
         }
 
-        // Phase 2: Extended delay to ensure user data is fully loaded
-        console.log('🎯 [INVITATION DEBUG] Waiting 3 seconds for user data to stabilize...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // PHASE 2: Extended User Data Stabilization
+        console.log('🎯 [INVITATION DEBUG] Waiting 5 seconds for complete user data stabilization...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
-        // Phase 3: Verify user profile completeness
+        // PHASE 3: User Profile Completeness Verification
         if (!user.email) {
           throw new Error('User profile incomplete - missing email');
         }
 
-        console.log('🎯 [INVITATION DEBUG] Processing invitation with UnifiedInvitationService');
-        
-        // Attempt invitation processing with retry mechanism
-        let attempt = 1;
-        let result = null;
-        const maxAttempts = 3;
+        if (!user.id) {
+          throw new Error('User profile incomplete - missing user ID');
+        }
 
-        while (attempt <= maxAttempts && !result?.success) {
-          console.log(`🎯 [INVITATION DEBUG] Attempt ${attempt}/${maxAttempts}`);
+        console.log('🎯 [INVITATION DEBUG] User profile verified complete');
+
+        // PHASE 4: Token Format Validation
+        console.log('🎯 [INVITATION DEBUG] Validating token format...');
+        const tokenVariants = [
+          acceptInvitationToken.trim(),
+          decodeURIComponent(acceptInvitationToken.trim()),
+          acceptInvitationToken.replace(/ /g, '+').trim(),
+          decodeURIComponent(acceptInvitationToken.replace(/ /g, '+').trim()),
+          acceptInvitationToken.replace(/\s/g, '').trim(),
+        ];
+
+        console.log('🎯 [INVITATION DEBUG] Testing token variants:', tokenVariants.length);
+
+        let result = null;
+        let lastError = null;
+
+        // PHASE 5: Multi-attempt Processing with Token Variants
+        for (let tokenIndex = 0; tokenIndex < tokenVariants.length; tokenIndex++) {
+          const tokenVariant = tokenVariants[tokenIndex];
+          
+          if (!tokenVariant || tokenVariant.length < 10) {
+            console.log(`🎯 [INVITATION DEBUG] Skipping invalid token variant ${tokenIndex + 1}`);
+            continue;
+          }
+
+          console.log(`🎯 [INVITATION DEBUG] Attempting with token variant ${tokenIndex + 1}: ${tokenVariant.substring(0, 20)}...`);
           
           try {
             result = await UnifiedInvitationService.processInvitationAcceptance(
               user.email,
-              acceptInvitationToken,
+              tokenVariant,
               user.id
             );
 
-            console.log(`🎯 [INVITATION DEBUG] Attempt ${attempt} result:`, result);
+            console.log(`🎯 [INVITATION DEBUG] Token variant ${tokenIndex + 1} result:`, result);
 
             if (result.success) {
-              console.log('✅ [INVITATION DEBUG] Invitation accepted successfully!');
-              
-              const successMessage = result.duplicate_membership 
-                ? `You were already a member: ${result.message}`
-                : `Successfully joined the project!`;
-              
-              toast.success(successMessage, {
-                duration: 5000,
-                description: result.project_id ? `Project ID: ${result.project_id}` : undefined
-              });
-              
-              // Clear URL parameters and redirect appropriately
-              const finalRedirectPath = result.project_id 
-                ? `/project/${result.project_id}` 
-                : redirectPath;
-              
-              console.log('🎯 [INVITATION DEBUG] Redirecting to:', finalRedirectPath);
-              window.history.replaceState({}, '', finalRedirectPath);
-              
+              console.log('✅ [INVITATION DEBUG] Invitation accepted successfully with variant', tokenIndex + 1);
               break;
             } else {
-              console.warn(`⚠️ [INVITATION DEBUG] Attempt ${attempt} failed:`, result.error);
-              
-              if (attempt === maxAttempts) {
-                throw new Error(result.error || 'Failed to process invitation after all attempts');
-              }
-              
-              // Wait before retry
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              lastError = new Error(result.error || `Token variant ${tokenIndex + 1} failed`);
+              console.warn(`⚠️ [INVITATION DEBUG] Token variant ${tokenIndex + 1} failed:`, result.error);
             }
           } catch (attemptError) {
-            console.error(`❌ [INVITATION DEBUG] Attempt ${attempt} error:`, attemptError);
-            
-            if (attempt === maxAttempts) {
-              throw attemptError;
-            }
-            
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            lastError = attemptError;
+            console.error(`❌ [INVITATION DEBUG] Token variant ${tokenIndex + 1} error:`, attemptError);
           }
-          
-          attempt++;
         }
 
+        // PHASE 6: Result Processing
+        if (!result || !result.success) {
+          throw lastError || new Error('All token variants failed');
+        }
+
+        // PHASE 7: Success Handling
+        const successMessage = result.duplicate_membership 
+          ? `You were already a member: ${result.message}`
+          : `Successfully joined the project!`;
+        
+        toast.success(successMessage, {
+          duration: 5000,
+          description: result.project_id ? `Project ID: ${result.project_id}` : undefined
+        });
+        
+        // Clear URL parameters and redirect appropriately
+        const finalRedirectPath = result.project_id 
+          ? `/project/${result.project_id}` 
+          : redirectPath;
+        
+        console.log('🎯 [INVITATION DEBUG] Redirecting to:', finalRedirectPath);
+        
+        // Clear URL parameters
+        window.history.replaceState({}, '', finalRedirectPath);
+        
       } catch (error) {
         console.error('❌ [INVITATION DEBUG] Critical error processing invitation:', error);
         
@@ -143,11 +167,11 @@ const AuthPage = () => {
       }
     };
 
-    // Only process if we have all required data
-    if (user && acceptInvitationToken && !loading) {
+    // Only process if we have all required data and haven't exceeded attempts
+    if (user && acceptInvitationToken && !loading && invitationProcessingAttempts < 3) {
       handleInvitationAcceptance();
     }
-  }, [user, acceptInvitationToken, loading, redirectPath, isProcessingInvitation]);
+  }, [user, acceptInvitationToken, loading, redirectPath, invitationProcessingAttempts]);
 
   // Redirect if already authenticated (after invitation processing if needed)
   if (user && !loading && !isProcessingInvitation) {
@@ -219,9 +243,9 @@ const AuthPage = () => {
             </p>
           )}
           {isProcessingInvitation && (
-            <p className="text-sm text-orange-600 mt-2 font-medium animate-pulse">
-              ⏳ Processing your invitation...
-            </p>
+            <div className="text-sm text-orange-600 mt-2 font-medium animate-pulse">
+              ⏳ Processing your invitation... (Attempt {invitationProcessingAttempts}/3)
+            </div>
           )}
         </div>
         

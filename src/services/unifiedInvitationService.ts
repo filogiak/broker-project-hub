@@ -105,6 +105,80 @@ export class UnifiedInvitationService {
         throw new Error('Invalid token format');
       }
 
+      // PHASE 1: Database State Diagnostic
+      console.log('🔍 [DIAGNOSTIC] Checking current database state...');
+      
+      // Check if invitation exists before processing
+      const { data: invitationCheck, error: invCheckError } = await supabase
+        .from('invitations')
+        .select('id, email, encrypted_token, accepted_at, expires_at, project_id, role')
+        .eq('email', email)
+        .eq('encrypted_token', encryptedToken)
+        .single();
+
+      if (invCheckError) {
+        console.error('❌ [DIAGNOSTIC] Failed to check invitation:', invCheckError);
+        throw new Error(`Invitation lookup failed: ${invCheckError.message}`);
+      }
+
+      if (!invitationCheck) {
+        console.error('❌ [DIAGNOSTIC] No invitation found for token');
+        throw new Error('Invalid or expired invitation token');
+      }
+
+      console.log('✅ [DIAGNOSTIC] Found invitation:', {
+        id: invitationCheck.id,
+        email: invitationCheck.email,
+        project_id: invitationCheck.project_id,
+        role: invitationCheck.role,
+        accepted_at: invitationCheck.accepted_at,
+        expires_at: invitationCheck.expires_at
+      });
+
+      // Check if already accepted
+      if (invitationCheck.accepted_at) {
+        console.warn('⚠️ [DIAGNOSTIC] Invitation already accepted at:', invitationCheck.accepted_at);
+        return {
+          success: true,
+          message: 'Invitation was already accepted',
+          project_id: invitationCheck.project_id,
+          duplicate_membership: true
+        };
+      }
+
+      // Check if expired
+      if (new Date(invitationCheck.expires_at) <= new Date()) {
+        console.error('❌ [DIAGNOSTIC] Invitation expired:', invitationCheck.expires_at);
+        throw new Error('Invitation has expired');
+      }
+
+      // Check if user exists and has project access
+      if (userId && invitationCheck.project_id) {
+        const { data: existingMember, error: memberError } = await supabase
+          .from('project_members')
+          .select('id, role')
+          .eq('project_id', invitationCheck.project_id)
+          .eq('user_id', userId)
+          .single();
+
+        if (!memberError && existingMember) {
+          console.log('✅ [DIAGNOSTIC] User already project member:', existingMember);
+          
+          // Mark invitation as accepted since user is already a member
+          await supabase
+            .from('invitations')
+            .update({ accepted_at: new Date().toISOString() })
+            .eq('id', invitationCheck.id);
+
+          return {
+            success: true,
+            message: 'You are already a member of this project',
+            project_id: invitationCheck.project_id,
+            duplicate_membership: true
+          };
+        }
+      }
+
       console.log('🎯 [INVITATION SERVICE] Calling database function...');
       
       const { data, error } = await supabase.rpc('process_invitation_acceptance', {
@@ -142,6 +216,28 @@ export class UnifiedInvitationService {
       if (!result.success && !result.error) {
         console.error('❌ [INVITATION SERVICE] Failed without error message:', result);
         throw new Error('Invitation processing failed without error message');
+      }
+
+      // PHASE 2: Post-processing verification
+      if (result.success && invitationCheck.project_id && userId) {
+        console.log('🔍 [VERIFICATION] Verifying project membership was created...');
+        
+        // Small delay to ensure database consistency
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { data: verifyMember, error: verifyError } = await supabase
+          .from('project_members')
+          .select('id, role, joined_at')
+          .eq('project_id', invitationCheck.project_id)
+          .eq('user_id', userId)
+          .single();
+
+        if (verifyError || !verifyMember) {
+          console.error('❌ [VERIFICATION] Project membership not found after processing:', verifyError);
+          throw new Error('Invitation processing incomplete - membership not created');
+        }
+
+        console.log('✅ [VERIFICATION] Project membership confirmed:', verifyMember);
       }
 
       console.log('✅ [INVITATION SERVICE] Invitation processed successfully:', result);
