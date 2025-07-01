@@ -1036,6 +1036,84 @@ export type Database = {
           },
         ]
       }
+      simulation_members: {
+        Row: {
+          id: string
+          invited_at: string | null
+          invited_by: string
+          joined_at: string | null
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          role: Database["public"]["Enums"]["user_role"]
+          simulation_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          invited_at?: string | null
+          invited_by: string
+          joined_at?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          role: Database["public"]["Enums"]["user_role"]
+          simulation_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          invited_at?: string | null
+          invited_by?: string
+          joined_at?: string | null
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          role?: Database["public"]["Enums"]["user_role"]
+          simulation_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      simulations: {
+        Row: {
+          brokerage_id: string
+          converted_at: string | null
+          converted_to_project_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brokerage_id: string
+          converted_at?: string | null
+          converted_to_project_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brokerage_id?: string
+          converted_at?: string | null
+          converted_to_project_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1193,6 +1271,10 @@ export type Database = {
             }
         Returns: string
       }
+      safe_create_simulation: {
+        Args: { p_name: string; p_brokerage_id: string; p_description?: string }
+        Returns: string
+      }
       user_can_access_project: {
         Args: { project_uuid: string; user_uuid?: string }
         Returns: boolean
@@ -1264,6 +1346,7 @@ export type Database = {
         | "broker_assistant"
         | "mortgage_applicant"
         | "real_estate_agent"
+        | "simulation_collaborator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1426,6 +1509,7 @@ export const Constants = {
         "broker_assistant",
         "mortgage_applicant",
         "real_estate_agent",
+        "simulation_collaborator",
       ],
     },
   },

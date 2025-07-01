@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, FileText, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Settings, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UserProfileBox from '@/components/ui/user-profile-box';
 import { Logo } from '@/components/ui/logo';
@@ -32,6 +32,12 @@ const BrokerageSidebar = () => {
       icon: FileText,
       path: `/brokerage/${brokerageId}/projects`,
       isActive: window.location.pathname === `/brokerage/${brokerageId}/projects`,
+    },
+    {
+      title: 'Simulations',
+      icon: TrendingUp,
+      path: `/brokerage/${brokerageId}/simulations`,
+      isActive: window.location.pathname === `/brokerage/${brokerageId}/simulations`,
     },
     {
       title: 'Users',

@@ -1,22 +1,27 @@
+
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/hooks/useAuth';
-import AuthErrorBoundary from '@/components/auth/AuthErrorBoundary';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
+import AuthErrorBoundary from '@/components/auth/AuthErrorBoundary';
 
-// Auth pages
-import AuthPage from '@/pages/Auth/AuthPage';
-import InvitePage from '@/pages/Invite/InvitePage';
-import VerificationCallback from '@/pages/Invite/VerificationCallback';
-import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
-
-// Dashboard pages
+// Import pages
+import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard/Dashboard';
-import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
+import Login from '@/pages/Login/Login';
+import AuthPage from '@/pages/Auth/AuthPage';
+import NotFound from '@/pages/NotFound';
 
 // Admin pages
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
+
+// Brokerage pages
+import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
+import BrokerageProjects from '@/pages/Brokerage/BrokerageProjects';
+import BrokerageSimulations from '@/pages/Brokerage/BrokerageSimulations';
+import BrokerageUsers from '@/pages/Brokerage/BrokerageUsers';
+import BrokerageSettings from '@/pages/Brokerage/BrokerageSettings';
 
 // Project pages
 import ProjectDashboard from '@/pages/Project/ProjectDashboard';
@@ -24,105 +29,207 @@ import ProjectMembersDashboard from '@/pages/Project/ProjectMembersDashboard';
 import ProjectDocuments from '@/pages/Project/ProjectDocuments';
 import ProjectSettings from '@/pages/Project/ProjectSettings';
 
-// Other pages
-import Index from '@/pages/Index';
-import NotFound from '@/pages/NotFound';
+// Invitation pages
+import InvitePage from '@/pages/Invite/InvitePage';
+import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
+import VerificationCallback from '@/pages/Invite/VerificationCallback';
+
+// Broker pages
+import BrokerDashboard from '@/pages/Broker/BrokerDashboard';
+import BrokerProjectList from '@/pages/Broker/BrokerProjectList';
+
+// Agent pages
+import AgentPortal from '@/pages/Agent/AgentPortal';
+
+// Client pages
+import ClientPortal from '@/pages/Client/ClientPortal';
+
+// Tenant pages
+import TenantDashboard from '@/pages/Tenant/TenantDashboard';
+import TenantSettings from '@/pages/Tenant/TenantSettings';
 
 const AppRouter = () => {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  const router = createBrowserRouter([
+    {
+      path: '/',
+      element: <Index />,
+    },
+    {
+      path: '/auth',
+      element: <AuthPage />,
+    },
+    {
+      path: '/login',
+      element: <Login />,
+    },
+    {
+      path: '/dashboard',
+      element: (
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/admin',
+      element: (
+        <RoleBasedRoute allowedRoles={['superadmin']}>
+          <AdminDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/brokerage/:brokerageId',
+      element: (
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+          <BrokerageOwnerDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/brokerage/:brokerageId/projects',
+      element: (
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+          <BrokerageProjects />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/brokerage/:brokerageId/simulations',
+      element: (
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin', 'simulation_collaborator']}>
+          <BrokerageSimulations />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/brokerage/:brokerageId/users',
+      element: (
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+          <BrokerageUsers />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/brokerage/:brokerageId/settings',
+      element: (
+        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+          <BrokerageSettings />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/project/:projectId',
+      element: (
+        <ProtectedRoute>
+          <ProjectDashboard />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/project/:projectId/members',
+      element: (
+        <ProtectedRoute>
+          <ProjectMembersDashboard />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/project/:projectId/documents',
+      element: (
+        <ProtectedRoute>
+          <ProjectDocuments />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/project/:projectId/settings',
+      element: (
+        <ProtectedRoute>
+          <ProjectSettings />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/invite/:token',
+      element: <InvitePage />,
+    },
+    {
+      path: '/join/:token',
+      element: <InviteJoinPage />,
+    },
+    {
+      path: '/auth/callback',
+      element: <VerificationCallback />,
+    },
+    {
+      path: '/broker',
+      element: (
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/broker/projects',
+      element: (
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerProjectList />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentPortal />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/client',
+      element: (
+        <RoleBasedRoute allowedRoles={['mortgage_applicant']}>
+          <ClientPortal />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/tenant',
+      element: (
+        <RoleBasedRoute allowedRoles={['tenant']}>
+          <TenantDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/tenant/settings',
+      element: (
+        <RoleBasedRoute allowedRoles={['tenant']}>
+          <TenantSettings />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '*',
+      element: <NotFound />,
+    },
+  ]);
+
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AuthErrorBoundary>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/invite" element={<InvitePage />} />
-            <Route path="/invite/verify" element={<VerificationCallback />} />
-            
-            {/* New email-based invitation route */}
-            <Route path="/invite/join/:token" element={<InviteJoinPage />} />
-
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-
-            {/* Admin routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['superadmin']}>
-                  <AdminDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            {/* Brokerage owner routes */}
-            <Route path="/brokerage/:brokerageId" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
-                  <BrokerageOwnerDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/brokerage/:brokerageId/projects" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
-                  <BrokerageOwnerDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/brokerage/:brokerageId/users" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
-                  <BrokerageOwnerDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/brokerage/:brokerageId/settings" element={
-              <ProtectedRoute>
-                <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
-                  <BrokerageOwnerDashboard />
-                </RoleBasedRoute>
-              </ProtectedRoute>
-            } />
-
-            {/* Project routes */}
-            <Route path="/project/:projectId" element={
-              <ProtectedRoute>
-                <ProjectDashboard />
-              </ProtectedRoute>
-            } />
-
-            <Route path="/project/:projectId/members" element={
-              <ProtectedRoute>
-                <ProjectMembersDashboard />
-              </ProtectedRoute>
-            } />
-
-            <Route path="/project/:projectId/documents" element={
-              <ProtectedRoute>
-                <ProjectDocuments />
-              </ProtectedRoute>
-            } />
-
-            <Route path="/project/:projectId/settings" element={
-              <ProtectedRoute>
-                <ProjectSettings />
-              </ProtectedRoute>
-            } />
-
-            {/* Catch all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthErrorBoundary>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthErrorBoundary>
+      <RouterProvider router={router} />
+    </AuthErrorBoundary>
   );
 };
 
