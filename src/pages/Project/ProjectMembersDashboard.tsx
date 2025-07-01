@@ -5,12 +5,24 @@ import ProjectSidebar from '@/components/project/ProjectSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, User } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AddMemberModal from '@/components/project/AddMemberModal';
 import ProjectInvitationsSection from '@/components/project/ProjectInvitationsSection';
+import MemberActionMenu from '@/components/project/MemberActionMenu';
+import { deleteMemberFromProject, validateMemberDeletion, getMemberDataImpact } from '@/services/projectMemberService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
@@ -39,6 +51,18 @@ const ProjectMembersDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  
+  // New state for deletion
+  const [memberToDelete, setMemberToDelete] = useState<ProjectMember | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [dataImpact, setDataImpact] = useState<{
+    documentsCount: number;
+    checklistItemsCount: number;
+    otherDataCount: number;
+  } | null>(null);
+  const [canDeleteMembers, setCanDeleteMembers] = useState(false);
+
   useEffect(() => {
     const loadProjectData = async () => {
       if (authLoading) return;
@@ -83,6 +107,9 @@ const ProjectMembersDashboard = () => {
           return;
         }
         setMembers(membersData || []);
+        
+        // Check if current user can delete members
+        await checkDeletePermissions();
       } catch (error) {
         console.error('Error loading project data:', error);
         setError('An unexpected error occurred');
@@ -92,6 +119,15 @@ const ProjectMembersDashboard = () => {
     };
     loadProjectData();
   }, [user, authLoading, projectId, navigate]);
+
+  const checkDeletePermissions = async () => {
+    if (!projectId || !user?.id) return;
+    
+    // Check with any member (we'll validate per member later)
+    const validation = await validateMemberDeletion(projectId, 'dummy-id');
+    setCanDeleteMembers(validation.canDelete || validation.reason !== 'You do not have permission to delete members from this project');
+  };
+
   const loadMembers = async () => {
     if (!projectId) return;
     try {
@@ -117,11 +153,7 @@ const ProjectMembersDashboard = () => {
       console.error('Error loading members:', error);
     }
   };
-  useEffect(() => {
-    if (project) {
-      loadMembers();
-    }
-  }, [project, projectId]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -135,6 +167,7 @@ const ProjectMembersDashboard = () => {
       });
     }
   };
+
   const formatUserName = (member: ProjectMember) => {
     const profile = member.profiles;
     if (!profile) return 'Utente Sconosciuto';
@@ -143,25 +176,95 @@ const ProjectMembersDashboard = () => {
     }
     return profile.email;
   };
+
   const formatRole = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
   const formatParticipantDesignation = (designation: string | null) => {
     if (!designation) return 'Non assegnato';
     return designation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-  const formatApplicantCount = (count: string | null) => {
-    if (!count) return 'Non impostato';
-    return count.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Non ancora entrato';
     return new Date(dateString).toLocaleDateString('it-IT');
   };
+
   const handleMemberAdded = () => {
     loadMembers();
     setIsAddMemberModalOpen(false);
   };
+
+  const handleDeleteMember = async (member: ProjectMember) => {
+    if (!projectId) return;
+    
+    setMemberToDelete(member);
+    setIsDeleteDialogOpen(true);
+    
+    // Load data impact
+    try {
+      const impact = await getMemberDataImpact(projectId, member.user_id);
+      setDataImpact(impact);
+    } catch (error) {
+      console.error('Error loading data impact:', error);
+      setDataImpact(null);
+    }
+  };
+
+  const confirmDeleteMember = async () => {
+    if (!memberToDelete || !projectId) return;
+    
+    setDeleteLoading(true);
+    
+    try {
+      const result = await deleteMemberFromProject(projectId, memberToDelete.user_id);
+      
+      if (result.success) {
+        toast({
+          title: "Member Removed",
+          description: `${formatUserName(memberToDelete)} has been removed from the project.`,
+        });
+        
+        // Refresh the members list
+        await loadMembers();
+        
+        // Close dialog
+        setIsDeleteDialogOpen(false);
+        setMemberToDelete(null);
+        setDataImpact(null);
+      } else {
+        toast({
+          title: "Failed to Remove Member",
+          description: result.error || "An error occurred while removing the member.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Delete member error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setMemberToDelete(null);
+    setDataImpact(null);
+  };
+
+  const canDeleteMember = async (member: ProjectMember) => {
+    if (!projectId || !canDeleteMembers) return false;
+    
+    const validation = await validateMemberDeletion(projectId, member.user_id);
+    return validation.canDelete;
+  };
+
   if (authLoading || loading) {
     return <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background-light">
@@ -218,14 +321,18 @@ const ProjectMembersDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {members.length === 0 ? <div className="text-center py-8">
+                {members.length === 0 ? (
+                  <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4 font-dm-sans">Nessun membro del progetto trovato.</p>
                     <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
                       <Plus className="h-4 w-4" />
                       Aggiungi Primo Membro
                     </Button>
-                  </div> : <div className="space-y-4">
-                    {members.map(member => <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {members.map(member => (
+                      <Card key={member.id} className="cursor-pointer bg-white border-2 border-form-green rounded-[12px] press-down-effect relative overflow-hidden">
                         <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-form-green rounded-b-[10px]"></div>
                         <CardContent className="p-6">
                           <div className="flex items-center gap-6">
@@ -258,10 +365,19 @@ const ProjectMembersDashboard = () => {
                                 <p className="font-medium text-form-green text-sm">{formatDate(member.joined_at)}</p>
                               </div>
                             </div>
+
+                            {/* Action Menu */}
+                            <MemberActionMenu
+                              member={member}
+                              onDelete={handleDeleteMember}
+                              canDelete={canDeleteMembers && member.user_id !== user?.id}
+                            />
                           </div>
                         </CardContent>
-                      </Card>)}
-                  </div>}
+                      </Card>
+                    ))}
+                  </div>
+                )}
 
                 {/* Project Invitations Section - inside the members card */}
                 {projectId && (
@@ -273,7 +389,59 @@ const ProjectMembersDashboard = () => {
             </Card>
 
             {/* Add Member Modal */}
-            <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId!} onMemberAdded={handleMemberAdded} />
+            <AddMemberModal 
+              isOpen={isAddMemberModalOpen} 
+              onClose={() => setIsAddMemberModalOpen(false)} 
+              projectId={projectId!} 
+              onMemberAdded={handleMemberAdded}
+            />
+
+            {/* Delete Member Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Rimuovi Membro dal Progetto</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      Sei sicuro di voler rimuovere <strong>{memberToDelete ? formatUserName(memberToDelete) : ''}</strong> dal progetto?
+                    </p>
+                    
+                    {dataImpact && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                        <p className="font-medium text-yellow-800 mb-2">Dati che verranno rimossi:</p>
+                        <ul className="text-yellow-700 space-y-1">
+                          {dataImpact.checklistItemsCount > 0 && (
+                            <li>• {dataImpact.checklistItemsCount} elementi della checklist</li>
+                          )}
+                          {dataImpact.otherDataCount > 0 && (
+                            <li>• {dataImpact.otherDataCount} elementi di dati finanziari</li>
+                          )}
+                          {dataImpact.documentsCount > 0 && (
+                            <li>• {dataImpact.documentsCount} documenti caricati (verranno mantenuti ma marcati come "utente rimosso")</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm text-gray-600">
+                      Questa azione non può essere annullata. L'account dell'utente non verrà eliminato, ma perderà l'accesso a questo progetto.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={cancelDelete} disabled={deleteLoading}>
+                    Annulla
+                  </AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={confirmDeleteMember}
+                    disabled={deleteLoading}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleteLoading ? 'Rimozione...' : 'Rimuovi Membro'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </SidebarInset>
       </div>
