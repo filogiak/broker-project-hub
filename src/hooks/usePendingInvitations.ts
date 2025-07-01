@@ -19,11 +19,29 @@ export const usePendingInvitations = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 Loading pending invitations for user:', user.id);
+      
       const pendingInvitations = await UnifiedInvitationService.getMyPendingInvitations();
+      
+      console.log('✅ Successfully loaded invitations:', pendingInvitations);
       setInvitations(pendingInvitations);
+      
     } catch (err) {
-      console.error('Error loading pending invitations:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load invitations');
+      console.error('❌ Error loading pending invitations:', err);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load invitations';
+      if (err instanceof Error) {
+        if (err.message.includes('User not found')) {
+          errorMessage = 'User profile not found. Please try logging out and back in.';
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -31,22 +49,26 @@ export const usePendingInvitations = () => {
 
   const acceptInvitation = async (invitationId: string) => {
     try {
+      console.log('🎯 Accepting invitation:', invitationId);
+      
       const result = await UnifiedInvitationService.acceptInvitationById(invitationId);
       
       if (result.success) {
-        // Refresh invitations list
+        console.log('✅ Invitation accepted successfully:', result);
+        // Refresh invitations list after successful acceptance
         await loadInvitations();
         return result;
       } else {
         throw new Error(result.error || 'Failed to accept invitation');
       }
     } catch (error) {
-      console.error('Error accepting invitation:', error);
+      console.error('❌ Error accepting invitation:', error);
       throw error;
     }
   };
 
   useEffect(() => {
+    console.log('🚀 usePendingInvitations: User changed, loading invitations');
     loadInvitations();
   }, [user]);
 
