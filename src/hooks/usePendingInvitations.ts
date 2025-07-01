@@ -32,10 +32,15 @@ export const usePendingInvitations = () => {
       // Provide more specific error messages
       let errorMessage = 'Failed to load invitations';
       if (err instanceof Error) {
-        if (err.message.includes('User not found')) {
+        // Check for specific database errors
+        if (err.message.includes('GROUP BY')) {
+          errorMessage = 'Database configuration issue detected. Please contact support or try refreshing the page.';
+        } else if (err.message.includes('User not found')) {
           errorMessage = 'User profile not found. Please try logging out and back in.';
         } else if (err.message.includes('network')) {
           errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (err.message.includes('column') && err.message.includes('must appear')) {
+          errorMessage = 'Database schema issue. Please try refreshing the page or contact support.';
         } else {
           errorMessage = err.message;
         }
@@ -67,6 +72,17 @@ export const usePendingInvitations = () => {
     }
   };
 
+  // Force refresh function that clears cache
+  const forceRefresh = async () => {
+    console.log('🔄 Force refreshing invitations...');
+    setError(null);
+    setLoading(true);
+    
+    // Small delay to ensure any pending operations complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await loadInvitations();
+  };
+
   useEffect(() => {
     console.log('🚀 usePendingInvitations: User changed, loading invitations');
     loadInvitations();
@@ -78,6 +94,7 @@ export const usePendingInvitations = () => {
     error,
     loadInvitations,
     acceptInvitation,
+    forceRefresh,
     invitationCount: invitations.length
   };
 };

@@ -127,10 +127,19 @@ export class UnifiedInvitationService {
     console.log('📬 Getting pending invitations for current user');
     
     try {
+      // Add a small delay to ensure any database changes have been committed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase.rpc('get_my_pending_invitations');
 
       if (error) {
-        console.error('❌ Error getting pending invitations:', error);
+        console.error('❌ Database error getting pending invitations:', error);
+        
+        // Check for specific GROUP BY error
+        if (error.message.includes('GROUP BY') || error.message.includes('must appear')) {
+          throw new Error('Database configuration issue detected. The system administrator needs to update the database schema.');
+        }
+        
         throw new Error(`Failed to get pending invitations: ${error.message}`);
       }
 
@@ -148,11 +157,16 @@ export class UnifiedInvitationService {
       }
 
       if (result.error) {
+        if (result.error.includes('User not found')) {
+          throw new Error('User profile not found. Please try logging out and back in.');
+        }
         throw new Error(result.error);
       }
 
-      console.log('✅ Pending invitations retrieved:', result.count || 0);
-      return Array.isArray(result.invitations) ? result.invitations : [];
+      const invitations = Array.isArray(result.invitations) ? result.invitations : [];
+      console.log('✅ Pending invitations retrieved:', invitations.length);
+      
+      return invitations;
 
     } catch (error) {
       console.error('❌ Failed to get pending invitations:', error);

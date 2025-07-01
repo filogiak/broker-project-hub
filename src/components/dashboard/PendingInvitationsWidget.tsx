@@ -3,12 +3,12 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Calendar, User, Building2, CheckCircle, XCircle, RefreshCw, AlertCircle } from 'lucide-react';
+import { Mail, Calendar, User, Building2, CheckCircle, XCircle, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react';
 import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 import { useToast } from '@/hooks/use-toast';
 
 const PendingInvitationsWidget = () => {
-  const { invitations, loading, error, acceptInvitation, loadInvitations } = usePendingInvitations();
+  const { invitations, loading, error, acceptInvitation, forceRefresh } = usePendingInvitations();
   const { toast } = useToast();
 
   const handleAcceptInvitation = async (invitationId: string, projectName: string | null) => {
@@ -34,9 +34,9 @@ const PendingInvitationsWidget = () => {
     }
   };
 
-  const handleRetry = () => {
-    console.log('🔄 Retrying to load invitations');
-    loadInvitations();
+  const handleForceRefresh = () => {
+    console.log('🔄 Force refreshing invitations from widget');
+    forceRefresh();
   };
 
   if (loading) {
@@ -59,6 +59,11 @@ const PendingInvitationsWidget = () => {
   }
 
   if (error) {
+    // Determine icon and styling based on error type
+    const isDbError = error.includes('Database') || error.includes('GROUP BY') || error.includes('schema');
+    const ErrorIcon = isDbError ? AlertTriangle : AlertCircle;
+    const iconColor = isDbError ? 'text-orange-500' : 'text-red-500';
+    
     return (
       <Card>
         <CardHeader>
@@ -69,17 +74,24 @@ const PendingInvitationsWidget = () => {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <p className="text-sm text-red-600 mb-4">{error}</p>
-            <Button
-              onClick={handleRetry}
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Riprova
-            </Button>
+            <ErrorIcon className={`h-8 w-8 ${iconColor} mx-auto mb-4`} />
+            <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">{error}</p>
+            <div className="space-y-2">
+              <Button
+                onClick={handleForceRefresh}
+                size="sm"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Riprova
+              </Button>
+              {isDbError && (
+                <p className="text-xs text-muted-foreground">
+                  Se il problema persiste, contatta il supporto tecnico
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -99,6 +111,15 @@ const PendingInvitationsWidget = () => {
           <div className="text-center py-8">
             <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nessun invito in sospeso</p>
+            <Button
+              onClick={handleForceRefresh}
+              size="sm"
+              variant="ghost"
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Controlla Aggiornamenti
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -157,7 +178,7 @@ const PendingInvitationsWidget = () => {
         
         <div className="pt-2 border-t">
           <Button
-            onClick={handleRetry}
+            onClick={handleForceRefresh}
             size="sm"
             variant="ghost"
             className="w-full flex items-center gap-2 text-muted-foreground hover:text-foreground"
