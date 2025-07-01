@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ const AuthPage = () => {
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
@@ -23,7 +24,19 @@ const AuthPage = () => {
   });
 
   const redirectPath = searchParams.get('redirect') || '/dashboard';
-  const hasInvitationToken = searchParams.has('accept_invitation');
+  const hasInvitation = searchParams.has('invitation') || searchParams.has('accept_invitation');
+  const invitationEmail = searchParams.get('email');
+
+  // Set up initial form state and tab based on invitation context
+  useEffect(() => {
+    if (hasInvitation && invitationEmail) {
+      // Pre-fill email in both forms
+      setLoginForm(prev => ({ ...prev, email: invitationEmail }));
+      setSignupForm(prev => ({ ...prev, email: invitationEmail }));
+      // Default to signup tab for new users coming from invitation
+      setActiveTab('signup');
+    }
+  }, [hasInvitation, invitationEmail]);
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -36,7 +49,7 @@ const AuthPage = () => {
     setIsLoading(true);
     
     console.log('🔐 [LOGIN] Starting login process');
-    console.log('🔐 [LOGIN] Has invitation token:', hasInvitationToken);
+    console.log('🔐 [LOGIN] Has invitation:', hasInvitation);
     
     try {
       await login(loginForm.email, loginForm.password);
@@ -56,7 +69,7 @@ const AuthPage = () => {
     setIsLoading(true);
     
     console.log('📝 [SIGNUP] Starting signup process');
-    console.log('📝 [SIGNUP] Has invitation token:', hasInvitationToken);
+    console.log('📝 [SIGNUP] Has invitation:', hasInvitation);
     
     try {
       await signUp(
@@ -89,25 +102,37 @@ const AuthPage = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Broker Project Hub</h1>
           <p className="text-muted-foreground">AI-powered mortgage intermediation platform</p>
-          {hasInvitationToken && (
-            <p className="text-sm text-blue-600 mt-2 font-medium">
-              🎯 Login to access your invitations
-            </p>
+          {hasInvitation && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 font-medium">
+                🎯 You've been invited to join a project
+              </p>
+              {invitationEmail && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Invitation for: {invitationEmail}
+                </p>
+              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {activeTab === 'signup' ? 'Create your account below to get started' : 'Sign in to view your invitations'}
+              </p>
+            </div>
           )}
         </div>
         
         <Card className="card-primary">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">
+              {hasInvitation ? 'Join Your Team' : 'Welcome'}
+            </CardTitle>
             <CardDescription className="text-center">
-              {hasInvitationToken 
-                ? "Sign in to view and accept your invitations"
+              {hasInvitation && invitationEmail
+                ? `Complete your ${activeTab === 'signup' ? 'registration' : 'sign in'} to access your project invitation`
                 : "Sign in to your account or create a new one"
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -124,6 +149,7 @@ const AuthPage = () => {
                       value={loginForm.email}
                       onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
                       required
+                      disabled={hasInvitation && invitationEmail} // Disable if pre-filled from invitation
                     />
                   </div>
                   <div className="space-y-2">
@@ -180,7 +206,13 @@ const AuthPage = () => {
                       value={signupForm.email}
                       onChange={(e) => setSignupForm(prev => ({ ...prev, email: e.target.value }))}
                       required
+                      disabled={hasInvitation && invitationEmail} // Disable if pre-filled from invitation
                     />
+                    {hasInvitation && invitationEmail && (
+                      <p className="text-xs text-blue-600">
+                        This email was pre-filled from your invitation
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

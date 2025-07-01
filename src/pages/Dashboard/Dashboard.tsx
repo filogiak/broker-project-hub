@@ -27,14 +27,14 @@ const Dashboard = () => {
   // Clean up URL parameters and show invitation message if needed
   useEffect(() => {
     if (user) {
-      const hasInvitationToken = searchParams.has('accept_invitation');
+      const hasInvitationContext = searchParams.has('invitation') || searchParams.has('accept_invitation');
       const redirectParam = searchParams.get('redirect');
       
-      if (hasInvitationToken || redirectParam) {
+      if (hasInvitationContext || redirectParam) {
         // Show toast message about checking invitations
-        if (hasInvitationToken) {
-          toast.info('Check your pending invitations below to join projects', {
-            duration: 5000,
+        if (hasInvitationContext) {
+          toast.info('Welcome! Check your pending invitations below to join projects.', {
+            duration: 6000,
           });
         }
         
