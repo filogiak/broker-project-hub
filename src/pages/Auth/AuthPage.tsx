@@ -149,7 +149,7 @@ const AuthPage = () => {
                       value={loginForm.email}
                       onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
                       required
-                      disabled={hasInvitation && invitationEmail} // Disable if pre-filled from invitation
+                      disabled={Boolean(hasInvitation && invitationEmail)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -206,7 +206,7 @@ const AuthPage = () => {
                       value={signupForm.email}
                       onChange={(e) => setSignupForm(prev => ({ ...prev, email: e.target.value }))}
                       required
-                      disabled={hasInvitation && invitationEmail} // Disable if pre-filled from invitation
+                      disabled={Boolean(hasInvitation && invitationEmail)}
                     />
                     {hasInvitation && invitationEmail && (
                       <p className="text-xs text-blue-600">
