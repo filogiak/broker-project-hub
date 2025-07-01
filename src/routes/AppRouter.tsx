@@ -34,7 +34,7 @@ import InviteJoinPage from '@/pages/Invite/InviteJoinPage';
 import VerificationCallback from '@/pages/Invite/VerificationCallback';
 
 // Broker pages
-import BrokerDashboard from '@/pages/Broker/BrokerDashboard';
+import BrokerDashboard from '@/pages/Broker/BrokerProjectList';
 import BrokerProjectList from '@/pages/Broker/BrokerProjectList';
 
 // Agent pages
@@ -206,17 +206,17 @@ const AppRouter = () => {
     {
       path: '/tenant',
       element: (
-        <RoleBasedRoute allowedRoles={['tenant']}>
+        <ProtectedRoute>
           <TenantDashboard />
-        </RoleBasedRoute>
+        </ProtectedRoute>
       ),
     },
     {
       path: '/tenant/settings',
       element: (
-        <RoleBasedRoute allowedRoles={['tenant']}>
+        <ProtectedRoute>
           <TenantSettings />
-        </RoleBasedRoute>
+        </ProtectedRoute>
       ),
     },
     {
