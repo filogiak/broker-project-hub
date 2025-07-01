@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,7 @@ const AuthPage = () => {
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingInvitation, setIsProcessingInvitation] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
@@ -25,47 +27,131 @@ const AuthPage = () => {
   const redirectPath = searchParams.get('redirect') || '/dashboard';
   const acceptInvitationToken = searchParams.get('accept_invitation');
 
-  // Handle invitation acceptance after successful login
+  // Enhanced invitation acceptance with comprehensive logging and retry mechanism
   useEffect(() => {
     const handleInvitationAcceptance = async () => {
-      if (user && acceptInvitationToken && !loading) {
-        console.log('🎯 Processing invitation acceptance after login:', acceptInvitationToken);
-        
-        try {
-          // Small delay to ensure user data is fully loaded
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const result = await UnifiedInvitationService.processInvitationAcceptance(
-            user.email,
-            acceptInvitationToken,
-            user.id
-          );
+      if (!user || !acceptInvitationToken || loading || isProcessingInvitation) {
+        return;
+      }
 
-          if (result.success) {
-            toast.success(
-              result.duplicate_membership 
-                ? result.message 
-                : 'Invitation accepted successfully!'
-            );
-            
-            // Clear the URL parameter and redirect
-            window.history.replaceState({}, '', redirectPath);
-          } else {
-            console.error('Failed to process invitation:', result.error);
-            toast.error(result.error || 'Failed to process invitation');
-          }
-        } catch (error) {
-          console.error('Error processing invitation:', error);
-          toast.error('Failed to process invitation');
+      console.log('🎯 [INVITATION DEBUG] Starting invitation acceptance process');
+      console.log('🎯 [INVITATION DEBUG] User:', { 
+        id: user.id, 
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName 
+      });
+      console.log('🎯 [INVITATION DEBUG] Token:', acceptInvitationToken);
+      console.log('🎯 [INVITATION DEBUG] Redirect path:', redirectPath);
+
+      setIsProcessingInvitation(true);
+
+      try {
+        // Phase 1: Validate token format
+        if (!acceptInvitationToken || acceptInvitationToken.length < 10) {
+          throw new Error('Invalid invitation token format');
         }
+
+        // Phase 2: Extended delay to ensure user data is fully loaded
+        console.log('🎯 [INVITATION DEBUG] Waiting 3 seconds for user data to stabilize...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Phase 3: Verify user profile completeness
+        if (!user.email) {
+          throw new Error('User profile incomplete - missing email');
+        }
+
+        console.log('🎯 [INVITATION DEBUG] Processing invitation with UnifiedInvitationService');
+        
+        // Attempt invitation processing with retry mechanism
+        let attempt = 1;
+        let result = null;
+        const maxAttempts = 3;
+
+        while (attempt <= maxAttempts && !result?.success) {
+          console.log(`🎯 [INVITATION DEBUG] Attempt ${attempt}/${maxAttempts}`);
+          
+          try {
+            result = await UnifiedInvitationService.processInvitationAcceptance(
+              user.email,
+              acceptInvitationToken,
+              user.id
+            );
+
+            console.log(`🎯 [INVITATION DEBUG] Attempt ${attempt} result:`, result);
+
+            if (result.success) {
+              console.log('✅ [INVITATION DEBUG] Invitation accepted successfully!');
+              
+              const successMessage = result.duplicate_membership 
+                ? `You were already a member: ${result.message}`
+                : `Successfully joined the project!`;
+              
+              toast.success(successMessage, {
+                duration: 5000,
+                description: result.project_id ? `Project ID: ${result.project_id}` : undefined
+              });
+              
+              // Clear URL parameters and redirect appropriately
+              const finalRedirectPath = result.project_id 
+                ? `/project/${result.project_id}` 
+                : redirectPath;
+              
+              console.log('🎯 [INVITATION DEBUG] Redirecting to:', finalRedirectPath);
+              window.history.replaceState({}, '', finalRedirectPath);
+              
+              break;
+            } else {
+              console.warn(`⚠️ [INVITATION DEBUG] Attempt ${attempt} failed:`, result.error);
+              
+              if (attempt === maxAttempts) {
+                throw new Error(result.error || 'Failed to process invitation after all attempts');
+              }
+              
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (attemptError) {
+            console.error(`❌ [INVITATION DEBUG] Attempt ${attempt} error:`, attemptError);
+            
+            if (attempt === maxAttempts) {
+              throw attemptError;
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          attempt++;
+        }
+
+      } catch (error) {
+        console.error('❌ [INVITATION DEBUG] Critical error processing invitation:', error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        
+        toast.error('Failed to process invitation', {
+          duration: 10000,
+          description: `Error: ${errorMessage}. Please try again or contact support.`
+        });
+        
+        // Don't clear URL parameters on error so user can retry
+        console.log('🎯 [INVITATION DEBUG] Keeping URL parameters for retry');
+        
+      } finally {
+        setIsProcessingInvitation(false);
       }
     };
 
-    handleInvitationAcceptance();
-  }, [user, acceptInvitationToken, loading, redirectPath]);
+    // Only process if we have all required data
+    if (user && acceptInvitationToken && !loading) {
+      handleInvitationAcceptance();
+    }
+  }, [user, acceptInvitationToken, loading, redirectPath, isProcessingInvitation]);
 
   // Redirect if already authenticated (after invitation processing if needed)
-  if (user && !loading) {
+  if (user && !loading && !isProcessingInvitation) {
+    console.log('🎯 [INVITATION DEBUG] User authenticated, redirecting to:', redirectPath);
     return <Navigate to={redirectPath} replace />;
   }
 
@@ -73,12 +159,16 @@ const AuthPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('🔐 [LOGIN DEBUG] Starting login process');
+    console.log('🔐 [LOGIN DEBUG] Has invitation token:', !!acceptInvitationToken);
+    
     try {
       await login(loginForm.email, loginForm.password);
+      console.log('✅ [LOGIN DEBUG] Login successful');
       toast.success('Logged in successfully!');
       // Navigation and invitation processing will be handled by useEffect
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ [LOGIN DEBUG] Login error:', error);
       toast.error(error.message || 'Failed to log in');
     } finally {
       setIsLoading(false);
@@ -89,6 +179,9 @@ const AuthPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('📝 [SIGNUP DEBUG] Starting signup process');
+    console.log('📝 [SIGNUP DEBUG] Has invitation token:', !!acceptInvitationToken);
+    
     try {
       await signUp(
         signupForm.email, 
@@ -96,9 +189,10 @@ const AuthPage = () => {
         signupForm.firstName, 
         signupForm.lastName
       );
+      console.log('✅ [SIGNUP DEBUG] Signup successful');
       toast.success('Account created successfully! Please check your email to verify your account.');
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('❌ [SIGNUP DEBUG] Signup error:', error);
       toast.error(error.message || 'Failed to create account');
     } finally {
       setIsLoading(false);
@@ -122,6 +216,11 @@ const AuthPage = () => {
           {acceptInvitationToken && (
             <p className="text-sm text-blue-600 mt-2 font-medium">
               🎯 Login to accept your project invitation
+            </p>
+          )}
+          {isProcessingInvitation && (
+            <p className="text-sm text-orange-600 mt-2 font-medium animate-pulse">
+              ⏳ Processing your invitation...
             </p>
           )}
         </div>
@@ -167,7 +266,11 @@ const AuthPage = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading || isProcessingInvitation}
+                  >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
@@ -219,7 +322,11 @@ const AuthPage = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading || isProcessingInvitation}
+                  >
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
                 </form>
