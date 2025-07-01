@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FileText, Clock, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,20 +5,23 @@ import { getUserProjectStats } from '@/services/projectService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
-
 type Project = Database['public']['Tables']['projects']['Row'];
-
 interface DashboardStatsProps {
   brokerageId: string;
   projects: Project[];
 }
-
-const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+const DashboardStats = ({
+  brokerageId,
+  projects
+}: DashboardStatsProps) => {
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [invitedUsers, setInvitedUsers] = useState(0);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const loadStats = async () => {
       if (!user?.id) {
@@ -27,7 +29,6 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
         setLoading(false);
         return;
       }
-
       try {
         const stats = await getUserProjectStats(user.id);
         setInvitedUsers(stats.invitedUsers);
@@ -38,57 +39,42 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
         setLoading(false);
       }
     };
-
     loadStats();
   }, [user?.id, projects.length]);
-
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const approvalsDue = projects.filter(p => p.status === 'pending_approval').length;
-
   const handleProjectsClick = () => {
     toast({
       title: "Gestione Progetti",
       description: "Vai alla sezione progetti per gestire i tuoi progetti attivi."
     });
   };
-
   const handleApprovalsClick = () => {
     toast({
       title: "Approvazioni",
       description: "Controlla i progetti in attesa di approvazione."
     });
   };
-
   const handleUsersClick = () => {
     toast({
       title: "Gestione Utenti",
       description: "Gestisci gli utenti invitati nei tuoi progetti."
     });
   };
-
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light">
+    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => <div key={i} className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light">
             <div className="p-6">
               <div className="animate-pulse">
                 <div className="h-4 bg-form-placeholder rounded w-24 mb-2"></div>
                 <div className="h-8 bg-form-placeholder rounded w-16"></div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-    );
+          </div>)}
+      </div>;
   }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Card 
-        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" 
-        onClick={handleProjectsClick}
-      >
+  return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleProjectsClick}>
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center">
@@ -101,7 +87,7 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
 
           <div className="space-y-3">
             <div>
-              <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Progetti Attivi</h3>
+              <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Gestione Progetti</h3>
               <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
                 Gestisci e monitora i progetti attualmente in corso
               </p>
@@ -115,10 +101,7 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
         </CardContent>
       </Card>
 
-      <Card 
-        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" 
-        onClick={handleApprovalsClick}
-      >
+      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleApprovalsClick}>
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center">
@@ -145,10 +128,7 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
         </CardContent>
       </Card>
 
-      <Card 
-        className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" 
-        onClick={handleUsersClick}
-      >
+      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleUsersClick}>
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center">
@@ -174,8 +154,6 @@ const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default DashboardStats;
