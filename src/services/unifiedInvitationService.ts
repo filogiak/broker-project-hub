@@ -134,12 +134,6 @@ export class UnifiedInvitationService {
 
       if (error) {
         console.error('❌ Database error getting pending invitations:', error);
-        
-        // Check for specific GROUP BY error
-        if (error.message.includes('GROUP BY') || error.message.includes('must appear')) {
-          throw new Error('Database configuration issue detected. The system administrator needs to update the database schema.');
-        }
-        
         throw new Error(`Failed to get pending invitations: ${error.message}`);
       }
 

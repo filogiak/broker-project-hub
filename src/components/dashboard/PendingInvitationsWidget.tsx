@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Calendar, User, Building2, CheckCircle, XCircle, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Mail, Calendar, User, Building2, CheckCircle, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 import { useToast } from '@/hooks/use-toast';
 
@@ -59,11 +59,6 @@ const PendingInvitationsWidget = () => {
   }
 
   if (error) {
-    // Determine icon and styling based on error type
-    const isDbError = error.includes('Database') || error.includes('GROUP BY') || error.includes('schema');
-    const ErrorIcon = isDbError ? AlertTriangle : AlertCircle;
-    const iconColor = isDbError ? 'text-orange-500' : 'text-red-500';
-    
     return (
       <Card>
         <CardHeader>
@@ -74,24 +69,17 @@ const PendingInvitationsWidget = () => {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <ErrorIcon className={`h-8 w-8 ${iconColor} mx-auto mb-4`} />
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
             <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">{error}</p>
-            <div className="space-y-2">
-              <Button
-                onClick={handleForceRefresh}
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Riprova
-              </Button>
-              {isDbError && (
-                <p className="text-xs text-muted-foreground">
-                  Se il problema persiste, contatta il supporto tecnico
-                </p>
-              )}
-            </div>
+            <Button
+              onClick={handleForceRefresh}
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Riprova
+            </Button>
           </div>
         </CardContent>
       </Card>

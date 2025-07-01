@@ -32,15 +32,10 @@ export const usePendingInvitations = () => {
       // Provide more specific error messages
       let errorMessage = 'Failed to load invitations';
       if (err instanceof Error) {
-        // Check for specific database errors
-        if (err.message.includes('GROUP BY')) {
-          errorMessage = 'Database configuration issue detected. Please contact support or try refreshing the page.';
-        } else if (err.message.includes('User not found')) {
+        if (err.message.includes('User not found')) {
           errorMessage = 'User profile not found. Please try logging out and back in.';
         } else if (err.message.includes('network')) {
           errorMessage = 'Network error. Please check your connection and try again.';
-        } else if (err.message.includes('column') && err.message.includes('must appear')) {
-          errorMessage = 'Database schema issue. Please try refreshing the page or contact support.';
         } else {
           errorMessage = err.message;
         }
