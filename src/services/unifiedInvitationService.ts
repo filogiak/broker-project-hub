@@ -15,20 +15,6 @@ export interface PendingInvitation {
   days_remaining: number;
 }
 
-export interface SentInvitation {
-  id: string;
-  email: string;
-  role: UserRole;
-  project_id: string | null;
-  project_name: string | null;
-  created_at: string;
-  expires_at: string;
-  accepted_at: string | null;
-  email_sent: boolean;
-  status: 'pending' | 'accepted' | 'expired' | 'email_failed';
-  days_remaining: number;
-}
-
 export interface InvitationStatusResult {
   user_exists: boolean;
   user_id: string | null;
@@ -170,46 +156,6 @@ export class UnifiedInvitationService {
 
     } catch (error) {
       console.error('❌ Failed to get pending invitations:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get sent invitations for current logged-in user (brokerage owners)
-   */
-  static async getMySentInvitations(): Promise<SentInvitation[]> {
-    console.log('📤 Getting sent invitations for current user');
-    
-    try {
-      const { data, error } = await supabase.rpc('get_my_sent_invitations');
-
-      if (error) {
-        console.error('❌ Error getting sent invitations:', error);
-        throw new Error(`Failed to get sent invitations: ${error.message}`);
-      }
-
-      if (!data) {
-        console.log('ℹ️ No sent invitations data returned');
-        return [];
-      }
-
-      // Type assertion with runtime validation
-      const result = data as any;
-      
-      if (typeof result !== 'object' || result === null) {
-        console.log('ℹ️ Invalid response format, returning empty array');
-        return [];
-      }
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      console.log('✅ Sent invitations retrieved:', result.count || 0);
-      return Array.isArray(result.invitations) ? result.invitations : [];
-
-    } catch (error) {
-      console.error('❌ Failed to get sent invitations:', error);
       throw error;
     }
   }

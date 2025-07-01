@@ -3,7 +3,6 @@ import React from 'react';
 import BrokerageHeaderCard from '@/components/brokerage/BrokerageHeaderCard';
 import DashboardStats from '@/components/brokerage/DashboardStats';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
-import InvitationsSentWidget from '@/components/dashboard/InvitationsSentWidget';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -26,9 +25,6 @@ const BrokerageDashboard = ({
   onOpenProject 
 }: BrokerageDashboardProps) => {
   const { user } = useAuth();
-  
-  // Check if current user is the brokerage owner
-  const isBrokerageOwner = user?.id === brokerage.owner_id;
 
   return (
     <div className="flex-1 p-8 space-y-8">
@@ -46,16 +42,10 @@ const BrokerageDashboard = ({
         <DashboardStats brokerageId={brokerage.id} projects={projects} />
       </div>
 
-      {/* Role-based Invitations Widget */}
+      {/* Pending Invitations Widget */}
       <div>
-        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">
-          {isBrokerageOwner ? 'Inviti Inviati' : 'I Tuoi Inviti'}
-        </h2>
-        {isBrokerageOwner ? (
-          <InvitationsSentWidget />
-        ) : (
-          <PendingInvitationsWidget />
-        )}
+        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">I Tuoi Inviti</h2>
+        <PendingInvitationsWidget />
       </div>
     </div>
   );
