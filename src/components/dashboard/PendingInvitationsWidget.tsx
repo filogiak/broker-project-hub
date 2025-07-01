@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,10 +9,11 @@ import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 import { useToast } from '@/hooks/use-toast';
 
 const PendingInvitationsWidget = () => {
+  const navigate = useNavigate();
   const { invitations, loading, error, acceptInvitation, forceRefresh } = usePendingInvitations();
   const { toast } = useToast();
 
-  const handleAcceptInvitation = async (invitationId: string, projectName: string | null) => {
+  const handleAcceptInvitation = async (invitationId: string, projectName: string | null, projectId: string | null) => {
     try {
       const result = await acceptInvitation(invitationId);
       
@@ -23,6 +25,13 @@ const PendingInvitationsWidget = () => {
             : `Ti sei unito con successo a ${projectName || 'il progetto'}`,
           variant: "default",
         });
+
+        // Redirect to project if available
+        if (projectId && !result.duplicate_membership) {
+          setTimeout(() => {
+            navigate(`/project/${projectId}`);
+          }, 2000);
+        }
       }
     } catch (error) {
       console.error('Error accepting invitation:', error);
@@ -150,7 +159,7 @@ const PendingInvitationsWidget = () => {
               </div>
               
               <Button
-                onClick={() => handleAcceptInvitation(invitation.id, invitation.project_name)}
+                onClick={() => handleAcceptInvitation(invitation.id, invitation.project_name, invitation.project_id)}
                 size="sm"
                 className="gomutuo-button-primary"
               >

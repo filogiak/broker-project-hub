@@ -20,6 +20,21 @@ export const createEmailInvitation = async (
       throw new Error('Authentication required');
     }
 
+    // Check for existing pending invitation
+    const { data: existingInvitation } = await supabase
+      .from('invitations')
+      .select('id, accepted_at, expires_at')
+      .eq('email', email)
+      .eq('project_id', projectId)
+      .eq('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (existingInvitation) {
+      console.log('⚠️ [EMAIL INVITATION] Pending invitation already exists:', existingInvitation.id);
+      throw new Error('An active invitation already exists for this email and project');
+    }
+
     // Get current user profile for inviter name
     const { data: inviterProfile } = await supabase
       .from('profiles')
@@ -42,7 +57,7 @@ export const createEmailInvitation = async (
       throw new Error('Project not found');
     }
 
-    // Generate encrypted token using the updated function
+    // Generate encrypted token
     const { data: encryptedToken, error: tokenError } = await supabase
       .rpc('generate_encrypted_invitation_token');
 
@@ -53,7 +68,7 @@ export const createEmailInvitation = async (
 
     console.log('✅ [EMAIL INVITATION] Token generated successfully');
 
-    // Create invitation record with simplified data structure
+    // Create invitation record
     const invitationData = {
       email,
       role,
@@ -69,9 +84,19 @@ export const createEmailInvitation = async (
       .select()
       .single();
 
-    if (invitationError || !invitation) {
+    if (invitationError) {
       console.error('❌ [EMAIL INVITATION] Failed to create invitation:', invitationError);
-      throw new Error('Failed to create invitation: ' + invitationError?.message);
+      
+      // Handle unique constraint violation
+      if (invitationError.code === '23505') {
+        throw new Error('An invitation for this email and project already exists');
+      }
+      
+      throw new Error('Failed to create invitation: ' + invitationError.message);
+    }
+
+    if (!invitation) {
+      throw new Error('No invitation record returned after creation');
     }
 
     console.log('✅ [EMAIL INVITATION] Invitation record created:', invitation.id);
