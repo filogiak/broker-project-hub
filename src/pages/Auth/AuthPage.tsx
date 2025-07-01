@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,27 +78,18 @@ const AuthPage = () => {
         signupForm.lastName
       );
       
-      console.log('✅ [SIGNUP] Signup successful');
+      console.log('✅ [SIGNUP] Signup successful:', signupResult);
       
-      // If coming from invitation and we have a session, the user is already logged in
-      if (hasInvitation && signupResult.session) {
-        console.log('🎯 [SIGNUP] User from invitation logged in automatically');
-        toast.success('Account created and logged in successfully! Welcome to the project!');
+      // Since email verification is disabled, signup should return a session immediately
+      if (signupResult.session) {
+        console.log('✅ [SIGNUP] User logged in automatically after signup');
+        toast.success('Account created and logged in successfully!');
         // Navigation will be handled by the auth state change
-      } else if (hasInvitation && !signupResult.session) {
-        // For invitation users, try to log them in immediately after signup
-        console.log('🔄 [SIGNUP] Auto-logging in invitation user...');
-        try {
-          await login(signupForm.email, signupForm.password);
-          toast.success('Account created and logged in successfully! Welcome to the project!');
-        } catch (loginError: any) {
-          console.error('❌ [SIGNUP] Auto-login failed:', loginError);
-          toast.success('Account created successfully! Please sign in to continue.');
-          setActiveTab('login');
-        }
       } else {
-        // Regular signup - requires email verification
-        toast.success('Account created successfully! Please check your email to verify your account.');
+        // This shouldn't happen with email verification disabled, but handle gracefully
+        console.log('⚠️ [SIGNUP] No session returned, user may need to verify email');
+        toast.success('Account created successfully! Please sign in to continue.');
+        setActiveTab('login');
       }
     } catch (error: any) {
       console.error('❌ [SIGNUP] Signup error:', error);
