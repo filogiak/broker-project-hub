@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Users, Mail } from 'lucide-react';
+import { UserPlus, Users, Mail, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -103,7 +103,7 @@ const BrokerageUsersSection = () => {
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'brokerage_owner': return 'Proprietario';
-      case 'simulation_collaborator': return 'Collaboratore Simulazioni';
+      case 'simulation_collaborator': return 'Segnalatore';
       case 'broker_assistant': return 'Assistente Broker';
       case 'real_estate_agent': return 'Agente Immobiliare';
       default: return role;
@@ -157,6 +157,12 @@ const BrokerageUsersSection = () => {
               <DialogTitle>Invita Nuovo Utente</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Tutti i ruoli possono creare simulazioni. Solo gli "Assistente Broker" e "Agenti Immobiliari" potranno lavorare sui progetti assegnati.
+                </AlertDescription>
+              </Alert>
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -177,7 +183,7 @@ const BrokerageUsersSection = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="simulation_collaborator">Collaboratore Simulazioni</SelectItem>
+                    <SelectItem value="simulation_collaborator">Segnalatore</SelectItem>
                     <SelectItem value="broker_assistant">Assistente Broker</SelectItem>
                     <SelectItem value="real_estate_agent">Agente Immobiliare</SelectItem>
                   </SelectContent>
