@@ -2,8 +2,8 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, RotateCcw, X, Clock, Check, AlertTriangle, AlertCircle } from 'lucide-react';
-import { InvitationWithStatus, getInvitationStatusColor, getInvitationStatusText, resendInvitation, cancelInvitation } from '@/services/projectInvitationService';
+import { Mail, RotateCcw, X, Clock, Check, AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
+import { InvitationWithStatus, getInvitationStatusColor, getInvitationStatusText, resendInvitation, cancelInvitation, deleteInvitation } from '@/services/projectInvitationService';
 import { useToast } from '@/hooks/use-toast';
 
 interface InvitationCardProps {
@@ -15,6 +15,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
   const { toast } = useToast();
   const [isResending, setIsResending] = React.useState(false);
   const [isCancelling, setIsCancelling] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -72,7 +73,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
       await cancelInvitation(invitation.id);
       toast({
         title: "Invito Annullato",
-        description: `L'invito per ${invitation.email} è stato annullato`,
+        description: `L'invito per ${invitation.email} è stato annullato (scaduto)`,
       });
       onInvitationUpdated();
     } catch (error) {
@@ -83,6 +84,26 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
       });
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteInvitation(invitation.id);
+      toast({
+        title: "Invito Eliminato",
+        description: `L'invito per ${invitation.email} è stato eliminato definitivamente`,
+      });
+      onInvitationUpdated();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'invito. Riprova più tardi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -141,13 +162,35 @@ const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onInvitatio
                     onClick={handleCancel}
                     disabled={isCancelling}
                     size="sm"
-                    variant="destructive"
-                    className="flex items-center gap-1"
+                    variant="outline"
+                    className="flex items-center gap-1 text-orange-600 hover:text-orange-700"
                   >
                     <X className="h-3 w-3" />
                     Annulla
                   </Button>
+                  <Button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    size="sm"
+                    variant="destructive"
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Elimina
+                  </Button>
                 </>
+              )}
+              {(invitation.status === 'expired' || invitation.status === 'accepted') && (
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-1 text-gray-600 hover:text-gray-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Elimina
+                </Button>
               )}
             </div>
           </div>

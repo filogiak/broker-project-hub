@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { Resend } from "npm:resend@2.0.0";
@@ -44,24 +45,13 @@ const handler = async (req: Request): Promise<Response> => {
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000";
 
-    let inviteUrl: string;
-    let buttonText: string;
-    let mainMessage: string;
-    let instructions: string;
-
-    if (userExists) {
-      // Existing user - direct them to login with invitation acceptance
-      inviteUrl = `${baseUrl}/auth?redirect=/dashboard&accept_invitation=${encryptedToken}`;
-      buttonText = "Login & Accept Invitation";
-      mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
-      instructions = "Since you already have an account, simply login to accept this invitation and join the project.";
-    } else {
-      // New user - direct them to the signup flow
-      inviteUrl = `${baseUrl}/invite/join/${encryptedToken}`;
-      buttonText = "Create Account & Accept Invitation";
-      mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
-      instructions = "Create your account to join the project and start collaborating with the team.";
-    }
+    // Simplified link - always direct to login/auth with invitation info
+    const inviteUrl = `${baseUrl}/auth?invitation=true&email=${encodeURIComponent(email)}`;
+    const buttonText = userExists ? "Login & View Invitation" : "Create Account & View Invitation";
+    const mainMessage = `You've been invited to join <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+    const instructions = userExists 
+      ? "Login to your account and check your dashboard to accept this invitation."
+      : "Create your account to join the project. After signup, check your dashboard to accept the invitation.";
 
     const emailResponse = await resend.emails.send({
       from: "Invitations <noreply@gomutuo.it>",

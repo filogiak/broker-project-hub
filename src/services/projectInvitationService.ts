@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
 import type { Database } from '@/integrations/supabase/types';
@@ -127,6 +128,28 @@ export const cancelInvitation = async (invitationId: string): Promise<void> => {
 
   } catch (error) {
     console.error('❌ [PROJECT INVITATION SERVICE] Failed to cancel invitation:', error);
+    throw error;
+  }
+};
+
+export const deleteInvitation = async (invitationId: string): Promise<void> => {
+  console.log('🗑️ [PROJECT INVITATION SERVICE] Deleting invitation:', invitationId);
+  
+  try {
+    // Actually delete the invitation record
+    const { error } = await supabase
+      .from('invitations')
+      .delete()
+      .eq('id', invitationId);
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('✅ [PROJECT INVITATION SERVICE] Invitation deleted successfully');
+
+  } catch (error) {
+    console.error('❌ [PROJECT INVITATION SERVICE] Failed to delete invitation:', error);
     throw error;
   }
 };
