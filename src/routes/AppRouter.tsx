@@ -15,6 +15,12 @@ import NotFound from '@/pages/NotFound';
 // Admin pages
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
 
+// Role-specific dashboard pages
+import SimulationCollaboratorDashboard from '@/pages/Dashboard/SimulationCollaboratorDashboard';
+import RealEstateAgentDashboard from '@/pages/Dashboard/RealEstateAgentDashboard';
+import BrokerAssistantDashboard from '@/pages/Dashboard/BrokerAssistantDashboard';
+import MortgageApplicantDashboard from '@/pages/Dashboard/MortgageApplicantDashboard';
+
 // Brokerage pages
 import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
 import BrokerageProjects from '@/pages/Brokerage/BrokerageProjects';
@@ -77,6 +83,39 @@ const AppRouter = () => {
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
+      ),
+    },
+    // Role-specific dashboard routes
+    {
+      path: '/dashboard/simulation-collaborator',
+      element: (
+        <RoleBasedRoute allowedRoles={['simulation_collaborator']}>
+          <SimulationCollaboratorDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/dashboard/real-estate-agent',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/dashboard/broker-assistant',
+      element: (
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/dashboard/mortgage-applicant',
+      element: (
+        <RoleBasedRoute allowedRoles={['mortgage_applicant']}>
+          <MortgageApplicantDashboard />
+        </RoleBasedRoute>
       ),
     },
     {
