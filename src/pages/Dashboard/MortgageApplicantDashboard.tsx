@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProjects } from '@/services/userProjectService';
 import MainLayout from '@/components/layout/MainLayout';
+import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,6 +124,9 @@ const MortgageApplicantDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pending Invitations Widget */}
+        <PendingInvitationsWidget />
 
         {/* Pending Tasks */}
         <Card>

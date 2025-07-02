@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
@@ -6,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import RoleSelector from '@/components/dashboard/RoleSelector';
+import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -187,6 +187,9 @@ const BrokerAssistantDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Pending Invitations Widget */}
+        <PendingInvitationsWidget />
 
         {/* Work Items */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
