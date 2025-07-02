@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { simulationService } from '@/services/simulationService';
+import { simulationService, type SimulationMemberWithProfile } from '@/services/simulationService';
 
 export const useSimulationData = (simulationId: string) => {
   return useQuery({
@@ -14,7 +14,7 @@ export const useSimulationData = (simulationId: string) => {
 };
 
 export const useSimulationMembers = (simulationId: string) => {
-  return useQuery({
+  return useQuery<SimulationMemberWithProfile[]>({
     queryKey: ['simulation-members', simulationId],
     queryFn: async () => {
       if (!simulationId) throw new Error('Simulation ID is required');

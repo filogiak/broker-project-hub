@@ -6,6 +6,16 @@ type Simulation = Database['public']['Tables']['simulations']['Row'];
 type SimulationInsert = Database['public']['Tables']['simulations']['Insert'];
 type SimulationMember = Database['public']['Tables']['simulation_members']['Row'];
 
+// Extended type for simulation members with joined profile data
+export type SimulationMemberWithProfile = SimulationMember & {
+  profiles: {
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+};
+
 export const simulationService = {
   // Get all simulations for a brokerage
   async getBrokerageSimulations(brokerageId: string): Promise<Simulation[]> {
@@ -70,8 +80,8 @@ export const simulationService = {
     if (error) throw error;
   },
 
-  // Get simulation members
-  async getSimulationMembers(simulationId: string): Promise<SimulationMember[]> {
+  // Get simulation members with profile data
+  async getSimulationMembers(simulationId: string): Promise<SimulationMemberWithProfile[]> {
     const { data, error } = await supabase
       .from('simulation_members')
       .select(`
