@@ -18,27 +18,34 @@ const SimulationCollaboratorDashboard = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
+      // Use a manual join approach since the relationship might not be recognized
+      const { data: memberData, error: memberError } = await supabase
         .from('simulation_members')
-        .select(`
-          simulation_id,
-          simulations!inner(
-            id,
-            name,
-            description,
-            status,
-            created_at,
-            brokerage_id
-          )
-        `)
+        .select('simulation_id')
         .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error fetching simulations:', error);
+      if (memberError) {
+        console.error('Error fetching simulation members:', memberError);
         return [];
       }
 
-      return data?.map(item => item.simulations) || [];
+      if (!memberData || memberData.length === 0) {
+        return [];
+      }
+
+      const simulationIds = memberData.map(item => item.simulation_id);
+
+      const { data: simulationData, error: simulationError } = await supabase
+        .from('simulations')
+        .select('*')
+        .in('id', simulationIds);
+
+      if (simulationError) {
+        console.error('Error fetching simulations:', simulationError);
+        return [];
+      }
+
+      return simulationData || [];
     },
     enabled: !!user?.id,
   });
@@ -62,7 +69,7 @@ const SimulationCollaboratorDashboard = () => {
     );
   }
 
-  // Mock data for demonstration
+  // Mock data for demonstration - now using actual simulations data
   const mockStats = {
     activeSimulations: simulations.filter(s => s.status === 'active').length,
     completedSimulations: simulations.filter(s => s.status === 'completed').length,
