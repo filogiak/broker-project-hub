@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,7 +77,7 @@ const Dashboard = () => {
   }
 
   // Use selected role for routing decisions, fallback to primary role
-  const activeRole = selectedRole || user.roles[0];
+  const activeRole: string = selectedRole || user.roles[0];
 
   // Route based on user's active role
   switch (activeRole) {

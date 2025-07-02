@@ -22,6 +22,7 @@ const SimulationCollaboratorDashboard = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
+      // Build the query step by step to handle the database relation properly
       let query = supabase
         .from('simulation_members')
         .select(`
@@ -34,10 +35,7 @@ const SimulationCollaboratorDashboard = () => {
             description,
             status,
             created_at,
-            brokerage_id,
-            brokerages!inner (
-              name
-            )
+            brokerage_id
           )
         `)
         .eq('user_id', user.id);
@@ -47,14 +45,36 @@ const SimulationCollaboratorDashboard = () => {
         query = query.eq('role', selectedRole);
       }
 
-      const { data, error } = await query;
+      const { data: simulationData, error } = await query;
       
       if (error) {
         console.error('Error fetching simulations:', error);
         return [];
       }
 
-      return data || [];
+      // Now fetch brokerage info separately to avoid relation issues
+      const simulationsWithBrokerages = await Promise.all(
+        (simulationData || []).map(async (memberRecord) => {
+          const simulation = memberRecord.simulations;
+          
+          // Fetch brokerage info separately
+          const { data: brokerageData } = await supabase
+            .from('brokerages')
+            .select('name')
+            .eq('id', simulation.brokerage_id)
+            .single();
+
+          return {
+            ...memberRecord,
+            simulations: {
+              ...simulation,
+              brokerages: brokerageData || { name: 'Unknown' }
+            }
+          };
+        })
+      );
+
+      return simulationsWithBrokerages;
     },
     enabled: !!user?.id,
   });
@@ -187,7 +207,7 @@ const SimulationCollaboratorDashboard = () => {
                             <Badge variant="secondary">{simulation.status}</Badge>
                             <Badge variant="outline" className="flex items-center gap-1">
                               <Building className="h-3 w-3" />
-                              {simulation.brokerages.name}
+                              {simulation.brokerages?.name || 'Unknown'}
                             </Badge>
                             <Badge variant="outline">{memberRecord.role.replace('_', ' ')}</Badge>
                           </div>

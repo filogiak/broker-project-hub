@@ -17,10 +17,10 @@ const BrokerAssistantDashboard = () => {
   const { selectedRole, isMultiRole } = useRoleSelection();
 
   // Fetch projects and brokerages with role-aware filtering
-  const { data: workItems = [], isLoading } = useQuery({
+  const { data: workItems, isLoading } = useQuery({
     queryKey: ['broker-assistant-work', user?.id, selectedRole],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id) return { brokerages: [], projects: [] };
 
       // Get brokerage memberships for broker assistant role
       let brokerageQuery = supabase
@@ -49,7 +49,7 @@ const BrokerAssistantDashboard = () => {
       
       if (brokerageError) {
         console.error('Error fetching brokerage data:', brokerageError);
-        return [];
+        return { brokerages: [], projects: [] };
       }
 
       // Get project memberships for broker assistant role
@@ -85,7 +85,7 @@ const BrokerAssistantDashboard = () => {
       
       if (projectError) {
         console.error('Error fetching project data:', projectError);
-        return [];
+        return { brokerages: [], projects: [] };
       }
 
       return {
@@ -118,7 +118,8 @@ const BrokerAssistantDashboard = () => {
     );
   }
 
-  const { brokerages = [], projects = [] } = workItems;
+  // Add type guard and safe destructuring
+  const { brokerages = [], projects = [] } = workItems || { brokerages: [], projects: [] };
 
   return (
     <MainLayout title="Broker Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
