@@ -53,6 +53,12 @@ import ClientPortal from '@/pages/Client/ClientPortal';
 import TenantDashboard from '@/pages/Tenant/TenantDashboard';
 import TenantSettings from '@/pages/Tenant/TenantSettings';
 
+// Import simulation pages
+import SimulationDashboard from '@/pages/Simulation/SimulationDashboard';
+import SimulationQuestionnaire from '@/pages/Simulation/SimulationQuestionnaire';
+import SimulationMembers from '@/pages/Simulation/SimulationMembers';
+import SimulationSettings from '@/pages/Simulation/SimulationSettings';
+
 const AppRouter = () => {
   const { loading } = useAuth();
 
@@ -255,6 +261,38 @@ const AppRouter = () => {
       element: (
         <ProtectedRoute>
           <TenantSettings />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/simulation/:simulationId',
+      element: (
+        <ProtectedRoute>
+          <SimulationDashboard />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/simulation/:simulationId/questionnaire',
+      element: (
+        <ProtectedRoute>
+          <SimulationQuestionnaire />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/simulation/:simulationId/members',
+      element: (
+        <ProtectedRoute>
+          <SimulationMembers />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/simulation/:simulationId/settings',
+      element: (
+        <ProtectedRoute>
+          <SimulationSettings />
         </ProtectedRoute>
       ),
     },
