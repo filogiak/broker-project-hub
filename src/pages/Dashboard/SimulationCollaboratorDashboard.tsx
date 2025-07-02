@@ -18,7 +18,9 @@ const SimulationCollaboratorDashboard = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Use a manual join approach since the relationship might not be recognized
+      console.log('Fetching simulations for user:', user.id);
+      
+      // First get simulation IDs where user is a member
       const { data: memberData, error: memberError } = await supabase
         .from('simulation_members')
         .select('simulation_id')
@@ -29,12 +31,17 @@ const SimulationCollaboratorDashboard = () => {
         return [];
       }
 
+      console.log('Member data:', memberData);
+
       if (!memberData || memberData.length === 0) {
+        console.log('No simulation memberships found');
         return [];
       }
 
       const simulationIds = memberData.map(item => item.simulation_id);
+      console.log('Simulation IDs:', simulationIds);
 
+      // Then get simulation details
       const { data: simulationData, error: simulationError } = await supabase
         .from('simulations')
         .select('*')
@@ -45,6 +52,7 @@ const SimulationCollaboratorDashboard = () => {
         return [];
       }
 
+      console.log('Simulation data:', simulationData);
       return simulationData || [];
     },
     enabled: !!user?.id,
@@ -69,7 +77,7 @@ const SimulationCollaboratorDashboard = () => {
     );
   }
 
-  // Mock data for demonstration - now using actual simulations data
+  // Calculate stats from actual simulations data
   const mockStats = {
     activeSimulations: simulations.filter(s => s.status === 'active').length,
     completedSimulations: simulations.filter(s => s.status === 'completed').length,
