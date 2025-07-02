@@ -15,7 +15,11 @@ const SimulationMembers = () => {
   const { simulationId } = useParams();
   const { user } = useAuth();
   const { data: simulation, isLoading: simulationLoading, error: simulationError } = useSimulationData(simulationId || '');
-  const { data: members = [], isLoading: membersLoading } = useSimulationMembers(simulationId || '');
+  const { data: members = [], isLoading: membersLoading, error: membersError } = useSimulationMembers(simulationId || '');
+
+  // Debug logging
+  console.log('SimulationMembers - members data:', members);
+  console.log('SimulationMembers - members error:', membersError);
 
   if (!simulationId) {
     return <Navigate to="/dashboard" replace />;
@@ -94,6 +98,11 @@ const SimulationMembers = () => {
                 </div>
               </CardHeader>
               <CardContent>
+                {membersError && (
+                  <div className="text-red-600 mb-4">
+                    Error loading members: {membersError.message}
+                  </div>
+                )}
                 {members.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-full bg-form-green/10 flex items-center justify-center mx-auto mb-4">
@@ -126,7 +135,7 @@ const SimulationMembers = () => {
                               <div className="flex items-center gap-2 mt-1">
                                 <Mail className="h-3 w-3 text-gray-400" />
                                 <span className="text-sm text-gray-600">
-                                  {member.profiles?.email}
+                                  {member.profiles?.email || 'Email non disponibile'}
                                 </span>
                               </div>
                             </div>
