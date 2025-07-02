@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { logout } from '@/services/authService';
 import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageForm';
 import MainLayout from '@/components/layout/MainLayout';
@@ -16,6 +17,7 @@ import MortgageApplicantDashboard from './MortgageApplicantDashboard';
 
 const Dashboard = () => {
   const { user, loading, refreshUser } = useAuth();
+  const { selectedRole, isMultiRole } = useRoleSelection();
   const [searchParams, setSearchParams] = useSearchParams();
   const { invitations, loading: invitationsLoading, invitationCount } = usePendingInvitations();
 
@@ -57,10 +59,11 @@ const Dashboard = () => {
         invitationCount,
         invitations: invitations.length,
         userRoles: user.roles,
+        selectedRole,
         invitationsList: invitations
       });
     }
-  }, [user, invitations, invitationCount, invitationsLoading]);
+  }, [user, invitations, invitationCount, invitationsLoading, selectedRole]);
 
   if (loading) {
     return (
@@ -74,11 +77,11 @@ const Dashboard = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Get the primary role (first role in the array)
-  const primaryRole = user.roles[0];
+  // Use selected role for routing decisions, fallback to primary role
+  const activeRole = selectedRole || user.roles[0];
 
-  // Route based on user's primary role
-  switch (primaryRole) {
+  // Route based on user's active role
+  switch (activeRole) {
     case 'superadmin':
       return <Navigate to="/admin" replace />;
       
@@ -94,7 +97,10 @@ const Dashboard = () => {
             userEmail={user.email}
             onLogout={handleLogout}
           >
-            <CreateOwnBrokerageForm onSuccess={refreshUser} />
+            <div className="max-w-4xl mx-auto">
+              {isMultiRole && <RoleSelector />}
+              <CreateOwnBrokerageForm onSuccess={refreshUser} />
+            </div>
           </MainLayout>
         );
       }
@@ -148,7 +154,14 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-background rounded-lg shadow-sm p-6">
                 <p className="text-muted-foreground">
-                  Welcome {user.firstName} {user.lastName}! Your role: {user.roles.join(', ')}
+                  Welcome {user.firstName} {user.lastName}! 
+                  {isMultiRole ? (
+                    <span className="block mt-1">
+                      Active role: <span className="font-medium">{activeRole?.replace('_', ' ')}</span>
+                    </span>
+                  ) : (
+                    <span> Your role: {user.roles.join(', ')}</span>
+                  )}
                 </p>
                 {!showInvitationPrompt && (
                   <p className="text-sm text-muted-foreground mt-2">

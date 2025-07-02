@@ -1,20 +1,23 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProjects } from '@/services/userProjectService';
 import MainLayout from '@/components/layout/MainLayout';
+import RoleSelector from '@/components/dashboard/RoleSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Home, FileText, Users, Calendar } from 'lucide-react';
+import { Home, FileText, Users, Calendar, User } from 'lucide-react';
 import { logout } from '@/services/authService';
 
 const RealEstateAgentDashboard = () => {
   const { user } = useAuth();
+  const { selectedRole, isMultiRole } = useRoleSelection();
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['user-projects', user?.id],
+    queryKey: ['user-projects', user?.id, selectedRole],
     queryFn: () => getUserProjects(user?.id || ''),
     enabled: !!user?.id,
   });
@@ -31,8 +34,11 @@ const RealEstateAgentDashboard = () => {
   if (isLoading) {
     return (
       <MainLayout title="Agent Dashboard" userEmail={user?.email} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading your projects...</div>
+        <div className="max-w-6xl mx-auto space-y-6">
+          {isMultiRole && <RoleSelector />}
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-lg">Loading your projects...</div>
+          </div>
         </div>
       </MainLayout>
     );
@@ -41,12 +47,23 @@ const RealEstateAgentDashboard = () => {
   return (
     <MainLayout title="Agent Dashboard" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Role Selector for multi-role users */}
+        {isMultiRole && <RoleSelector />}
+
         <div className="flex items-center gap-3 mb-6">
           <Home className="h-8 w-8 text-primary" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-primary">Real Estate Agent Dashboard</h1>
             <p className="text-muted-foreground">Manage your client projects and transactions</p>
           </div>
+          {selectedRole && isMultiRole && (
+            <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Role: <span className="font-medium text-foreground">{selectedRole.replace('_', ' ')}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -85,7 +102,7 @@ const RealEstateAgentDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{projects.length}</div>
               <p className="text-xs text-muted-foreground">
-                Active client relationships
+                {selectedRole && isMultiRole ? `As ${selectedRole.replace('_', ' ')}` : 'Active client relationships'}
               </p>
             </CardContent>
           </Card>
@@ -96,7 +113,10 @@ const RealEstateAgentDashboard = () => {
           <CardHeader>
             <CardTitle>Your Client Projects</CardTitle>
             <CardDescription>
-              Manage and track progress for your real estate transactions
+              {selectedRole && isMultiRole 
+                ? `Manage and track progress for your real estate transactions as ${selectedRole.replace('_', ' ')}`
+                : 'Manage and track progress for your real estate transactions'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -105,7 +125,10 @@ const RealEstateAgentDashboard = () => {
                 <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
                 <p className="text-muted-foreground mb-4">
-                  You haven't been assigned to any projects yet. Contact your brokerage to get started.
+                  {selectedRole && isMultiRole 
+                    ? `You haven't been assigned to any projects as ${selectedRole.replace('_', ' ')} yet.`
+                    : 'You haven\'t been assigned to any projects yet.'
+                  } Contact your brokerage to get started.
                 </p>
               </div>
             ) : (

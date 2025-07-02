@@ -1,20 +1,23 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProjects } from '@/services/userProjectService';
 import MainLayout from '@/components/layout/MainLayout';
+import RoleSelector from '@/components/dashboard/RoleSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, FileText, Users, TrendingUp, Calendar, MessageSquare } from 'lucide-react';
+import { Building2, FileText, Users, TrendingUp, Calendar, MessageSquare, User } from 'lucide-react';
 import { logout } from '@/services/authService';
 
 const BrokerAssistantDashboard = () => {
   const { user } = useAuth();
+  const { selectedRole, isMultiRole } = useRoleSelection();
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['user-projects', user?.id],
+    queryKey: ['user-projects', user?.id, selectedRole],
     queryFn: () => getUserProjects(user?.id || ''),
     enabled: !!user?.id,
   });
@@ -31,8 +34,11 @@ const BrokerAssistantDashboard = () => {
   if (isLoading) {
     return (
       <MainLayout title="Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading dashboard...</div>
+        <div className="max-w-6xl mx-auto space-y-6">
+          {isMultiRole && <RoleSelector />}
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-lg">Loading dashboard...</div>
+          </div>
         </div>
       </MainLayout>
     );
@@ -55,12 +61,23 @@ const BrokerAssistantDashboard = () => {
   return (
     <MainLayout title="Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Role Selector for multi-role users */}
+        {isMultiRole && <RoleSelector />}
+
         <div className="flex items-center gap-3 mb-6">
           <Building2 className="h-8 w-8 text-primary" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-primary">Broker Assistant Dashboard</h1>
             <p className="text-muted-foreground">Support brokerage operations and client management</p>
           </div>
+          {selectedRole && isMultiRole && (
+            <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Role: <span className="font-medium text-foreground">{selectedRole.replace('_', ' ')}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -112,7 +129,7 @@ const BrokerAssistantDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{mockStats.completedTasks}</div>
               <p className="text-xs text-muted-foreground">
-                This month
+                {selectedRole && isMultiRole ? `As ${selectedRole.replace('_', ' ')}` : 'This month'}
               </p>
             </CardContent>
           </Card>
@@ -123,7 +140,10 @@ const BrokerAssistantDashboard = () => {
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
-              Latest updates across your managed projects
+              {selectedRole && isMultiRole 
+                ? `Latest updates across your managed projects as ${selectedRole.replace('_', ' ')}`
+                : 'Latest updates across your managed projects'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -147,7 +167,10 @@ const BrokerAssistantDashboard = () => {
           <CardHeader>
             <CardTitle>Managed Projects</CardTitle>
             <CardDescription>
-              Projects you're assisting with as a broker assistant
+              {selectedRole && isMultiRole 
+                ? `Projects you're assisting with as ${selectedRole.replace('_', ' ')}`
+                : 'Projects you\'re assisting with as a broker assistant'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -156,7 +179,10 @@ const BrokerAssistantDashboard = () => {
                 <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Projects Assigned</h3>
                 <p className="text-muted-foreground mb-4">
-                  You haven't been assigned to any projects yet. Contact your broker to get started.
+                  {selectedRole && isMultiRole 
+                    ? `You haven't been assigned to any projects as ${selectedRole.replace('_', ' ')} yet.`
+                    : 'You haven\'t been assigned to any projects yet.'
+                  } Contact your broker to get started.
                 </p>
               </div>
             ) : (

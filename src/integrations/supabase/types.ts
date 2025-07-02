@@ -1347,12 +1347,20 @@ export type Database = {
         Args: { project_uuid: string; user_uuid?: string }
         Returns: boolean
       }
+      user_created_simulation: {
+        Args: { simulation_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
       user_is_brokerage_member: {
         Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean
       }
       user_is_project_member: {
         Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_is_simulation_member: {
+        Args: { simulation_uuid: string; user_uuid?: string }
         Returns: boolean
       }
       user_is_superadmin: {
@@ -1369,6 +1377,10 @@ export type Database = {
       }
       user_owns_project_brokerage_simple: {
         Args: { project_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
+      user_owns_simulation_brokerage: {
+        Args: { simulation_uuid: string; user_uuid?: string }
         Returns: boolean
       }
     }

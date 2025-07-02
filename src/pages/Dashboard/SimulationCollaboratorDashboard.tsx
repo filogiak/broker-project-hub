@@ -1,29 +1,32 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
+import RoleSelector from '@/components/dashboard/RoleSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Beaker, BarChart3, Users, PlayCircle, PauseCircle, Settings } from 'lucide-react';
+import { Beaker, BarChart3, Users, PlayCircle, PauseCircle, Settings, User } from 'lucide-react';
 import { logout } from '@/services/authService';
 
 const SimulationCollaboratorDashboard = () => {
   const { user } = useAuth();
+  const { selectedRole, isMultiRole } = useRoleSelection();
 
   const { data: simulations = [], isLoading } = useQuery({
-    queryKey: ['user-simulations', user?.id],
+    queryKey: ['user-simulations', user?.id, selectedRole],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      console.log('Fetching simulations for user:', user.id);
+      console.log('Fetching simulations for user:', user.id, 'with role context:', selectedRole);
       
       // First get simulation IDs where user is a member
       const { data: memberData, error: memberError } = await supabase
         .from('simulation_members')
-        .select('simulation_id')
+        .select('simulation_id, role')
         .eq('user_id', user.id);
 
       if (memberError) {
@@ -38,8 +41,18 @@ const SimulationCollaboratorDashboard = () => {
         return [];
       }
 
-      const simulationIds = memberData.map(item => item.simulation_id);
-      console.log('Simulation IDs:', simulationIds);
+      // Filter by selected role if in multi-role context
+      const filteredMemberData = selectedRole && isMultiRole 
+        ? memberData.filter(item => item.role === selectedRole)
+        : memberData;
+
+      if (filteredMemberData.length === 0) {
+        console.log('No simulations found for selected role:', selectedRole);
+        return [];
+      }
+
+      const simulationIds = filteredMemberData.map(item => item.simulation_id);
+      console.log('Simulation IDs for role context:', simulationIds);
 
       // Then get simulation details
       const { data: simulationData, error: simulationError } = await supabase
@@ -70,8 +83,11 @@ const SimulationCollaboratorDashboard = () => {
   if (isLoading) {
     return (
       <MainLayout title="Simulation Lab" userEmail={user?.email} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading simulations...</div>
+        <div className="max-w-6xl mx-auto space-y-6">
+          {isMultiRole && <RoleSelector />}
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-lg">Loading simulations...</div>
+          </div>
         </div>
       </MainLayout>
     );
@@ -88,12 +104,23 @@ const SimulationCollaboratorDashboard = () => {
   return (
     <MainLayout title="Simulation Lab" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Role Selector for multi-role users */}
+        {isMultiRole && <RoleSelector />}
+
         <div className="flex items-center gap-3 mb-6">
           <Beaker className="h-8 w-8 text-primary" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-primary">Simulation Laboratory</h1>
             <p className="text-muted-foreground">Collaborate on mortgage and real estate simulations</p>
           </div>
+          {selectedRole && isMultiRole && (
+            <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Role: <span className="font-medium text-foreground">{selectedRole.replace('_', ' ')}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -145,7 +172,7 @@ const SimulationCollaboratorDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{mockStats.totalCollaborations}</div>
               <p className="text-xs text-muted-foreground">
-                Total participated
+                {selectedRole && isMultiRole ? `As ${selectedRole.replace('_', ' ')}` : 'Total participated'}
               </p>
             </CardContent>
           </Card>
@@ -156,7 +183,10 @@ const SimulationCollaboratorDashboard = () => {
           <CardHeader>
             <CardTitle>Your Simulations</CardTitle>
             <CardDescription>
-              Simulations you're collaborating on or managing
+              {selectedRole && isMultiRole 
+                ? `Simulations you're collaborating on as ${selectedRole.replace('_', ' ')}`
+                : 'Simulations you\'re collaborating on or managing'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -165,7 +195,10 @@ const SimulationCollaboratorDashboard = () => {
                 <Beaker className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Simulations Yet</h3>
                 <p className="text-muted-foreground mb-4">
-                  You haven't been assigned to any simulations yet. Contact your team lead to get started.
+                  {selectedRole && isMultiRole 
+                    ? `You haven't been assigned to any simulations as ${selectedRole.replace('_', ' ')} yet.`
+                    : 'You haven\'t been assigned to any simulations yet.'
+                  } Contact your team lead to get started.
                 </p>
                 <Button>
                   <PlayCircle className="h-4 w-4 mr-2" />
