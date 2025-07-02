@@ -6,6 +6,7 @@ import { logout } from '@/services/authService';
 import CreateOwnBrokerageForm from '@/components/brokerage/CreateOwnBrokerageForm';
 import MainLayout from '@/components/layout/MainLayout';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
+import RoleSelector from '@/components/dashboard/RoleSelector';
 import { toast } from 'sonner';
 import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 
@@ -115,6 +116,9 @@ const Dashboard = () => {
     >
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Dashboard</h1>
+        
+        {/* Role Selector for multi-role users */}
+        <RoleSelector />
         
         {showInvitationPrompt && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
