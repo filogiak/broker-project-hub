@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProjects } from '@/services/userProjectService';
+import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import RoleSelector from '@/components/dashboard/RoleSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +16,43 @@ const RealEstateAgentDashboard = () => {
   const { user } = useAuth();
   const { selectedRole, isMultiRole } = useRoleSelection();
 
+  // Fetch projects with role-aware filtering
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['user-projects', user?.id, selectedRole],
-    queryFn: () => getUserProjects(user?.id || ''),
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      // If user has multiple roles and has selected a specific role, filter by that role
+      if (selectedRole && isMultiRole) {
+        const { data, error } = await supabase
+          .from('project_members')
+          .select(`
+            project_id,
+            role,
+            joined_at,
+            projects!inner (
+              id,
+              name,
+              description,
+              status,
+              project_type,
+              created_at
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('role', selectedRole);
+
+        if (error) {
+          console.error('Error fetching role-specific projects:', error);
+          return [];
+        }
+
+        return data?.map(pm => pm.projects) || [];
+      }
+
+      // Otherwise, use the general user projects service
+      return getUserProjects(user.id);
+    },
     enabled: !!user?.id,
   });
 
@@ -76,7 +110,10 @@ const RealEstateAgentDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{projects.length}</div>
               <p className="text-xs text-muted-foreground">
-                Projects under management
+                {selectedRole && isMultiRole 
+                  ? `As ${selectedRole.replace('_', ' ')}`
+                  : 'Projects under management'
+                }
               </p>
             </CardContent>
           </Card>
@@ -102,7 +139,7 @@ const RealEstateAgentDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{projects.length}</div>
               <p className="text-xs text-muted-foreground">
-                {selectedRole && isMultiRole ? `As ${selectedRole.replace('_', ' ')}` : 'Active client relationships'}
+                Active client relationships
               </p>
             </CardContent>
           </Card>

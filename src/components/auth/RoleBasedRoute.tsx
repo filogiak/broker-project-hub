@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -19,6 +20,7 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   fallbackPath = '/dashboard' 
 }) => {
   const { user, loading } = useAuth();
+  const { selectedRole } = useRoleSelection();
 
   if (loading) {
     return (
@@ -34,23 +36,35 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
 
   console.log('RoleBasedRoute - User:', user.email);
   console.log('RoleBasedRoute - User roles:', user.roles);
+  console.log('RoleBasedRoute - Selected role:', selectedRole);
   console.log('RoleBasedRoute - Allowed roles:', allowedRoles);
 
-  // Check if user has any of the allowed roles
-  const hasAllowedRole = user.roles.some(role => allowedRoles.includes(role));
+  // Determine the effective role to check against
+  const effectiveRole = selectedRole || user.roles[0];
+  console.log('RoleBasedRoute - Effective role:', effectiveRole);
+
+  // Check if the effective role is in the allowed roles
+  const hasAllowedRole = effectiveRole && allowedRoles.includes(effectiveRole);
   console.log('RoleBasedRoute - Has allowed role:', hasAllowedRole);
 
-  if (!hasAllowedRole) {
+  // Fallback: check if user has any of the allowed roles (for backward compatibility)
+  const hasAnyAllowedRole = user.roles.some(role => allowedRoles.includes(role));
+  console.log('RoleBasedRoute - Has any allowed role:', hasAnyAllowedRole);
+
+  // Use effective role check first, fallback to any allowed role check
+  const canAccess = hasAllowedRole || hasAnyAllowedRole;
+
+  if (!canAccess) {
     console.log('RoleBasedRoute - Access denied, redirecting to:', fallbackPath);
     return <Navigate to={fallbackPath} replace />;
   }
 
-  // Only use AdminPermissionCheck if the user is actually a superadmin AND superadmin is allowed
-  const userIsSuperadmin = user.roles.includes('superadmin');
+  // Only use AdminPermissionCheck if the effective role is superadmin AND superadmin is allowed
+  const effectiveRoleIsSuperadmin = effectiveRole === 'superadmin';
   const superadminIsAllowed = allowedRoles.includes('superadmin');
   
-  if (userIsSuperadmin && superadminIsAllowed) {
-    console.log('RoleBasedRoute - User is superadmin, using AdminPermissionCheck');
+  if (effectiveRoleIsSuperadmin && superadminIsAllowed) {
+    console.log('RoleBasedRoute - Effective role is superadmin, using AdminPermissionCheck');
     return (
       <AdminPermissionCheck fallback={<Navigate to={fallbackPath} replace />}>
         {children}
@@ -58,7 +72,7 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     );
   }
 
-  // For all other cases (including brokerage_owner), allow access directly
+  // For all other cases, allow access directly
   console.log('RoleBasedRoute - User has allowed role, granting access');
   return <>{children}</>;
 };

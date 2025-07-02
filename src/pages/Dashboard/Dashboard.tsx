@@ -157,7 +157,7 @@ const Dashboard = () => {
                   Welcome {user.firstName} {user.lastName}! 
                   {isMultiRole ? (
                     <span className="block mt-1">
-                      Active role: <span className="font-medium">{activeRole?.replace('_', ' ')}</span>
+                      Active role: <span className="font-medium">{activeRole ? activeRole.replace('_', ' ') : 'Loading...'}</span>
                     </span>
                   ) : (
                     <span> Your role: {user.roles.join(', ')}</span>

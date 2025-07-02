@@ -3,22 +3,96 @@ import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
-import { getUserProjects } from '@/services/userProjectService';
+import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import RoleSelector from '@/components/dashboard/RoleSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, FileText, Users, TrendingUp, Calendar, MessageSquare, User } from 'lucide-react';
+import { FileSpreadsheet, Users, Calendar, User, Building } from 'lucide-react';
 import { logout } from '@/services/authService';
 
 const BrokerAssistantDashboard = () => {
   const { user } = useAuth();
   const { selectedRole, isMultiRole } = useRoleSelection();
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['user-projects', user?.id, selectedRole],
-    queryFn: () => getUserProjects(user?.id || ''),
+  // Fetch projects and brokerages with role-aware filtering
+  const { data: workItems = [], isLoading } = useQuery({
+    queryKey: ['broker-assistant-work', user?.id, selectedRole],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      // Get brokerage memberships for broker assistant role
+      let brokerageQuery = supabase
+        .from('brokerage_members')
+        .select(`
+          brokerage_id,
+          role,
+          joined_at,
+          brokerages!inner (
+            id,
+            name,
+            description,
+            created_at
+          )
+        `)
+        .eq('user_id', user.id);
+
+      // Filter by selected role if multi-role user
+      if (selectedRole && isMultiRole) {
+        brokerageQuery = brokerageQuery.eq('role', selectedRole);
+      } else {
+        brokerageQuery = brokerageQuery.eq('role', 'broker_assistant');
+      }
+
+      const { data: brokerageData, error: brokerageError } = await brokerageQuery;
+      
+      if (brokerageError) {
+        console.error('Error fetching brokerage data:', brokerageError);
+        return [];
+      }
+
+      // Get project memberships for broker assistant role
+      let projectQuery = supabase
+        .from('project_members')
+        .select(`
+          project_id,
+          role,
+          joined_at,
+          projects!inner (
+            id,
+            name,
+            description,
+            status,
+            project_type,
+            created_at,
+            brokerage_id,
+            brokerages!inner (
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id);
+
+      // Filter by selected role if multi-role user 
+      if (selectedRole && isMultiRole) {
+        projectQuery = projectQuery.eq('role', selectedRole);
+      } else {
+        projectQuery = projectQuery.eq('role', 'broker_assistant');
+      }
+
+      const { data: projectData, error: projectError } = await projectQuery;
+      
+      if (projectError) {
+        console.error('Error fetching project data:', projectError);
+        return [];
+      }
+
+      return {
+        brokerages: brokerageData || [],
+        projects: projectData || []
+      };
+    },
     enabled: !!user?.id,
   });
 
@@ -33,42 +107,30 @@ const BrokerAssistantDashboard = () => {
 
   if (isLoading) {
     return (
-      <MainLayout title="Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
+      <MainLayout title="Broker Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
         <div className="max-w-6xl mx-auto space-y-6">
           {isMultiRole && <RoleSelector />}
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-lg">Loading dashboard...</div>
+            <div className="text-lg">Loading your work items...</div>
           </div>
         </div>
       </MainLayout>
     );
   }
 
-  // Mock data for demonstration
-  const mockStats = {
-    activeProjects: projects.length,
-    pendingReviews: 3,
-    clientMeetings: 2,
-    completedTasks: 15,
-  };
-
-  const mockRecentActivity = [
-    { action: 'Document reviewed', project: 'Smith Family Purchase', time: '2 hours ago' },
-    { action: 'Client meeting scheduled', project: 'Johnson Refinance', time: '4 hours ago' },
-    { action: 'Application submitted', project: 'Wilson Investment', time: '1 day ago' },
-  ];
+  const { brokerages = [], projects = [] } = workItems;
 
   return (
-    <MainLayout title="Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
+    <MainLayout title="Broker Assistant Dashboard" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Role Selector for multi-role users */}
         {isMultiRole && <RoleSelector />}
 
         <div className="flex items-center gap-3 mb-6">
-          <Building2 className="h-8 w-8 text-primary" />
+          <FileSpreadsheet className="h-8 w-8 text-primary" />
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-primary">Broker Assistant Dashboard</h1>
-            <p className="text-muted-foreground">Support brokerage operations and client management</p>
+            <p className="text-muted-foreground">Support brokerage operations and assist with project management</p>
           </div>
           {selectedRole && isMultiRole && (
             <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
@@ -81,142 +143,141 @@ const BrokerAssistantDashboard = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Brokerages</CardTitle>
+              <Building className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{brokerages.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {selectedRole && isMultiRole 
+                  ? `Supporting as ${selectedRole.replace('_', ' ')}`
+                  : 'Organizations you support'
+                }
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockStats.activeProjects}</div>
+              <div className="text-2xl font-bold">{projects.length}</div>
               <p className="text-xs text-muted-foreground">
-                Projects under management
+                Projects requiring assistance
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockStats.pendingReviews}</div>
-              <p className="text-xs text-muted-foreground">
-                Items awaiting review
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Client Meetings</CardTitle>
+              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockStats.clientMeetings}</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">
-                Scheduled this week
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockStats.completedTasks}</div>
-              <p className="text-xs text-muted-foreground">
-                {selectedRole && isMultiRole ? `As ${selectedRole.replace('_', ' ')}` : 'This month'}
+                Items requiring attention
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              {selectedRole && isMultiRole 
-                ? `Latest updates across your managed projects as ${selectedRole.replace('_', ' ')}`
-                : 'Latest updates across your managed projects'
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockRecentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.project}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
+        {/* Work Items */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Brokerages */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Brokerages</CardTitle>
+              <CardDescription>
+                {selectedRole && isMultiRole 
+                  ? `Brokerages you support as ${selectedRole.replace('_', ' ')}`
+                  : 'Organizations where you provide broker assistance'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {brokerages.length === 0 ? (
+                <div className="text-center py-6">
+                  <Building className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">No brokerages assigned yet</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Projects List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Managed Projects</CardTitle>
-            <CardDescription>
-              {selectedRole && isMultiRole 
-                ? `Projects you're assisting with as ${selectedRole.replace('_', ' ')}`
-                : 'Projects you\'re assisting with as a broker assistant'
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {projects.length === 0 ? (
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Projects Assigned</h3>
-                <p className="text-muted-foreground mb-4">
-                  {selectedRole && isMultiRole 
-                    ? `You haven't been assigned to any projects as ${selectedRole.replace('_', ' ')} yet.`
-                    : 'You haven\'t been assigned to any projects yet.'
-                  } Contact your broker to get started.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {projects.map((project) => (
-                  <div key={project.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{project.name}</h3>
-                        {project.description && (
-                          <p className="text-muted-foreground text-sm mt-1">{project.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary">{project.status}</Badge>
-                          {project.project_type && (
-                            <Badge variant="outline">{project.project_type.replace('_', ' ')}</Badge>
-                          )}
+              ) : (
+                <div className="space-y-3">
+                  {brokerages.map((membership) => {
+                    const brokerage = membership.brokerages;
+                    return (
+                      <div key={brokerage.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{brokerage.name}</h4>
+                            {brokerage.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{brokerage.description}</p>
+                            )}
+                            <Badge variant="outline" className="mt-2">{membership.role.replace('_', ' ')}</Badge>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Assist
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          View Project
-                        </Button>
-                        <Button size="sm">
-                          Assist
-                        </Button>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Projects */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Projects</CardTitle>
+              <CardDescription>
+                Projects where you provide broker assistance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {projects.length === 0 ? (
+                <div className="text-center py-6">
+                  <FileSpreadsheet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">No projects assigned yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projects.map((membership) => {
+                    const project = membership.projects;
+                    return (
+                      <div key={project.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{project.name}</h4>
+                            {project.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="secondary">{project.status}</Badge>
+                              <Badge variant="outline" className="flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                {project.brokerages.name}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Assist
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   );
