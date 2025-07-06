@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Users, Mail, Info, Clock, CheckCircle, XCircle, Send } from 'lucide-react';
+import { UserPlus, Users, Mail, Info, Clock, CheckCircle, XCircle, Send, ArrowLeft, ChevronRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { createBrokerageInvitation, resendBrokerageInvitation, cancelBrokerageInvitation } from '@/services/brokerageInvitationService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -40,9 +41,11 @@ interface BrokerageInvitation {
 
 const BrokerageUsersSection = () => {
   const { brokerageId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<BrokerageUser[]>([]);
   const [invitations, setInvitations] = useState<BrokerageInvitation[]>([]);
+  const [brokerageName, setBrokerageName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({
@@ -61,6 +64,16 @@ const BrokerageUsersSection = () => {
     try {
       setLoading(true);
       
+      // Load brokerage info
+      const { data: brokerageData, error: brokerageError } = await supabase
+        .from('brokerages')
+        .select('name')
+        .eq('id', brokerageId)
+        .single();
+
+      if (brokerageError) throw brokerageError;
+      setBrokerageName(brokerageData?.name || '');
+
       // Load users using the updated function that queries brokerage_members
       const { data: usersData, error: usersError } = await supabase.rpc('get_brokerage_users', {
         brokerage_uuid: brokerageId
@@ -262,7 +275,42 @@ const BrokerageUsersSection = () => {
   }
 
   return (
-    <div className="flex-1 p-8 space-y-8">
+    <div className="flex-1 p-8 space-y-6">
+      {/* Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/brokerage/${brokerageId}`)}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Torna al Dashboard
+          </Button>
+          <div className="h-6 w-px bg-gray-300" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink 
+                  onClick={() => navigate(`/brokerage/${brokerageId}`)}
+                  className="cursor-pointer hover:text-primary"
+                >
+                  {brokerageName || 'Brokerage'}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage>Gestione Utenti</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-semibold font-dm-sans text-3xl text-black mb-2">Gestione Utenti</h1>

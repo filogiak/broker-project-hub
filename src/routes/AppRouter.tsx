@@ -160,17 +160,17 @@ const AppRouter = () => {
     {
       path: '/brokerage/:brokerageId/users',
       element: (
-        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+        <BrokerageAccessRoute>
           <BrokerageUsers />
-        </RoleBasedRoute>
+        </BrokerageAccessRoute>
       ),
     },
     {
       path: '/brokerage/:brokerageId/settings',
       element: (
-        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+        <BrokerageAccessRoute>
           <BrokerageSettings />
-        </RoleBasedRoute>
+        </BrokerageAccessRoute>
       ),
     },
     {
