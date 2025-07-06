@@ -9,6 +9,7 @@ export interface PendingInvitation {
   role: UserRole;
   project_id: string | null;
   project_name: string | null;
+  brokerage_id?: string | null;
   inviter_name: string;
   created_at: string;
   expires_at: string;
@@ -27,6 +28,7 @@ export interface InvitationAcceptanceResult {
   error?: string;
   message?: string;
   project_id?: string | null;
+  brokerage_id?: string | null;
   duplicate_membership?: boolean;
   role?: UserRole;
 }

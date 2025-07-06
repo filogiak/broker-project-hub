@@ -15,24 +15,31 @@ const PendingInvitationsWidget = () => {
   const { invitations, loading, error, acceptInvitation, forceRefresh } = usePendingInvitations();
   const { toast } = useToast();
 
-  const handleAcceptInvitation = async (invitationId: string, projectName: string | null, projectId: string | null) => {
+  const handleAcceptInvitation = async (invitationId: string, projectName: string | null, projectId: string | null, brokerageId?: string | null) => {
     try {
       const result = await acceptInvitation(invitationId);
       
       if (result.success) {
+        const entityName = projectName || (brokerageId ? 'l\'agenzia' : 'l\'invito');
         toast({
           title: "Invito Accettato",
           description: result.duplicate_membership 
             ? result.message 
-            : `Ti sei unito con successo a ${projectName || 'il progetto'}`,
+            : `Ti sei unito con successo a ${entityName}`,
           variant: "default",
         });
 
-        // Redirect to project if available
-        if (projectId && !result.duplicate_membership) {
-          setTimeout(() => {
-            navigate(`/project/${projectId}`);
-          }, 2000);
+        // Redirect based on invitation type
+        if (!result.duplicate_membership) {
+          if (projectId) {
+            setTimeout(() => {
+              navigate(`/project/${projectId}`);
+            }, 2000);
+          } else if (brokerageId) {
+            setTimeout(() => {
+              navigate(`/brokerage/${brokerageId}`);
+            }, 2000);
+          }
         }
       }
     } catch (error) {
@@ -208,13 +215,13 @@ const PendingInvitationsWidget = () => {
                 </div>
               </div>
               
-              <Button
-                onClick={() => handleAcceptInvitation(invitation.id, invitation.project_name, invitation.project_id)}
-                size="sm"
-                className="gomutuo-button-primary"
-              >
-                Accetta
-              </Button>
+               <Button
+                 onClick={() => handleAcceptInvitation(invitation.id, invitation.project_name, invitation.project_id, invitation.brokerage_id)}
+                 size="sm"
+                 className="gomutuo-button-primary"
+               >
+                 Accetta
+               </Button>
             </div>
             
             <div className="text-xs text-muted-foreground">

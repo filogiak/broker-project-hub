@@ -92,6 +92,25 @@ export const accessDiscoveryService = {
       });
     }
 
+    // 4. Brokerages through direct membership  
+    const { data: brokerageMemberships } = await supabase
+      .from('brokerage_members')
+      .select(`
+        brokerage_id,
+        brokerages!inner (*)
+      `)
+      .eq('user_id', currentUserId);
+
+    brokerageMemberships?.forEach(membership => {
+      const brokerage = membership.brokerages;
+      if (!accessibleBrokerages.has(brokerage.id)) {
+        accessibleBrokerages.set(brokerage.id, {
+          ...brokerage,
+          access_type: 'project_member' // Using project_member as the general access type
+        });
+      }
+    });
+
     // Add counts for each brokerage
     const result = Array.from(accessibleBrokerages.values());
     
@@ -199,6 +218,16 @@ export const accessDiscoveryService = {
       .single();
 
     if (ownedBrokerage) return true;
+
+    // Check if user is a direct member of the brokerage
+    const { data: brokerageMembership } = await supabase
+      .from('brokerage_members')
+      .select('id')
+      .eq('brokerage_id', brokerageId)
+      .eq('user_id', currentUserId)
+      .single();
+
+    if (brokerageMembership) return true;
 
     // Check if user is a project member in this brokerage
     const { data: projectMembership } = await supabase
