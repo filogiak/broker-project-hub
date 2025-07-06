@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
+import BrokerageAccessRoute from '@/components/auth/BrokerageAccessRoute';
 import AuthErrorBoundary from '@/components/auth/AuthErrorBoundary';
 
 // Import pages
@@ -135,25 +136,25 @@ const AppRouter = () => {
     {
       path: '/brokerage/:brokerageId',
       element: (
-        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+        <BrokerageAccessRoute>
           <BrokerageOwnerDashboard />
-        </RoleBasedRoute>
+        </BrokerageAccessRoute>
       ),
     },
     {
       path: '/brokerage/:brokerageId/projects',
       element: (
-        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin']}>
+        <BrokerageAccessRoute>
           <BrokerageProjects />
-        </RoleBasedRoute>
+        </BrokerageAccessRoute>
       ),
     },
     {
       path: '/brokerage/:brokerageId/simulations',
       element: (
-        <RoleBasedRoute allowedRoles={['brokerage_owner', 'superadmin', 'simulation_collaborator']}>
+        <BrokerageAccessRoute>
           <BrokerageSimulations />
-        </RoleBasedRoute>
+        </BrokerageAccessRoute>
       ),
     },
     {

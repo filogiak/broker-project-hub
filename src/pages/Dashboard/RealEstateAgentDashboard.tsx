@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import RoleSelector from '@/components/dashboard/RoleSelector';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
+import AccessibleBrokerages from '@/components/dashboard/AccessibleBrokerages';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -148,6 +149,9 @@ const RealEstateAgentDashboard = () => {
 
         {/* Pending Invitations Widget */}
         <PendingInvitationsWidget />
+
+        {/* Accessible Brokerages */}
+        <AccessibleBrokerages />
 
         {/* Projects List */}
         <Card>
