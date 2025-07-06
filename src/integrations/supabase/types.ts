@@ -1216,6 +1216,14 @@ export type Database = {
         Args: { p_email: string }
         Returns: Json
       }
+      cleanup_orphaned_user_roles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_email: string
+          removed_roles: Database["public"]["Enums"]["user_role"][]
+          kept_roles: Database["public"]["Enums"]["user_role"][]
+        }[]
+      }
       create_project_safe: {
         Args: {
           project_name: string
