@@ -16,6 +16,7 @@ import QuestionForm from '@/components/admin/QuestionForm';
 import QuestionsList from '@/components/admin/QuestionsList';
 import LogicRulesManager from '@/components/admin/LogicRulesManager';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ const AdminDashboard = () => {
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [isTestingFormLink, setIsTestingFormLink] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -106,6 +108,54 @@ const AdminDashboard = () => {
     }
   };
 
+  const testFormLinkAPI = async () => {
+    try {
+      setIsTestingFormLink(true);
+      
+      // Call the external API
+      const response = await fetch('https://jeqdbtzqkwzpqnuzzlvf.supabase.co/functions/v1/create-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.FORM_LINKS_API_KEY || 'missing-api-key'}`
+        },
+        body: JSON.stringify({
+          form_slug: 'simulazione-mutuo'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Store in our database
+      const { error } = await supabase
+        .from('form_links')
+        .insert({
+          form_slug: 'simulazione-mutuo',
+          link: data.link,
+          token: data.token,
+          expires_at: data.expires_at,
+          created_by: user?.id
+        });
+
+      if (error) {
+        throw new Error(`Database insert failed: ${error.message}`);
+      }
+
+      toast.success('Form link created and stored successfully');
+      console.log('Form link API response:', data);
+      
+    } catch (error) {
+      console.error('Form link API test failed:', error);
+      toast.error(`Form link test failed: ${error.message}`);
+    } finally {
+      setIsTestingFormLink(false);
+    }
+  };
+
   useEffect(() => {
     loadStats();
   }, []);
@@ -136,6 +186,15 @@ const AdminDashboard = () => {
               <Button variant="outline" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 System Settings
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={testFormLinkAPI}
+                disabled={isTestingFormLink}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isTestingFormLink ? 'animate-spin' : ''}`} />
+                Test Form Link API
               </Button>
               <Button variant="destructive" onClick={handleLogout} className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
