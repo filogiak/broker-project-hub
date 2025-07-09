@@ -112,41 +112,23 @@ const AdminDashboard = () => {
     try {
       setIsTestingFormLink(true);
       
-      // Call the external API
-      const response = await fetch('https://jeqdbtzqkwzpqnuzzlvf.supabase.co/functions/v1/create-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.FORM_LINKS_API_KEY || 'missing-api-key'}`
-        },
-        body: JSON.stringify({
+      // Call our edge function instead of external API directly
+      const { data, error } = await supabase.functions.invoke('test-form-link', {
+        body: {
           form_slug: 'simulazione-mutuo'
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
+      if (error) {
+        throw new Error(`Edge function error: ${error.message}`);
       }
 
-      const data = await response.json();
-      
-      // Store in our database
-      const { error } = await supabase
-        .from('form_links')
-        .insert({
-          form_slug: 'simulazione-mutuo',
-          link: data.link,
-          token: data.token,
-          expires_at: data.expires_at,
-          created_by: user?.id
-        });
-
-      if (error) {
-        throw new Error(`Database insert failed: ${error.message}`);
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error from edge function');
       }
 
       toast.success('Form link created and stored successfully');
-      console.log('Form link API response:', data);
+      console.log('Form link API response:', data.data);
       
     } catch (error) {
       console.error('Form link API test failed:', error);
