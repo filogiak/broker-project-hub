@@ -29,7 +29,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'x-api-key': apiKey
       },
       body: JSON.stringify({
         form_slug: form_slug
