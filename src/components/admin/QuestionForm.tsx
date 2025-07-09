@@ -87,7 +87,6 @@ const PROJECT_TYPE_OPTIONS = [
 
 const REPEATABLE_GROUP_TARGET_TABLE_OPTIONS = [
   { value: 'project_secondary_income_items', label: 'Secondary Income Items' },
-  { value: 'project_dependent_items', label: 'Dependent Items' },
   { value: 'project_debt_items', label: 'Debt Items' }
 ] as const;
 

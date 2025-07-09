@@ -95,12 +95,6 @@ const cleanupRelatedData = async (projectId: string, memberUserId: string) => {
     .eq('project_id', projectId)
     .eq('participant_designation', participantDesignation);
 
-  // Clean up dependent items
-  await supabase
-    .from('project_dependent_items')
-    .delete()
-    .eq('project_id', projectId)
-    .eq('participant_designation', participantDesignation);
 
   // Clean up secondary income items
   await supabase
@@ -109,12 +103,6 @@ const cleanupRelatedData = async (projectId: string, memberUserId: string) => {
     .eq('project_id', projectId)
     .eq('participant_designation', participantDesignation);
 
-  // Clean up properties
-  await supabase
-    .from('project_properties')
-    .delete()
-    .eq('project_id', projectId)
-    .eq('participant_designation', participantDesignation);
 
   // Note: We keep project_documents but they will show as uploaded by "deleted user"
 };
@@ -191,25 +179,13 @@ export const getMemberDataImpact = async (projectId: string, memberId: string): 
     .eq('project_id', projectId)
     .eq('participant_designation', participantDesignation);
 
-  const { count: dependentCount } = await supabase
-    .from('project_dependent_items')
-    .select('*', { count: 'exact', head: true })
-    .eq('project_id', projectId)
-    .eq('participant_designation', participantDesignation);
-
   const { count: incomeCount } = await supabase
     .from('project_secondary_income_items')
     .select('*', { count: 'exact', head: true })
     .eq('project_id', projectId)
     .eq('participant_designation', participantDesignation);
 
-  const { count: propertiesCount } = await supabase
-    .from('project_properties')
-    .select('*', { count: 'exact', head: true })
-    .eq('project_id', projectId)
-    .eq('participant_designation', participantDesignation);
-
-  const otherDataCount = (debtCount || 0) + (dependentCount || 0) + (incomeCount || 0) + (propertiesCount || 0);
+  const otherDataCount = (debtCount || 0) + (incomeCount || 0);
 
   return {
     documentsCount: documentsCount || 0,

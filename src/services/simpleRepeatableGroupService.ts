@@ -32,15 +32,6 @@ export class SimpleRepeatableGroupService {
         );
         break;
 
-      case 'project_dependent_items':
-        query = buildQuery(
-          supabase
-            .from('project_dependent_items')
-            .select('group_index')
-            .eq('project_id', projectId)
-        );
-        break;
-
       case 'project_debt_items':
         query = buildQuery(
           supabase
@@ -79,14 +70,6 @@ export class SimpleRepeatableGroupService {
         return await buildQuery(
           supabase
             .from('project_secondary_income_items')
-            .select('group_index, item_id, status, text_value, numeric_value, boolean_value, date_value, json_value')
-            .eq('project_id', projectId)
-        ).order('group_index', { ascending: true });
-
-      case 'project_dependent_items':
-        return await buildQuery(
-          supabase
-            .from('project_dependent_items')
             .select('group_index, item_id, status, text_value, numeric_value, boolean_value, date_value, json_value')
             .eq('project_id', projectId)
         ).order('group_index', { ascending: true });
@@ -138,11 +121,6 @@ export class SimpleRepeatableGroupService {
         case 'project_secondary_income_items':
           return await supabase
             .from('project_secondary_income_items')
-            .insert(baseData);
-
-        case 'project_dependent_items':
-          return await supabase
-            .from('project_dependent_items')
             .insert(baseData);
 
         case 'project_debt_items':
@@ -224,13 +202,6 @@ export class SimpleRepeatableGroupService {
             .update(valueData)
         );
 
-      case 'project_dependent_items':
-        return await buildUpdateQuery(
-          supabase
-            .from('project_dependent_items')
-            .update(valueData)
-        );
-
       case 'project_debt_items':
         return await buildUpdateQuery(
           supabase
@@ -266,13 +237,6 @@ export class SimpleRepeatableGroupService {
         return await buildDeleteQuery(
           supabase
             .from('project_secondary_income_items')
-            .delete()
-        );
-
-      case 'project_dependent_items':
-        return await buildDeleteQuery(
-          supabase
-            .from('project_dependent_items')
             .delete()
         );
 
@@ -315,14 +279,6 @@ export class SimpleRepeatableGroupService {
         query = buildQuery(
           supabase
             .from('project_secondary_income_items')
-            .select('id')
-        );
-        break;
-
-      case 'project_dependent_items':
-        query = buildQuery(
-          supabase
-            .from('project_dependent_items')
             .select('id')
         );
         break;

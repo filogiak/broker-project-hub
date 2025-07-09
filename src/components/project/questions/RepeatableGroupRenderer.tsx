@@ -69,8 +69,6 @@ const RepeatableGroupRenderer = ({ item, onChange }: RepeatableGroupRendererProp
     switch (item.repeatableGroupTargetTable) {
       case 'project_secondary_income_items':
         return <CreditCard className="h-8 w-8 text-blue-500" />;
-      case 'project_dependent_items':
-        return <Users className="h-8 w-8 text-green-500" />;
       case 'project_debt_items':
         return <Home className="h-8 w-8 text-orange-500" />;
       default:

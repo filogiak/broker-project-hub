@@ -76,13 +76,6 @@ export const useSimpleGroupQuestions = (
           );
           break;
 
-        case 'project_dependent_items':
-          answersQuery = buildAnswersQuery(
-            supabase
-              .from('project_dependent_items')
-              .select('item_id, text_value, numeric_value, boolean_value, date_value, json_value, document_reference_id')
-          );
-          break;
 
         case 'project_debt_items':
           answersQuery = buildAnswersQuery(
