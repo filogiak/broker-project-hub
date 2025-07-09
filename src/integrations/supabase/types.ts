@@ -87,54 +87,6 @@ export type Database = {
           },
         ]
       }
-      checklist_rules: {
-        Row: {
-          condition_operator: Database["public"]["Enums"]["condition_operator"]
-          condition_value: string
-          created_at: string
-          id: string
-          is_iterative: boolean | null
-          source_item_id: string
-          target_item_id: string
-          updated_at: string
-        }
-        Insert: {
-          condition_operator: Database["public"]["Enums"]["condition_operator"]
-          condition_value: string
-          created_at?: string
-          id?: string
-          is_iterative?: boolean | null
-          source_item_id: string
-          target_item_id: string
-          updated_at?: string
-        }
-        Update: {
-          condition_operator?: Database["public"]["Enums"]["condition_operator"]
-          condition_value?: string
-          created_at?: string
-          id?: string
-          is_iterative?: boolean | null
-          source_item_id?: string
-          target_item_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "checklist_rules_source_item_id_fkey"
-            columns: ["source_item_id"]
-            isOneToOne: false
-            referencedRelation: "required_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "checklist_rules_target_item_id_fkey"
-            columns: ["target_item_id"]
-            isOneToOne: false
-            referencedRelation: "required_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       form_generation_rules: {
         Row: {
           condition_logic: Json
@@ -1326,12 +1278,6 @@ export type Database = {
         | "two_applicants"
         | "three_or_more_applicants"
       checklist_status: "pending" | "submitted" | "approved" | "rejected"
-      condition_operator:
-        | "EQUALS"
-        | "NOT_EQUALS"
-        | "GREATER_THAN"
-        | "LESS_THAN"
-        | "CONTAINS"
       item_scope: "PROJECT" | "PARTICIPANT"
       item_type:
         | "text"
@@ -1496,13 +1442,6 @@ export const Constants = {
         "three_or_more_applicants",
       ],
       checklist_status: ["pending", "submitted", "approved", "rejected"],
-      condition_operator: [
-        "EQUALS",
-        "NOT_EQUALS",
-        "GREATER_THAN",
-        "LESS_THAN",
-        "CONTAINS",
-      ],
       item_scope: ["PROJECT", "PARTICIPANT"],
       item_type: [
         "text",
