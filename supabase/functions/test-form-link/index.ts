@@ -25,7 +25,7 @@ serve(async (req) => {
     console.log('Making API call to external service with form_slug:', form_slug)
 
     // Call the external API
-    const response = await fetch('https://jeqdbtzqkwzpqnuzzlvf.supabase.co/functions/v1/create-link', {
+    const response = await fetch('https://6f5c6f22-20c2-4c4a-9617-4b072ae0ec30.supabase.co/functions/v1/create-link', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
