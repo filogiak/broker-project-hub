@@ -115,25 +115,33 @@ const AdminDashboard = () => {
       
       console.log('Calling getFormLink edge function...');
       
+      // Create URL with query parameters for GET request
+      const queryParams = new URLSearchParams({
+        name: 'Filippo',
+        email: 'giacometti.filippo@gmail.com',
+        phone: '+393519440664',
+        'form-slug': 'simulazione-mutuo'
+      });
+
       const { data, error } = await supabase.functions.invoke('getFormLink', {
-        body: {
-          name: 'Filippo',
-          email: 'giacometti.filippo@gmail.com',
-          phone: '+393519440664',
-          'form-slug': 'simulazione-mutuo'
-        }
+        method: 'GET',
+        headers: {
+          'x-api-key': 'your-api-key-here' // This should be replaced with actual API key
+        },
+        body: null // No body for GET request
       });
 
       if (error) {
         throw new Error(`Edge function error: ${error.message}`);
       }
 
-      if (!data.success) {
+      if (data.status !== "success") {
         throw new Error(data.error || 'Unknown error from edge function');
       }
 
       toast.success('Form link created successfully');
-      console.log('Form link API response:', data.data);
+      console.log('Form link API response:', data);
+      console.log('Generated link:', data.link);
       
     } catch (error) {
       console.error('Form link API test failed:', error);
