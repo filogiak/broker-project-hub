@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -32,11 +32,11 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(null);
   const [rolesWithContext, setRolesWithContext] = useState<RoleWithContext[]>([]);
 
-  const availableRoles = user?.roles || [];
-  const isMultiRole = availableRoles.length > 1;
+  const availableRoles = useMemo(() => user?.roles || [], [user?.roles]);
+  const isMultiRole = useMemo(() => availableRoles.length > 1, [availableRoles.length]);
 
   // Fetch membership context for roles
-  const refreshRoles = async () => {
+  const refreshRoles = useCallback(async () => {
     if (!user?.id || availableRoles.length === 0) {
       setRolesWithContext([]);
       return;
@@ -129,7 +129,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
         }))
       );
     }
-  };
+  }, [user?.id, availableRoles]);
 
   // Initialize selected role from localStorage or default to first role with active membership
   useEffect(() => {
@@ -150,26 +150,26 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
   // Refresh roles when user changes
   useEffect(() => {
     refreshRoles();
-  }, [user?.id, availableRoles]);
+  }, [refreshRoles]);
 
-  const setSelectedRole = (role: UserRole) => {
+  const setSelectedRole = useCallback((role: UserRole) => {
     if (availableRoles.includes(role)) {
       setSelectedRoleState(role);
       localStorage.setItem('selectedRole', role);
     }
-  };
+  }, [availableRoles]);
+
+  const contextValue = useMemo(() => ({
+    selectedRole,
+    setSelectedRole,
+    availableRoles,
+    rolesWithContext,
+    isMultiRole,
+    refreshRoles,
+  }), [selectedRole, setSelectedRole, availableRoles, rolesWithContext, isMultiRole, refreshRoles]);
 
   return (
-    <RoleSelectionContext.Provider
-      value={{
-        selectedRole,
-        setSelectedRole,
-        availableRoles,
-        rolesWithContext,
-        isMultiRole,
-        refreshRoles,
-      }}
-    >
+    <RoleSelectionContext.Provider value={contextValue}>
       {children}
     </RoleSelectionContext.Provider>
   );
