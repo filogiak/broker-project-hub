@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
@@ -112,10 +113,14 @@ const AdminDashboard = () => {
     try {
       setIsTestingFormLink(true);
       
-      // Call our edge function instead of external API directly
-      const { data, error } = await supabase.functions.invoke('test-form-link', {
+      console.log('Calling getFormLink edge function...');
+      
+      const { data, error } = await supabase.functions.invoke('getFormLink', {
         body: {
-          form_slug: 'simulazione-mutuo'
+          name: 'Filippo',
+          email: 'giacometti.filippo@gmail.com',
+          phone: '+393519440664',
+          'form-slug': 'simulazione-mutuo'
         }
       });
 
@@ -127,7 +132,7 @@ const AdminDashboard = () => {
         throw new Error(data.error || 'Unknown error from edge function');
       }
 
-      toast.success('Form link created and stored successfully');
+      toast.success('Form link created successfully');
       console.log('Form link API response:', data.data);
       
     } catch (error) {
