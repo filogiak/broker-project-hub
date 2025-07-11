@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
@@ -123,20 +122,17 @@ const AdminDashboard = () => {
         'form-slug': 'simulazione-mutuo'
       });
       
-      // Make GET request to the edge function
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/getFormLink?${params.toString()}`, {
+      // Make GET request to the edge function using supabase functions.invoke
+      const { data, error } = await supabase.functions.invoke('getFormLink', {
         method: 'GET',
+        body: null,
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
-          'x-api-key': 'your-portale-api-key', // This should match PORTALE_API_KEY secret
-          'Content-Type': 'application/json'
+          'x-api-key': 'portale-api-key-placeholder' // This will be replaced by the actual PORTALE_API_KEY secret
         }
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || `Request failed with status: ${response.status}`);
+      if (error) {
+        throw new Error(error.message || 'Unknown error from edge function');
       }
 
       if (data.status !== 'success') {
