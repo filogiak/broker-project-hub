@@ -16,7 +16,7 @@ import QuestionForm from '@/components/admin/QuestionForm';
 import QuestionsList from '@/components/admin/QuestionsList';
 import LogicRulesManager from '@/components/admin/LogicRulesManager';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { getFormLink, FormLinkParams } from '@/services/formLinkService';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -112,27 +112,26 @@ const AdminDashboard = () => {
     try {
       setIsTestingFormLink(true);
       
-      // Call our edge function instead of external API directly
-      const { data, error } = await supabase.functions.invoke('test-form-link', {
-        body: {
-          form_slug: 'simulazione-mutuo'
-        }
+      console.log('🧪 Testing Form Link API with getFormLink service...');
+      
+      // Call the new getFormLink service with specified parameters
+      const result = await getFormLink({
+        name: "Filippo",
+        email: "giacometti.filippo@gmail.com",
+        phone: "+393519440664",
+        formSlug: "simulazione-mutuo"
       });
 
-      if (error) {
-        throw new Error(`Edge function error: ${error.message}`);
+      if (!result.success) {
+        throw new Error(result.error || 'Unknown error from getFormLink');
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Unknown error from edge function');
-      }
-
-      toast.success('Form link created and stored successfully');
-      console.log('Form link API response:', data.data);
+      toast.success('Form link generated successfully');
+      console.log('✅ Form link API response:', result.data);
       
     } catch (error) {
-      console.error('Form link API test failed:', error);
-      toast.error(`Form link test failed: ${error.message}`);
+      console.error('❌ Form link API test failed:', error);
+      toast.error(`Form link test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsTestingFormLink(false);
     }
