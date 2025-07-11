@@ -60,6 +60,10 @@ import SimulationQuestionnaire from '@/pages/Simulation/SimulationQuestionnaire'
 import SimulationMembers from '@/pages/Simulation/SimulationMembers';
 import SimulationSettings from '@/pages/Simulation/SimulationSettings';
 
+// Import broker assistant pages
+import BrokerAssistantInvitations from '@/pages/BrokerAssistant/BrokerAssistantInvitations';
+import BrokerAssistantSettings from '@/pages/BrokerAssistant/BrokerAssistantSettings';
+
 const AppRouter = () => {
   const { loading } = useAuth();
 
@@ -114,6 +118,22 @@ const AppRouter = () => {
       element: (
         <RoleBasedRoute allowedRoles={['broker_assistant']}>
           <BrokerAssistantDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/dashboard/broker-assistant/invitations',
+      element: (
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantInvitations />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/dashboard/broker-assistant/settings',
+      element: (
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantSettings />
         </RoleBasedRoute>
       ),
     },
