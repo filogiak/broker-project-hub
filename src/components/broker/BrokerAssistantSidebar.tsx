@@ -1,17 +1,18 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Building, MailOpen, Settings, ChevronRight } from 'lucide-react';
+import { Building, MailOpen, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
+import { useAuth } from '@/hooks/useAuth';
+import UserProfileBox from '@/components/ui/user-profile-box';
+import { Logo } from '@/components/ui/logo';
 
 const menuItems = [
   {
@@ -34,45 +35,70 @@ const menuItems = [
 export function BrokerAssistantSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state } = useSidebar();
+  const { user } = useAuth();
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard/broker-assistant') {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
+  const menuItems = [
+    {
+      title: 'Organizzazioni',
+      icon: Building,
+      path: '/dashboard/broker-assistant',
+      isActive: location.pathname === '/dashboard/broker-assistant',
+    },
+    {
+      title: 'Inviti',
+      icon: MailOpen,
+      path: '/dashboard/broker-assistant/invitations',
+      isActive: location.pathname === '/dashboard/broker-assistant/invitations',
+    },
+    {
+      title: 'Impostazioni',
+      icon: Settings,
+      path: '/dashboard/broker-assistant/settings',
+      isActive: location.pathname === '/dashboard/broker-assistant/settings',
+    },
+  ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => navigate(item.url)}
-                    isActive={isActive(item.url)}
-                    className="w-full justify-start"
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {state === 'expanded' && (
-                      <>
-                        <span>{item.title}</span>
-                        {isActive(item.url) && (
-                          <ChevronRight className="ml-auto h-4 w-4" />
-                        )}
-                      </>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+    <Sidebar className="border-r border-form-border bg-white">
+      <SidebarHeader className="p-6 border-b border-form-border">
+        <div className="flex items-center justify-center h-16">
+          <Logo />
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="p-4">
+        <SidebarMenu>
+          {menuItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                onClick={() => handleNavigation(item.path)}
+                isActive={item.isActive}
+                className={`w-full justify-start gap-3 p-3 rounded-lg font-inter ${
+                  item.isActive
+                    ? 'bg-vibe-green-light text-form-green border border-form-green/20'
+                    : 'text-gray-600 hover:bg-vibe-green-light hover:text-form-green'
+                } transition-all duration-200`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <UserProfileBox user={user} />
+        <div className="border-t border-form-border pt-4">
+          <div className="text-xs text-gray-500 text-center">
+            GoMutuo.it Broker Assistant
+          </div>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

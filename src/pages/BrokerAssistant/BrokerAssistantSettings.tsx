@@ -65,15 +65,15 @@ const BrokerAssistantSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 p-8 space-y-8">
       {/* Role Selector for multi-role users */}
       {isMultiRole && <RoleSelector />}
 
       <div className="flex items-center gap-3">
         <Settings className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-primary">Impostazioni</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Impostazioni</h1>
+          <p className="text-muted-foreground font-dm-sans">
             Gestisci le tue informazioni personali e preferenze
           </p>
         </div>
@@ -82,11 +82,11 @@ const BrokerAssistantSettings = () => {
       {/* Profile Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-dm-sans">
             <User className="h-5 w-5" />
             Informazioni Personali
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="font-dm-sans">
             Aggiorna le tue informazioni di contatto e profilo
           </CardDescription>
         </CardHeader>
@@ -94,47 +94,50 @@ const BrokerAssistantSettings = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first_name">Nome</Label>
+              <Label htmlFor="first_name" className="font-dm-sans">Nome</Label>
               <Input
                 id="first_name"
                 value={formData.first_name}
                 onChange={(e) => handleInputChange('first_name', e.target.value)}
                 placeholder="Inserisci il tuo nome"
+                className="font-dm-sans"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="last_name">Cognome</Label>
+              <Label htmlFor="last_name" className="font-dm-sans">Cognome</Label>
               <Input
                 id="last_name"
                 value={formData.last_name}
                 onChange={(e) => handleInputChange('last_name', e.target.value)}
                 placeholder="Inserisci il tuo cognome"
+                className="font-dm-sans"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="font-dm-sans">Email</Label>
             <Input
               id="email"
               value={user?.email || ''}
               disabled
-              className="bg-muted"
+              className="bg-muted font-dm-sans"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground font-dm-sans">
               L'email non può essere modificata
             </p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefono</Label>
+            <Label htmlFor="phone" className="font-dm-sans">Telefono</Label>
             <Input
               id="phone"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               placeholder="Inserisci il tuo numero di telefono"
               type="tel"
+              className="font-dm-sans"
             />
           </div>
           
@@ -142,7 +145,7 @@ const BrokerAssistantSettings = () => {
             <Button 
               onClick={handleSaveSettings}
               disabled={isUpdating}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 font-dm-sans"
             >
               <Save className="h-4 w-4" />
               {isUpdating ? 'Salvando...' : 'Salva Impostazioni'}

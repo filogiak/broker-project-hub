@@ -72,15 +72,15 @@ const BrokerAssistantOrganizations = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 p-8 space-y-8">
       {/* Role Selector for multi-role users */}
       {isMultiRole && <RoleSelector />}
 
       <div className="flex items-center gap-3">
         <Building className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-primary">Organizzazioni</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Organizzazioni</h1>
+          <p className="text-muted-foreground font-dm-sans">
             Organizzazioni dove fornisci assistenza come broker assistant
           </p>
         </div>
@@ -92,8 +92,8 @@ const BrokerAssistantOrganizations = () => {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Building className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nessuna organizzazione trovata</h3>
-              <p className="text-muted-foreground text-center max-w-md">
+              <h3 className="text-lg font-medium mb-2 font-dm-sans">Nessuna organizzazione trovata</h3>
+              <p className="text-muted-foreground text-center max-w-md font-dm-sans">
                 Non sei ancora membro di nessuna organizzazione come broker assistant. 
                 Attendi un invito dal proprietario di un'organizzazione.
               </p>
@@ -108,12 +108,12 @@ const BrokerAssistantOrganizations = () => {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 font-dm-sans">
                           <Building className="h-5 w-5" />
                           {brokerage.name}
                         </CardTitle>
                         {brokerage.description && (
-                          <CardDescription className="mt-2">
+                          <CardDescription className="mt-2 font-dm-sans">
                             {brokerage.description}
                           </CardDescription>
                         )}
@@ -128,14 +128,14 @@ const BrokerAssistantOrganizations = () => {
                         {membership.role.replace('_', ' ')}
                       </Badge>
                       
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground font-dm-sans">
                         Membro dal {new Date(membership.joined_at || '').toLocaleDateString('it-IT')}
                       </span>
                     </div>
                     
                     <Button 
                       onClick={() => handleAccessBrokerage(brokerage.id)}
-                      className="w-full"
+                      className="w-full font-dm-sans"
                       variant="default"
                     >
                       Accedi all'organizzazione

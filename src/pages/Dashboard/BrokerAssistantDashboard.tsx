@@ -4,7 +4,7 @@ import BrokerAssistantOrganizations from '@/pages/BrokerAssistant/BrokerAssistan
 
 const BrokerAssistantDashboard = () => {
   return (
-    <BrokerAssistantLayout title="Organizzazioni">
+    <BrokerAssistantLayout>
       <BrokerAssistantOrganizations />
     </BrokerAssistantLayout>
   );

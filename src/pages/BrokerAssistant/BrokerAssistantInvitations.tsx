@@ -55,15 +55,15 @@ const BrokerAssistantInvitations = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 p-8 space-y-8">
       {/* Role Selector for multi-role users */}
       {isMultiRole && <RoleSelector />}
 
       <div className="flex items-center gap-3">
         <MailOpen className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-primary">Inviti</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Inviti</h1>
+          <p className="text-muted-foreground font-dm-sans">
             Inviti in sospeso per organizzazioni e simulazioni
           </p>
         </div>
@@ -75,8 +75,8 @@ const BrokerAssistantInvitations = () => {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <MailOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nessun invito in sospeso</h3>
-              <p className="text-muted-foreground text-center max-w-md">
+              <h3 className="text-lg font-medium mb-2 font-dm-sans">Nessun invito in sospeso</h3>
+              <p className="text-muted-foreground text-center max-w-md font-dm-sans">
                 Al momento non hai inviti in sospeso per organizzazioni o simulazioni.
               </p>
             </CardContent>
@@ -88,7 +88,7 @@ const BrokerAssistantInvitations = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 font-dm-sans">
                         {invitation.brokerage_id ? (
                           <Building className="h-5 w-5" />
                         ) : (
@@ -96,7 +96,7 @@ const BrokerAssistantInvitations = () => {
                         )}
                         Invito {invitation.brokerage_id ? 'Organizzazione' : 'Progetto'}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="font-dm-sans">
                         {invitation.project_name || 'Invito per organizzazione'}
                       </CardDescription>
                     </div>
@@ -110,12 +110,12 @@ const BrokerAssistantInvitations = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-4 w-4" />
-                      <span>Invitato da: {invitation.inviter_name}</span>
+                      <span className="font-dm-sans">Invitato da: {invitation.inviter_name}</span>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>
+                      <span className="font-dm-sans">
                         Scade tra {invitation.days_remaining} giorni
                       </span>
                     </div>
@@ -125,12 +125,12 @@ const BrokerAssistantInvitations = () => {
                     <Button 
                       onClick={() => handleAcceptInvitation(invitation.id)}
                       disabled={acceptingId === invitation.id}
-                      className="flex-1"
+                      className="flex-1 font-dm-sans"
                     >
                       {acceptingId === invitation.id ? 'Accettando...' : 'Accetta Invito'}
                     </Button>
                     
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1 font-dm-sans">
                       Rifiuta
                     </Button>
                   </div>
