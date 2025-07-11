@@ -172,6 +172,14 @@ export class UnifiedInvitationService {
   ): Promise<{ success: boolean; error?: string }> {
     console.log('📧 [INVITATION SERVICE] Creating invitation:', { projectId, role, email });
     
+    // Prevent simulation_collaborator from being invited to projects
+    if (role === 'simulation_collaborator') {
+      return {
+        success: false,
+        error: 'Simulation collaborators cannot be invited to projects. They work at brokerage and simulation level only.'
+      };
+    }
+    
     try {
       // Use existing email invitation service
       const { createEmailInvitation } = await import('./emailInvitationService');

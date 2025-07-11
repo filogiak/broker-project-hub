@@ -13,6 +13,11 @@ export const createEmailInvitation = async (
   console.log('📧 [EMAIL INVITATION] Starting email invitation creation');
   console.log('📧 [EMAIL INVITATION] Parameters:', { projectId, role, email });
 
+  // Prevent simulation_collaborator from being invited to projects
+  if (role === 'simulation_collaborator') {
+    throw new Error('Simulation collaborators cannot be invited to projects. They work at brokerage and simulation level only.');
+  }
+
   try {
     // Get current user session
     const { data: { session } } = await supabase.auth.getSession();

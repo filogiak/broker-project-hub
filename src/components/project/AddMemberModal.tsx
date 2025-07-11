@@ -31,6 +31,7 @@ const AddMemberModal = ({ isOpen, onClose, projectId, onMemberAdded }: AddMember
   const [currentApplicantCount, setCurrentApplicantCount] = useState(0);
   const { toast } = useToast();
 
+  // Project-only roles (simulation_collaborator excluded as they work only at brokerage/simulation level)
   const roleOptions = [
     { value: 'real_estate_agent' as UserRole, label: 'Real Estate Agent' },
     { value: 'broker_assistant' as UserRole, label: 'Broker Assistant' },
