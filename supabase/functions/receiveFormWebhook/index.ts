@@ -74,22 +74,32 @@ serve(async (req) => {
     console.log('✅ API key validated successfully');
     console.log('🎯 Webhook received');
 
-    // Parse request body for potential future use
+    // Parse request body and collect all webhook data
     let requestBody;
+    let webhookDetails = {
+      headers: Object.fromEntries(req.headers.entries()),
+      method: req.method,
+      url: req.url,
+      timestamp: new Date().toISOString()
+    };
+
     try {
       const bodyText = await req.text();
       if (bodyText) {
         requestBody = JSON.parse(bodyText);
+        webhookDetails.body = requestBody;
         console.log('📦 Request body parsed successfully:', {
           hasData: !!requestBody,
           keys: requestBody ? Object.keys(requestBody) : []
         });
       } else {
         console.log('📝 Empty request body received');
+        webhookDetails.body = null;
       }
     } catch (parseError) {
       console.log('⚠️ Failed to parse request body as JSON:', parseError.message);
-      // Don't fail the webhook for parsing errors - log and continue
+      webhookDetails.body = bodyText;
+      webhookDetails.parseError = parseError.message;
     }
 
     // Initialize Supabase client with service role (bypassing RLS)
@@ -105,8 +115,38 @@ serve(async (req) => {
     );
     console.log('🗄️ Supabase admin client initialized (RLS bypassed)');
 
-    // Future webhook processing logic can be added here
-    // For now, we just log the successful webhook reception
+    // Determine event name from the webhook data
+    let eventName = 'webhook_received';
+    if (requestBody && typeof requestBody === 'object') {
+      // Try to extract event name from common webhook patterns
+      eventName = requestBody.event || 
+                 requestBody.type || 
+                 requestBody.event_type || 
+                 requestBody.action || 
+                 'webhook_received';
+    }
+
+    // Store webhook event in database
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('webhook_logs')
+        .insert({
+          event_name: eventName,
+          details: webhookDetails
+        })
+        .select();
+
+      if (error) {
+        console.error('❌ Failed to store webhook log:', error);
+        // Don't fail the webhook if logging fails, just log the error
+      } else {
+        console.log('✅ Webhook logged to database:', data?.[0]?.id);
+      }
+    } catch (dbError) {
+      console.error('❌ Database error while logging webhook:', dbError);
+      // Continue processing even if logging fails
+    }
+
     console.log('🎉 Webhook processing completed successfully');
 
     return new Response(
