@@ -19,39 +19,78 @@ const BrokerAssistantOrganizations = () => {
   const { data: brokerages, isLoading } = useQuery({
     queryKey: ['broker-assistant-brokerages', user?.id, selectedRole],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      let query = supabase
-        .from('brokerage_members')
-        .select(`
-          brokerage_id,
-          role,
-          joined_at,
-          brokerages!inner (
-            id,
-            name,
-            description,
-            created_at,
-            owner_id
-          )
-        `)
-        .eq('user_id', user.id);
-
-      // Filter by selected role if multi-role user
-      if (selectedRole && isMultiRole) {
-        query = query.eq('role', selectedRole);
-      } else {
-        query = query.eq('role', 'broker_assistant');
-      }
-
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching brokerage data:', error);
+      if (!user?.id) {
+        console.log('🔍 [BrokerAssistant] No user ID available');
         return [];
       }
 
-      return data || [];
+      console.log('🔍 [BrokerAssistant] Starting query for user:', user.id);
+      console.log('🔍 [BrokerAssistant] Selected role:', selectedRole);
+      console.log('🔍 [BrokerAssistant] Is multi-role:', isMultiRole);
+      console.log('🔍 [BrokerAssistant] User roles:', user.roles);
+
+      try {
+        // First, get the brokerage memberships
+        let membershipQuery = supabase
+          .from('brokerage_members')
+          .select('brokerage_id, role, joined_at')
+          .eq('user_id', user.id);
+
+        // Apply role filter if needed
+        if (selectedRole && isMultiRole) {
+          console.log('🔍 [BrokerAssistant] Filtering by selected role:', selectedRole);
+          membershipQuery = membershipQuery.eq('role', selectedRole);
+        } else if (!isMultiRole) {
+          // For single role users, filter by broker_assistant
+          console.log('🔍 [BrokerAssistant] Single role user, filtering by broker_assistant');
+          membershipQuery = membershipQuery.eq('role', 'broker_assistant');
+        }
+
+        const { data: memberships, error: membershipError } = await membershipQuery;
+        
+        if (membershipError) {
+          console.error('❌ [BrokerAssistant] Error fetching memberships:', membershipError);
+          return [];
+        }
+
+        console.log('✅ [BrokerAssistant] Memberships found:', memberships?.length || 0);
+        console.log('📊 [BrokerAssistant] Membership data:', memberships);
+
+        if (!memberships || memberships.length === 0) {
+          console.log('ℹ️ [BrokerAssistant] No memberships found');
+          return [];
+        }
+
+        // Now get the brokerage details
+        const brokerageIds = memberships.map(m => m.brokerage_id);
+        console.log('🔍 [BrokerAssistant] Fetching brokerages for IDs:', brokerageIds);
+
+        const { data: brokerageDetails, error: brokerageError } = await supabase
+          .from('brokerages')
+          .select('id, name, description, created_at, owner_id')
+          .in('id', brokerageIds);
+
+        if (brokerageError) {
+          console.error('❌ [BrokerAssistant] Error fetching brokerage details:', brokerageError);
+          return [];
+        }
+
+        console.log('✅ [BrokerAssistant] Brokerage details found:', brokerageDetails?.length || 0);
+        console.log('📊 [BrokerAssistant] Brokerage details:', brokerageDetails);
+
+        // Combine the data
+        const combinedData = memberships.map(membership => ({
+          ...membership,
+          brokerages: brokerageDetails?.find(b => b.id === membership.brokerage_id)
+        })).filter(item => item.brokerages); // Only include items where we found the brokerage
+
+        console.log('✅ [BrokerAssistant] Combined data:', combinedData);
+        return combinedData;
+
+      } catch (error) {
+        console.error('❌ [BrokerAssistant] Unexpected error:', error);
+        return [];
+      }
     },
     enabled: !!user?.id,
   });
