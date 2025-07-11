@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
@@ -116,9 +117,9 @@ const AdminDashboard = () => {
       // Call our new getFormLink edge function
       const { data, error } = await supabase.functions.invoke('getFormLink', {
         body: {
-          name: 'Test User',
-          email: 'test@example.com',
-          phone: '+1234567890',
+          name: 'Filippo',
+          email: 'giacometti.filippo@gmail.com',
+          phone: '+393519440664',
           formSlug: 'simulazione-mutuo'
         }
       });
@@ -341,3 +342,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
