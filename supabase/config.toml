@@ -32,9 +32,6 @@ major_version = 15
 [functions.create-brokerage-owner]
 verify_jwt = false
 
-[functions.getFormLink]
-verify_jwt = true
-
 [studio]
 enabled = true
 port = 54323

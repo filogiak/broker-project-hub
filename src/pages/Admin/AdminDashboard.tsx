@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
@@ -113,35 +112,23 @@ const AdminDashboard = () => {
     try {
       setIsTestingFormLink(true);
       
-      console.log('Calling getFormLink edge function...');
-      
-      // Create URL with query parameters for GET request
-      const queryParams = new URLSearchParams({
-        name: 'Filippo',
-        email: 'giacometti.filippo@gmail.com',
-        phone: '+393519440664',
-        'form-slug': 'simulazione-mutuo'
-      });
-
-      const { data, error } = await supabase.functions.invoke('getFormLink', {
-        method: 'GET',
-        headers: {
-          'x-api-key': 'your-api-key-here' // This should be replaced with actual API key
-        },
-        body: null // No body for GET request
+      // Call our edge function instead of external API directly
+      const { data, error } = await supabase.functions.invoke('test-form-link', {
+        body: {
+          form_slug: 'simulazione-mutuo'
+        }
       });
 
       if (error) {
         throw new Error(`Edge function error: ${error.message}`);
       }
 
-      if (data.status !== "success") {
+      if (!data.success) {
         throw new Error(data.error || 'Unknown error from edge function');
       }
 
-      toast.success('Form link created successfully');
-      console.log('Form link API response:', data);
-      console.log('Generated link:', data.link);
+      toast.success('Form link created and stored successfully');
+      console.log('Form link API response:', data.data);
       
     } catch (error) {
       console.error('Form link API test failed:', error);
