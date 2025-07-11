@@ -1,15 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface GetFormLinkRequest {
-  name: string;
-  email: string;
-  phone: string;
-  'form-slug': string;
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
 }
 
 Deno.serve(async (req) => {
@@ -18,12 +10,52 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Only accept GET requests
+  if (req.method !== 'GET') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { 
+        status: 405, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
   try {
     console.log('getFormLink function started');
     
-    // Parse request body
-    const requestBody: GetFormLinkRequest = await req.json();
-    const { name, email, phone, 'form-slug': formSlug } = requestBody;
+    // Validate API key
+    const apiKey = req.headers.get('x-api-key');
+    const expectedApiKey = Deno.env.get('PORTALE_API_KEY');
+    
+    if (!expectedApiKey) {
+      console.error('PORTALE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    if (!apiKey || apiKey !== expectedApiKey) {
+      console.error('Invalid or missing API key');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    // Extract query parameters
+    const url = new URL(req.url);
+    const name = url.searchParams.get('name');
+    const email = url.searchParams.get('email');
+    const phone = url.searchParams.get('phone');
+    const formSlug = url.searchParams.get('form-slug');
     
     console.log('Request parameters:', { name, email, phone, formSlug });
     
@@ -41,75 +73,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get API key from environment
-    const apiKey = Deno.env.get('PORTALE_API_KEY');
-    if (!apiKey) {
-      console.error('PORTALE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'API key not configured' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Construct the API URL with query parameters
-    const apiUrl = new URL('https://jegdbtznkwzpqntzzlvf.supabase.co/functions/v1/generateLinkAPI');
-    apiUrl.searchParams.append('name', name);
-    apiUrl.searchParams.append('email', email);
-    apiUrl.searchParams.append('phone', phone);
-    apiUrl.searchParams.append('form-slug', formSlug);
-
-    console.log('Making API request to:', apiUrl.toString());
-
-    // Make the GET request to external API
-    const response = await fetch(apiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    console.log('API response status:', response.status);
-
-    // Handle error responses
-    if (!response.ok) {
-      if (response.status === 403) {
-        console.error('Unauthorized or not found (403)');
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized or not found' }),
-          { 
-            status: 403, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
-      
-      console.error('API request failed with status:', response.status);
-      return new Response(
-        JSON.stringify({ 
-          error: `API request failed with status: ${response.status}` 
-        }),
-        { 
-          status: response.status, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Parse response as JSON
-    const formLinks = await response.json();
-    console.log('API response data:', formLinks);
-
+    // Generate the final link (customize this based on your requirements)
+    const finalLink = `https://example.com/forms/${formSlug}?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`;
+    
+    console.log('Generated final link:', finalLink);
     console.log('getFormLink function completed successfully');
 
-    // Return successful response
+    // Return successful response in the required format
     return new Response(
       JSON.stringify({
-        success: true,
-        data: formLinks
+        link: finalLink,
+        status: "success"
       }),
       { 
         status: 200, 

@@ -113,27 +113,39 @@ const AdminDashboard = () => {
     try {
       setIsTestingFormLink(true);
       
-      console.log('Calling getFormLink edge function...');
+      console.log('Calling getFormLink edge function with GET request...');
       
-      const { data, error } = await supabase.functions.invoke('getFormLink', {
-        body: {
-          name: 'Filippo',
-          email: 'giacometti.filippo@gmail.com',
-          phone: '+393519440664',
-          'form-slug': 'simulazione-mutuo'
+      // Construct query parameters
+      const params = new URLSearchParams({
+        name: 'Filippo',
+        email: 'giacometti.filippo@gmail.com',
+        phone: '+393519440664',
+        'form-slug': 'simulazione-mutuo'
+      });
+      
+      // Make GET request to the edge function
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/getFormLink?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'x-api-key': 'your-portale-api-key', // This should match PORTALE_API_KEY secret
+          'Content-Type': 'application/json'
         }
       });
 
-      if (error) {
-        throw new Error(`Edge function error: ${error.message}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with status: ${response.status}`);
       }
 
-      if (!data.success) {
+      if (data.status !== 'success') {
         throw new Error(data.error || 'Unknown error from edge function');
       }
 
       toast.success('Form link created successfully');
-      console.log('Form link API response:', data.data);
+      console.log('Form link API response:', data);
+      console.log('Generated link:', data.link);
       
     } catch (error) {
       console.error('Form link API test failed:', error);
