@@ -5,9 +5,8 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
 import ProjectsFullSection from '@/components/brokerage/ProjectsFullSection';
 import { useAuth } from '@/hooks/useAuth';
-import { getBrokerageByOwner } from '@/services/brokerageService';
-import { createProject, deleteProject } from '@/services/projectService';
-import { getUserProjects } from '@/services/userProjectService';
+import { getBrokerageByAccess } from '@/services/brokerageService';
+import { createProject, deleteProject, getBrokerageProjects } from '@/services/projectService';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -33,20 +32,21 @@ const BrokerageProjects = () => {
       try {
         setLoading(true);
         
-        // Load brokerage
-        const brokerageData = await getBrokerageByOwner(user.id);
-        if (!brokerageData) {
+        // Load brokerage using the new access logic
+        const brokerageData = await getBrokerageByAccess(user.id);
+        if (!brokerageData || brokerageData.id !== brokerageId) {
           toast({
-            title: "Error",
-            description: "No brokerage found for your account.",
+            title: "Access Denied",
+            description: "You don't have access to this brokerage.",
             variant: "destructive",
           });
+          navigate('/dashboard');
           return;
         }
         setBrokerage(brokerageData);
 
-        // Load projects
-        const projectsData = await getUserProjects(user.id);
+        // Load projects for this brokerage
+        const projectsData = await getBrokerageProjects(brokerageData.id);
         setProjects(projectsData);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -61,7 +61,7 @@ const BrokerageProjects = () => {
     };
 
     loadData();
-  }, [user, navigate, toast]);
+  }, [user, brokerageId, navigate, toast]);
 
   const handleCreateProject = async (projectData: any) => {
     if (!brokerage) return;
@@ -69,7 +69,8 @@ const BrokerageProjects = () => {
     try {
       const newProject = await createProject({
         ...projectData,
-        brokerageId: brokerage.id,
+        brokerage_id: brokerage.id,
+        created_by: user?.id || '',
       });
 
       setProjects(prev => [newProject, ...prev]);
