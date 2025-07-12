@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
@@ -96,6 +97,7 @@ const BrokerAssistantOrganizations = () => {
   });
 
   const handleAccessBrokerage = (brokerageId: string) => {
+    console.log('🚀 [BrokerAssistant] Navigating to brokerage:', brokerageId);
     navigate(`/brokerage/${brokerageId}`);
   };
 

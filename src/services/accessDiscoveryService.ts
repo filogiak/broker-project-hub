@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -6,7 +7,7 @@ type Project = Database['public']['Tables']['projects']['Row'];
 type Simulation = Database['public']['Tables']['simulations']['Row'];
 
 export interface AccessibleBrokerage extends Brokerage {
-  access_type: 'owner' | 'project_member' | 'simulation_member';
+  access_type: 'owner' | 'project_member' | 'simulation_member' | 'brokerage_member';
   project_count?: number;
   simulation_count?: number;
 }
@@ -20,7 +21,7 @@ export interface AccessibleSimulation extends Simulation {
 }
 
 export const accessDiscoveryService = {
-  // Get all brokerages user has access to (owned, project member, or simulation member)
+  // Get all brokerages user has access to (owned, project member, simulation member, or brokerage member)
   async getAccessibleBrokerages(userId?: string): Promise<AccessibleBrokerage[]> {
     const { data: { user } } = await supabase.auth.getUser();
     const currentUserId = userId || user?.id;
@@ -92,7 +93,7 @@ export const accessDiscoveryService = {
       });
     }
 
-    // 4. Brokerages through direct membership  
+    // 4. Brokerages through direct membership (NEW - this fixes the broker assistant access)
     const { data: brokerageMemberships } = await supabase
       .from('brokerage_members')
       .select(`
@@ -106,7 +107,7 @@ export const accessDiscoveryService = {
       if (!accessibleBrokerages.has(brokerage.id)) {
         accessibleBrokerages.set(brokerage.id, {
           ...brokerage,
-          access_type: 'project_member' // Using project_member as the general access type
+          access_type: 'brokerage_member'
         });
       }
     });
@@ -202,63 +203,23 @@ export const accessDiscoveryService = {
     }));
   },
 
-  // Check if user can access a specific brokerage
+  // Check if user can access a specific brokerage (updated to use new database function)
   async canAccessBrokerage(brokerageId: string, userId?: string): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     const currentUserId = userId || user?.id;
     
     if (!currentUserId) return false;
 
-    // Check if user owns the brokerage
-    const { data: ownedBrokerage } = await supabase
-      .from('brokerages')
-      .select('id')
-      .eq('id', brokerageId)
-      .eq('owner_id', currentUserId)
-      .single();
+    const { data, error } = await supabase.rpc('user_can_access_brokerage', {
+      brokerage_uuid: brokerageId,
+      user_uuid: currentUserId
+    });
 
-    if (ownedBrokerage) return true;
+    if (error) {
+      console.error('Error checking brokerage access:', error);
+      return false;
+    }
 
-    // Check if user is a direct member of the brokerage
-    const { data: brokerageMembership } = await supabase
-      .from('brokerage_members')
-      .select('id')
-      .eq('brokerage_id', brokerageId)
-      .eq('user_id', currentUserId)
-      .single();
-
-    if (brokerageMembership) return true;
-
-    // Check if user is a project member in this brokerage
-    const { data: projectMembership } = await supabase
-      .from('project_members')
-      .select('id')
-      .eq('user_id', currentUserId)
-      .in('project_id', 
-        (await supabase
-          .from('projects')
-          .select('id')
-          .eq('brokerage_id', brokerageId)
-        ).data?.map(p => p.id) || []
-      )
-      .single();
-
-    if (projectMembership) return true;
-
-    // Check if user is a simulation member in this brokerage
-    const { data: simulationMembership } = await supabase
-      .from('simulation_members')
-      .select('id')
-      .eq('user_id', currentUserId)
-      .in('simulation_id',
-        (await supabase
-          .from('simulations')
-          .select('id')
-          .eq('brokerage_id', brokerageId)
-        ).data?.map(s => s.id) || []
-      )
-      .single();
-
-    return !!simulationMembership;
+    return data || false;
   }
 };

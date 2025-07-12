@@ -6,14 +6,14 @@ import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
 import BrokerageDashboard from './BrokerageDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/services/authService';
-import { getBrokerageByOwner } from '@/services/brokerageService';
+import { getBrokerageByAccess } from '@/services/brokerageService';
 import { createProject, deleteProject } from '@/services/projectService';
 import { getUserProjects } from '@/services/userProjectService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import type { BrokerageWithAccess } from '@/services/brokerageService';
 
-type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -23,7 +23,7 @@ const BrokerageOwnerDashboard = () => {
   const location = useLocation();
   const { user, loading: authLoading, sessionError, refreshUser } = useAuth();
   const { toast } = useToast();
-  const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
+  const [brokerage, setBrokerage] = useState<BrokerageWithAccess | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,19 +95,19 @@ const BrokerageOwnerDashboard = () => {
         setUserProfile(profileData);
         console.log('✅ User profile loaded successfully');
 
-        // Load user's brokerage
-        console.log('🏢 Loading user brokerage...');
+        // Load user's brokerage using the new function that handles both ownership and membership
+        console.log('🏢 Loading user brokerage access...');
         try {
-          const brokerageData = await getBrokerageByOwner(user.id);
+          const brokerageData = await getBrokerageByAccess(user.id);
           
           if (!brokerageData) {
-            console.log('❌ No brokerage found for user');
+            console.log('❌ No brokerage access found for user');
             setError('No brokerage found for your account. You may not have the required permissions.');
             return;
           }
 
           setBrokerage(brokerageData);
-          console.log('✅ Brokerage loaded successfully:', brokerageData.name);
+          console.log('✅ Brokerage access loaded successfully:', brokerageData.name, 'as', brokerageData.access_type);
 
           // Load projects with improved error handling
           console.log('📋 Loading user projects...');

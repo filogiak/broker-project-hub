@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,10 +24,14 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
       
       try {
         setLoading(true);
+        console.log('🔍 [BrokerageAccessRoute] Checking access for brokerage:', brokerageId);
+        
         const canAccess = await accessDiscoveryService.canAccessBrokerage(brokerageId);
+        console.log('🔍 [BrokerageAccessRoute] Access check result:', canAccess);
+        
         setHasAccess(canAccess);
       } catch (error) {
-        console.error('Error checking brokerage access:', error);
+        console.error('❌ [BrokerageAccessRoute] Error checking brokerage access:', error);
         setHasAccess(false);
       } finally {
         setLoading(false);
@@ -53,11 +58,12 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
   }
 
   if (hasAccess === false) {
-    console.log('BrokerageAccessRoute - Access denied, redirecting to:', fallbackPath);
+    console.log('🚫 [BrokerageAccessRoute] Access denied, redirecting to:', fallbackPath);
     return <Navigate to={fallbackPath} replace />;
   }
 
   if (hasAccess === true) {
+    console.log('✅ [BrokerageAccessRoute] Access granted, rendering children');
     return <>{children}</>;
   }
 

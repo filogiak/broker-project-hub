@@ -1172,6 +1172,18 @@ export type Database = {
           last_name: string
         }[]
       }
+      get_brokerage_by_access: {
+        Args: { user_uuid?: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          owner_id: string
+          created_at: string
+          updated_at: string
+          access_type: string
+        }[]
+      }
       get_brokerage_users: {
         Args: { brokerage_uuid: string }
         Returns: {
@@ -1250,6 +1262,10 @@ export type Database = {
       safe_create_simulation: {
         Args: { p_name: string; p_brokerage_id: string; p_description?: string }
         Returns: string
+      }
+      user_can_access_brokerage: {
+        Args: { brokerage_uuid: string; user_uuid?: string }
+        Returns: boolean
       }
       user_can_access_project: {
         Args: { project_uuid: string; user_uuid?: string }
