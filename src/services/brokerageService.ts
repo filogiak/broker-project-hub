@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export interface BrokerageWithAccess extends Brokerage {
   access_type: 'owner' | 'member';
@@ -73,6 +74,31 @@ export const updateBrokerage = async (
     .from('brokerages')
     .update(updates)
     .eq('id', brokerageId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Alias for updateBrokerage to match component expectation
+export const updateBrokerageProfile = updateBrokerage;
+
+export const updateOwnerProfile = async (
+  profileId: string,
+  updates: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  }
+): Promise<Profile> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', profileId)
     .select()
     .single();
 
