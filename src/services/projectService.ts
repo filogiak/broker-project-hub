@@ -57,3 +57,47 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
     return [];
   }
 };
+
+export const getUserProjectStats = async (userId: string) => {
+  try {
+    console.log('📊 Getting project stats for user:', userId);
+    
+    // Get projects where user is a member
+    const { data: projectsData, error: projectsError } = await supabase
+      .from('project_members')
+      .select('project_id, projects(*)')
+      .eq('user_id', userId)
+      .order('joined_at', { ascending: false });
+
+    if (projectsError) {
+      console.error('❌ Error fetching user project stats:', projectsError);
+      return {
+        totalProjects: 0,
+        activeProjects: 0,
+        recentProjects: []
+      };
+    }
+
+    const projects = projectsData?.map(pm => pm.projects).filter(Boolean) || [];
+    const activeProjects = projects.filter(p => p?.status === 'active');
+
+    console.log('✅ User project stats fetched successfully:', {
+      total: projects.length,
+      active: activeProjects.length
+    });
+
+    return {
+      totalProjects: projects.length,
+      activeProjects: activeProjects.length,
+      recentProjects: projects.slice(0, 5)
+    };
+
+  } catch (error) {
+    console.error('❌ Unexpected error in getUserProjectStats:', error);
+    return {
+      totalProjects: 0,
+      activeProjects: 0,
+      recentProjects: []
+    };
+  }
+};

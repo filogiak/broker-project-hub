@@ -203,14 +203,15 @@ const BrokerageOwnerDashboard = () => {
       const newProject = await createProject({
         name: projectData.name,
         description: projectData.description,
-        brokerageId: brokerage.id,
-        projectType: projectData.projectType,
-        applicantCount: projectData.applicantCount,
-        hasGuarantor: projectData.hasGuarantor,
-        applicantOneFirstName: projectData.applicantOneFirstName,
-        applicantOneLastName: projectData.applicantOneLastName,
-        applicantTwoFirstName: projectData.applicantTwoFirstName,
-        applicantTwoLastName: projectData.applicantTwoLastName,
+        brokerage_id: brokerage.id,
+        project_type: projectData.projectType,
+        applicant_count: projectData.applicantCount,
+        has_guarantor: projectData.hasGuarantor,
+        applicant_one_first_name: projectData.applicantOneFirstName,
+        applicant_one_last_name: projectData.applicantOneLastName,
+        applicant_two_first_name: projectData.applicantTwoFirstName,
+        applicant_two_last_name: projectData.applicantTwoLastName,
+        created_by: user?.id || '',
       });
 
       setProjects(prev => [newProject, ...prev]);
