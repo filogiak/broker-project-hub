@@ -1230,6 +1230,10 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: boolean
       }
+      is_user_superadmin: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
       process_invitation_acceptance: {
         Args: { p_email: string; p_encrypted_token: string; p_user_id?: string }
         Returns: Json
