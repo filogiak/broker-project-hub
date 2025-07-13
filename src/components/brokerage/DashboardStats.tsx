@@ -1,143 +1,200 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Clock, Users } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Users, FileText, TrendingUp, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import ProjectsSection from './ProjectsSection';
+import { simulationService } from '@/services/simulationService';
 import { getUserProjectStats } from '@/services/projectService';
+import { createProject, deleteProject } from '@/services/projectService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import BrokerageSimulationStats from './BrokerageSimulationStats';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'];
+type Simulation = Database['public']['Tables']['simulations']['Row'];
 
 interface DashboardStatsProps {
   brokerageId: string;
   projects: Project[];
 }
 
-const DashboardStats = ({
-  brokerageId,
-  projects
-}: DashboardStatsProps) => {
+const DashboardStats = ({ brokerageId, projects }: DashboardStatsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const [invitedUsers, setInvitedUsers] = useState(0);
+  const [simulations, setSimulations] = useState<Simulation[]>([]);
+  const [userStats, setUserStats] = useState({
+    totalProjects: 0,
+    activeProjects: 0,
+    recentProjects: []
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!user?.id) {
-        setInvitedUsers(0);
-        setLoading(false);
-        return;
-      }
+      if (!user?.id) return;
+
       try {
+        setLoading(true);
+        
+        // Load simulations
+        const simulationsData = await simulationService.getBrokerageSimulations(brokerageId);
+        setSimulations(simulationsData);
+
+        // Load user project stats
         const stats = await getUserProjectStats(user.id);
-        setInvitedUsers(stats.invitedUsers);
+        setUserStats(stats);
+
       } catch (error) {
-        console.error('Error loading stats:', error);
-        setInvitedUsers(0);
+        console.error('Error loading dashboard stats:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard statistics.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
+
     loadStats();
-  }, [user?.id, projects.length]);
+  }, [brokerageId, user?.id, toast]);
 
-  const activeProjects = projects.filter(p => p.status === 'active').length;
-  const approvalsDue = projects.filter(p => p.status === 'pending_approval').length;
+  const handleCreateProject = async (projectData: any) => {
+    try {
+      const newProject = await createProject({
+        name: projectData.name,
+        description: projectData.description,
+        brokerage_id: brokerageId,
+        project_type: projectData.projectType,
+        applicant_count: projectData.applicantCount,
+        has_guarantor: projectData.hasGuarantor,
+        applicant_one_first_name: projectData.applicantOneFirstName,
+        applicant_one_last_name: projectData.applicantOneLastName,
+        applicant_two_first_name: projectData.applicantTwoFirstName,
+        applicant_two_last_name: projectData.applicantTwoLastName,
+        created_by: user?.id || '',
+      });
 
-  const handleProjectsClick = () => {
-    navigate(`/brokerage/${brokerageId}/projects`);
+      toast({
+        title: "Project Created",
+        description: `${projectData.name} has been created successfully.`,
+      });
+
+      // Refresh stats
+      if (user?.id) {
+        const stats = await getUserProjectStats(user.id);
+        setUserStats(stats);
+      }
+
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create project.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleApprovalsClick = () => {
-    toast({
-      title: "Approvazioni",
-      description: "Controlla i progetti in attesa di approvazione."
-    });
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProject(projectId);
+      toast({
+        title: "Project Deleted",
+        description: "Project has been deleted successfully.",
+      });
+
+      // Refresh stats
+      if (user?.id) {
+        const stats = await getUserProjectStats(user.id);
+        setUserStats(stats);
+      }
+
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleUsersClick = () => {
-    navigate(`/brokerage/${brokerageId}/users`);
+  const handleOpenProject = (projectId: string) => {
+    window.location.href = `/project/${projectId}`;
   };
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light">
-            <div className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-form-placeholder rounded w-24 mb-2"></div>
-                <div className="h-8 bg-form-placeholder rounded w-16"></div>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleProjectsClick}>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <FileText className="h-9 w-9 text-form-green-dark" />
-            </div>
-            <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
-              {activeProjects} attivi
-            </span>
-          </div>
+    <div className="space-y-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="gomutuo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium font-dm-sans text-form-green">Total Projects</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-dm-sans text-form-green">{projects.length}</div>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Gestione Progetti</h3>
-              <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
-                Gestisci e monitora i progetti attualmente in corso
-              </p>
+        <Card className="gomutuo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium font-dm-sans text-form-green">Active Projects</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-dm-sans text-form-green">
+              {projects.filter(p => p.status === 'active').length}
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">Totale</span>
-              <span className="font-semibold text-form-green">{activeProjects}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <Card className="gomutuo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium font-dm-sans text-form-green">Simulations</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-dm-sans text-form-green">{simulations.length}</div>
+          </CardContent>
+        </Card>
 
-      <BrokerageSimulationStats brokerageId={brokerageId} />
+        <Card className="gomutuo-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium font-dm-sans text-form-green">My Projects</CardTitle>
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-dm-sans text-form-green">{userStats.totalProjects}</div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Card className="cursor-pointer bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light press-down-effect" onClick={handleUsersClick}>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <Users className="h-9 w-9 text-form-green-dark" />
-            </div>
-            <span className="bg-accent-yellow text-form-green text-xs font-medium px-2 py-1 rounded-md">
-              Gestisci team
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold text-black font-dm-sans mb-2 text-xl">Gestione Utenti</h3>
-              <p className="text-sm text-gray-600 font-dm-sans leading-relaxed">
-                Invita e gestisci i collaboratori del brokerage
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-              <span className="text-gray-500">Azione</span>
-              <span className="font-semibold text-form-green">Gestisci</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Projects Section */}
+      <ProjectsSection
+        projects={projects}
+        brokerageId={brokerageId}
+        onCreateProject={handleCreateProject}
+        onDeleteProject={handleDeleteProject}
+        onOpenProject={handleOpenProject}
+      />
     </div>
   );
 };
