@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -37,7 +36,9 @@ export const getBrokerageProjects = async (brokerageId: string): Promise<Project
   }
 
   try {
-    // Get all projects for the brokerage that the user has access to
+    // The RLS policies will now handle filtering based on user roles automatically
+    // Broker assistants will see all projects in their brokerage
+    // Other roles will only see projects they're members of
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
       .select('*')

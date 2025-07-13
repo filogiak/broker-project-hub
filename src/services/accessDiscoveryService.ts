@@ -93,7 +93,7 @@ export const accessDiscoveryService = {
       });
     }
 
-    // 4. Brokerages through direct membership (NEW - this fixes the broker assistant access)
+    // 4. Brokerages through direct membership
     const { data: brokerageMemberships } = await supabase
       .from('brokerage_members')
       .select(`
@@ -112,22 +112,38 @@ export const accessDiscoveryService = {
       }
     });
 
-    // Add counts for each brokerage
     const result = Array.from(accessibleBrokerages.values());
     
+    // Add counts for each brokerage
     for (const brokerage of result) {
-      // Count projects user has access to in this brokerage
-      const { count: projectCount } = await supabase
-        .from('project_members')
-        .select('project_id', { count: 'exact' })
-        .eq('user_id', currentUserId)
-        .in('project_id', 
-          (await supabase
-            .from('projects')
-            .select('id')
-            .eq('brokerage_id', brokerage.id)
-          ).data?.map(p => p.id) || []
-        );
+      // For broker assistants, count all projects in brokerage
+      // For others, count only projects they have access to
+      const isBrokerAssistant = await this.isUserBrokerageAssistant(brokerage.id, currentUserId);
+      
+      if (brokerage.access_type === 'owner' || isBrokerAssistant) {
+        // Count all projects in brokerage
+        const { count: projectCount } = await supabase
+          .from('projects')
+          .select('id', { count: 'exact' })
+          .eq('brokerage_id', brokerage.id);
+        
+        brokerage.project_count = projectCount || 0;
+      } else {
+        // Count only projects user has access to
+        const { count: projectCount } = await supabase
+          .from('project_members')
+          .select('project_id', { count: 'exact' })
+          .eq('user_id', currentUserId)
+          .in('project_id', 
+            (await supabase
+              .from('projects')
+              .select('id')
+              .eq('brokerage_id', brokerage.id)
+            ).data?.map(p => p.id) || []
+          );
+
+        brokerage.project_count = projectCount || 0;
+      }
 
       // Count simulations user has access to in this brokerage
       const { count: simulationCount } = await supabase
@@ -142,11 +158,23 @@ export const accessDiscoveryService = {
           ).data?.map(s => s.id) || []
         );
 
-      brokerage.project_count = projectCount || 0;
       brokerage.simulation_count = simulationCount || 0;
     }
 
     return result.sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  // Helper method to check if user is broker assistant for a brokerage
+  async isUserBrokerageAssistant(brokerageId: string, userId: string): Promise<boolean> {
+    const { data } = await supabase
+      .from('brokerage_members')
+      .select('role')
+      .eq('brokerage_id', brokerageId)
+      .eq('user_id', userId)
+      .eq('role', 'broker_assistant')
+      .single();
+
+    return !!data;
   },
 
   // Get all projects user has access to
