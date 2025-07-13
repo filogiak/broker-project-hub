@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -18,7 +19,7 @@ export const validateMemberDeletion = async (projectId: string, memberId: string
     return { canDelete: false, reason: 'Cannot delete yourself from the project' };
   }
 
-  // Get current user's roles and permissions
+  // Check if user is superadmin
   const { data: userRoles } = await supabase
     .from('user_roles')
     .select('role')
@@ -30,16 +31,26 @@ export const validateMemberDeletion = async (projectId: string, memberId: string
     return { canDelete: true };
   }
 
-  // Check if user owns the project's brokerage
+  // Get project and brokerage info
   const { data: project } = await supabase
     .from('projects')
     .select('brokerage_id, brokerages!inner(owner_id)')
     .eq('id', projectId)
     .single();
 
-  const ownsBrokerage = project?.brokerages?.owner_id === currentUser.data.user.id;
+  if (!project) {
+    return { canDelete: false, reason: 'Project not found' };
+  }
 
-  if (ownsBrokerage) {
+  const ownsBrokerage = project.brokerages?.owner_id === currentUser.data.user.id;
+
+  // Check if user is broker assistant for this project's brokerage
+  const { data: isBrokerAssistant } = await supabase.rpc('user_is_broker_assistant_for_brokerage', {
+    brokerage_uuid: project.brokerage_id,
+    user_uuid: currentUser.data.user.id
+  });
+
+  if (ownsBrokerage || isBrokerAssistant) {
     // Check if this is the last brokerage owner
     const { data: brokerageOwners } = await supabase
       .from('project_members')

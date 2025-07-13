@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -163,7 +162,7 @@ export class UnifiedInvitationService {
   }
 
   /**
-   * Create new invitation (keeps existing functionality)
+   * Create new invitation (enhanced to support broker assistants)
    */
   static async createInvitation(
     projectId: string,
@@ -181,6 +180,48 @@ export class UnifiedInvitationService {
     }
     
     try {
+      // Enhanced permission check: allow broker assistants to create invitations
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        return {
+          success: false,
+          error: 'Authentication required'
+        };
+      }
+
+      // Check if user has permission (brokerage owner or broker assistant)
+      const { data: project } = await supabase
+        .from('projects')
+        .select('brokerage_id')
+        .eq('id', projectId)
+        .single();
+
+      if (!project) {
+        return {
+          success: false,
+          error: 'Project not found'
+        };
+      }
+
+      // Check if user owns brokerage
+      const { data: ownsBrokerage } = await supabase.rpc('user_owns_brokerage', {
+        brokerage_uuid: project.brokerage_id,
+        user_uuid: session.user.id
+      });
+
+      // Check if user is broker assistant
+      const { data: isBrokerAssistant } = await supabase.rpc('user_is_broker_assistant_for_brokerage', {
+        brokerage_uuid: project.brokerage_id,
+        user_uuid: session.user.id
+      });
+
+      if (!ownsBrokerage && !isBrokerAssistant) {
+        return {
+          success: false,
+          error: 'You do not have permission to create invitations for this project'
+        };
+      }
+
       // Use existing email invitation service
       const { createEmailInvitation } = await import('./emailInvitationService');
       const result = await createEmailInvitation(projectId, role, email);

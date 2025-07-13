@@ -123,9 +123,13 @@ const ProjectMembersDashboard = () => {
   const checkDeletePermissions = async () => {
     if (!projectId || !user?.id) return;
     
-    // Check with any member (we'll validate per member later)
-    const validation = await validateMemberDeletion(projectId, 'dummy-id');
-    setCanDeleteMembers(validation.canDelete || validation.reason !== 'You do not have permission to delete members from this project');
+    // Use the database function to check permissions
+    const { data: canView } = await supabase.rpc('user_can_view_project_members', {
+      project_uuid: projectId,
+      user_uuid: user.id
+    });
+    
+    setCanDeleteMembers(canView || false);
   };
 
   const loadMembers = async () => {
