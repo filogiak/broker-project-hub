@@ -1279,6 +1279,10 @@ export type Database = {
         Args: { simulation_uuid: string; user_uuid?: string }
         Returns: boolean
       }
+      user_is_broker_assistant_for_brokerage: {
+        Args: { brokerage_uuid: string; user_uuid?: string }
+        Returns: boolean
+      }
       user_is_brokerage_member: {
         Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean

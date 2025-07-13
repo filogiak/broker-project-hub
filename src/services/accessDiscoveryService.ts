@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -116,9 +115,11 @@ export const accessDiscoveryService = {
     
     // Add counts for each brokerage
     for (const brokerage of result) {
-      // For broker assistants, count all projects in brokerage
-      // For others, count only projects they have access to
-      const isBrokerAssistant = await this.isUserBrokerageAssistant(brokerage.id, currentUserId);
+      // Use the database function to check if user is broker assistant
+      const { data: isBrokerAssistant } = await supabase.rpc('user_is_broker_assistant_for_brokerage', {
+        brokerage_uuid: brokerage.id,
+        user_uuid: currentUserId
+      });
       
       if (brokerage.access_type === 'owner' || isBrokerAssistant) {
         // Count all projects in brokerage
@@ -166,15 +167,17 @@ export const accessDiscoveryService = {
 
   // Helper method to check if user is broker assistant for a brokerage
   async isUserBrokerageAssistant(brokerageId: string, userId: string): Promise<boolean> {
-    const { data } = await supabase
-      .from('brokerage_members')
-      .select('role')
-      .eq('brokerage_id', brokerageId)
-      .eq('user_id', userId)
-      .eq('role', 'broker_assistant')
-      .single();
+    const { data, error } = await supabase.rpc('user_is_broker_assistant_for_brokerage', {
+      brokerage_uuid: brokerageId,
+      user_uuid: userId
+    });
 
-    return !!data;
+    if (error) {
+      console.error('Error checking broker assistant status:', error);
+      return false;
+    }
+
+    return data || false;
   },
 
   // Get all projects user has access to
