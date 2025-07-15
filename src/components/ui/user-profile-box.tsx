@@ -1,10 +1,24 @@
 
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { logout } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import type { AuthUser } from '@/services/authService';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
+
+const roleDisplayNames: Record<UserRole, string> = {
+  superadmin: 'Super Admin',
+  brokerage_owner: 'Brokerage Owner', 
+  broker_assistant: 'Broker Assistant',
+  mortgage_applicant: 'Mortgage Applicant',
+  real_estate_agent: 'Real Estate Agent',
+  simulation_collaborator: 'Simulation Collaborator',
+};
 
 interface UserProfileBoxProps {
   user: AuthUser | null;
@@ -14,6 +28,7 @@ const UserProfileBox = ({
   user
 }: UserProfileBoxProps) => {
   const { toast } = useToast();
+  const { selectedRole, setSelectedRole, isMultiRole, rolesWithContext } = useRoleSelection();
 
   const handleSignOut = async () => {
     try {
@@ -26,6 +41,10 @@ const UserProfileBox = ({
         variant: "destructive"
       });
     }
+  };
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setSelectedRole(newRole);
   };
 
   if (!user) {
@@ -42,6 +61,34 @@ const UserProfileBox = ({
             {displayName}
           </p>
         </div>
+        
+        {/* Role Selector for multi-role users */}
+        {isMultiRole && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <User className="h-3 w-3" />
+              <span>Ruolo attivo:</span>
+            </div>
+            <Select
+              value={selectedRole || ''}
+              onValueChange={(value) => handleRoleChange(value as UserRole)}
+            >
+              <SelectTrigger className="w-full h-7 text-xs">
+                <SelectValue placeholder="Seleziona ruolo" />
+              </SelectTrigger>
+              <SelectContent>
+                {rolesWithContext
+                  .filter(r => r.hasActiveMembership)
+                  .map((roleInfo) => (
+                  <SelectItem key={roleInfo.role} value={roleInfo.role}>
+                    <span className="text-xs">{roleDisplayNames[roleInfo.role]}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
         <Button 
           variant="outline" 
           size="sm" 

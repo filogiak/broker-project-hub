@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building, ArrowRight, Users } from 'lucide-react';
-import RoleSelector from '@/components/dashboard/RoleSelector';
+
 
 const BrokerAssistantOrganizations = () => {
   const { user } = useAuth();
@@ -103,24 +103,18 @@ const BrokerAssistantOrganizations = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        {isMultiRole && <RoleSelector />}
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Caricamento organizzazioni...</div>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg">Caricamento organizzazioni...</div>
       </div>
     );
   }
 
   return (
     <div className="flex-1 p-8 space-y-8">
-      {/* Role Selector for multi-role users */}
-      {isMultiRole && <RoleSelector />}
-
       <div className="flex items-center gap-3">
         <Building className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Organizzazioni</h1>
+          <h1 className="text-3xl font-bold text-primary font-dm-sans">Azioni Principali</h1>
           <p className="text-muted-foreground font-dm-sans">
             Organizzazioni dove fornisci assistenza come broker assistant
           </p>
