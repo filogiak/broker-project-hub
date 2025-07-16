@@ -60,7 +60,7 @@ const RoleSelector = () => {
         <CardTitle className="flex items-center justify-between font-dm-sans text-lg text-[hsl(var(--form-green))]">
           <div className="flex items-center gap-3">
             <User className="h-5 w-5" />
-            Role Context
+            Ruolo Utente
           </div>
           <Button 
             variant="ghost" 
