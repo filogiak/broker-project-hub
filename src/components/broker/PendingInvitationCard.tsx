@@ -49,7 +49,7 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
       <CardContent className="p-4">
         <div className="flex items-center justify-evenly gap-4">
           {/* Left section: Invitation Type and Name */}
-          <div className="flex-1 min-w-0">
+          <div className="w-72 min-w-0">
             <h3 className="font-semibold text-black font-dm-sans text-lg mb-1">
               Invito {invitationType.type}
             </h3>
