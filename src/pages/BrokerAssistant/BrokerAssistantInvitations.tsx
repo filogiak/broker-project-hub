@@ -59,14 +59,11 @@ const BrokerAssistantInvitations = () => {
       {/* Role Selector for multi-role users */}
       {isMultiRole && <RoleSelector />}
 
-      <div className="flex items-center gap-3">
-        <MailOpen className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Inviti</h1>
-          <p className="text-muted-foreground font-dm-sans">
-            Inviti in sospeso per organizzazioni e simulazioni
-          </p>
-        </div>
+      <div>
+        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Inviti</h2>
+        <p className="text-muted-foreground font-dm-sans mb-6">
+          Inviti in sospeso per organizzazioni e simulazioni
+        </p>
       </div>
 
       {/* Invitations List */}
