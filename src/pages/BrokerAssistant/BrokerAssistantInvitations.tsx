@@ -8,10 +8,11 @@ import PendingInvitationCard from '@/components/broker/PendingInvitationCard';
 
 const BrokerAssistantInvitations = () => {
   const { user } = useAuth();
-  const { invitations, loading: isLoading, acceptInvitation } = usePendingInvitations();
+  const { invitations, loading: isLoading, acceptInvitation, rejectInvitation } = usePendingInvitations();
   const { toast } = useToast();
 
   const [acceptingId, setAcceptingId] = React.useState<string | null>(null);
+  const [rejectingId, setRejectingId] = React.useState<string | null>(null);
 
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
@@ -38,6 +39,27 @@ const BrokerAssistantInvitations = () => {
     }
   };
 
+  const handleRejectInvitation = async (invitationId: string) => {
+    try {
+      setRejectingId(invitationId);
+      await rejectInvitation(invitationId);
+      
+      toast({
+        title: "Invito rifiutato",
+        description: "Hai rifiutato l'invito con successo.",
+      });
+    } catch (error) {
+      console.error('Error rejecting invitation:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore nel rifiutare l'invito.",
+        variant: "destructive",
+      });
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex-1 p-8">
@@ -54,8 +76,8 @@ const BrokerAssistantInvitations = () => {
       <Card className="bg-white border-2 border-form-green/20 rounded-[12px] overflow-hidden">
         <CardContent className="p-8">
           {/* Header */}
-          <div className="mb-6">
-            <h2 className="font-semibold font-dm-sans text-2xl text-black mb-2">Inviti</h2>
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-semibold font-dm-sans text-2xl text-black">Inviti</h2>
             <p className="text-muted-foreground font-dm-sans">
               {invitations.length === 1 ? '1 invito' : `${invitations.length} inviti`} in sospeso
             </p>
@@ -78,7 +100,9 @@ const BrokerAssistantInvitations = () => {
                     key={invitation.id}
                     invitation={invitation}
                     onAccept={handleAcceptInvitation}
+                    onReject={handleRejectInvitation}
                     isAccepting={acceptingId === invitation.id}
+                    isRejecting={rejectingId === invitation.id}
                   />
                 ))}
               </div>

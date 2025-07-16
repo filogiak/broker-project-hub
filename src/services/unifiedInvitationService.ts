@@ -9,6 +9,7 @@ export interface PendingInvitation {
   project_id: string | null;
   project_name: string | null;
   brokerage_id?: string | null;
+  brokerage_name?: string | null;
   inviter_name: string;
   created_at: string;
   expires_at: string;

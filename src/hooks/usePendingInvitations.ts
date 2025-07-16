@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { UnifiedInvitationService, type PendingInvitation } from '@/services/unifiedInvitationService';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePendingInvitations = () => {
   const { user } = useAuth();
@@ -97,12 +98,36 @@ export const usePendingInvitations = () => {
     loadInvitations();
   }, [user]);
 
+  const rejectInvitation = async (invitationId: string) => {
+    try {
+      console.log('🗑️ [PENDING INVITATIONS] Rejecting invitation:', invitationId);
+      
+      // Delete the invitation
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', invitationId);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      console.log('✅ [PENDING INVITATIONS] Invitation rejected successfully');
+      // Refresh invitations list after successful rejection
+      await loadInvitations();
+    } catch (error) {
+      console.error('❌ [PENDING INVITATIONS] Error rejecting invitation:', error);
+      throw error;
+    }
+  };
+
   return {
     invitations,
     loading,
     error,
     loadInvitations,
     acceptInvitation,
+    rejectInvitation,
     forceRefresh,
     invitationCount: invitations.length
   };
