@@ -111,14 +111,12 @@ const BrokerAssistantOrganizations = () => {
 
   return (
     <div className="flex-1 p-8 space-y-8">
-      <div className="flex items-center gap-3">
-        <Building className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold text-primary font-dm-sans">Azioni Principali</h1>
-          <p className="text-muted-foreground font-dm-sans">
-            Organizzazioni dove fornisci assistenza come broker assistant
-          </p>
-        </div>
+      {/* Main Action Cards */}
+      <div>
+        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Azioni Principali</h2>
+        <p className="text-muted-foreground font-dm-sans mb-6">
+          Organizzazioni dove fornisci assistenza come broker assistant
+        </p>
       </div>
 
       {/* Organizations Grid */}
