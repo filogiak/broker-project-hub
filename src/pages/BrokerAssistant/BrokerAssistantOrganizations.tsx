@@ -5,10 +5,9 @@ import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Building, ArrowRight, Users } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Building } from 'lucide-react';
+import BrokerOrganizationCard from '@/components/broker/BrokerOrganizationCard';
 
 
 const BrokerAssistantOrganizations = () => {
@@ -137,45 +136,16 @@ const BrokerAssistantOrganizations = () => {
             {brokerages.map((membership) => {
               const brokerage = membership.brokerages;
               return (
-                <Card key={brokerage.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2 font-dm-sans">
-                          <Building className="h-5 w-5" />
-                          {brokerage.name}
-                        </CardTitle>
-                        {brokerage.description && (
-                          <CardDescription className="mt-2 font-dm-sans">
-                            {brokerage.description}
-                          </CardDescription>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {membership.role.replace('_', ' ')}
-                      </Badge>
-                      
-                      <span className="text-sm text-muted-foreground font-dm-sans">
-                        Membro dal {new Date(membership.joined_at || '').toLocaleDateString('it-IT')}
-                      </span>
-                    </div>
-                    
-                    <Button 
-                      onClick={() => handleAccessBrokerage(brokerage.id)}
-                      className="w-full font-dm-sans"
-                      variant="default"
-                    >
-                      Accedi all'organizzazione
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
+                <BrokerOrganizationCard
+                  key={brokerage.id}
+                  brokerage={{
+                    id: brokerage.id,
+                    name: brokerage.name,
+                    description: brokerage.description,
+                    access_type: membership.role === 'brokerage_owner' ? 'owner' : 'member'
+                  }}
+                  onClick={() => handleAccessBrokerage(brokerage.id)}
+                />
               );
             })}
           </div>
