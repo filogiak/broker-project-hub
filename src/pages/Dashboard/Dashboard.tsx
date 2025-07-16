@@ -203,21 +203,33 @@ const Dashboard = () => {
   // Use selected role for routing decisions, fallback to primary role
   const activeRole: string = selectedRole || user.roles[0];
 
-  // For multi-role users, use conditional rendering instead of redirects to allow role switching
+  // For multi-role users, check if they have a dedicated dashboard component first
   if (isMultiRole) {
-    // Render dashboard based on selected role with role selector
-    return (
-      <MainLayout 
-        title="Dashboard" 
-        userEmail={user.email}
-        onLogout={handleLogout}
-      >
-        <div className="max-w-4xl mx-auto space-y-6">
-          <RoleSelector />
-          {renderRoleSpecificContent(activeRole, user, refreshUser, handleLogout, invitationCount, invitations)}
-        </div>
-      </MainLayout>
-    );
+    // Route to dedicated dashboard components when available
+    switch (activeRole) {
+      case 'broker_assistant':
+        return <BrokerAssistantDashboard />;
+      case 'real_estate_agent':
+        return <RealEstateAgentDashboard />;
+      case 'mortgage_applicant':
+        return <MortgageApplicantDashboard />;
+      case 'simulation_collaborator':
+        return <SimulationCollaboratorDashboard />;
+      default:
+        // For roles without dedicated components, use generic dashboard with role selector
+        return (
+          <MainLayout 
+            title="Dashboard" 
+            userEmail={user.email}
+            onLogout={handleLogout}
+          >
+            <div className="max-w-4xl mx-auto space-y-6">
+              <RoleSelector />
+              {renderRoleSpecificContent(activeRole, user, refreshUser, handleLogout, invitationCount, invitations)}
+            </div>
+          </MainLayout>
+        );
+    }
   }
 
   // For single-role users, use traditional routing
