@@ -13,6 +13,130 @@ import SimulationCollaboratorDashboard from './SimulationCollaboratorDashboard';
 import RealEstateAgentDashboard from './RealEstateAgentDashboard';
 import BrokerAssistantDashboard from './BrokerAssistantDashboard';
 import MortgageApplicantDashboard from './MortgageApplicantDashboard';
+import type { AuthUser } from '@/services/authService';
+
+// Helper function to render role-specific content for multi-role users
+const renderRoleSpecificContent = (
+  activeRole: string,
+  user: AuthUser,
+  refreshUser: () => Promise<void>,
+  handleLogout: () => Promise<void>,
+  invitationCount: number,
+  invitations: any[]
+) => {
+  switch (activeRole) {
+    case 'superadmin':
+      return (
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-primary mb-4">Admin Dashboard</h2>
+          <p className="text-muted-foreground mb-4">Use the admin panel for administrative tasks.</p>
+          <a href="/admin" className="text-primary hover:underline">Go to Admin Panel</a>
+        </div>
+      );
+      
+    case 'brokerage_owner':
+      if (user.brokerageId) {
+        return (
+          <div className="text-center p-8">
+            <h2 className="text-2xl font-bold text-primary mb-4">Brokerage Owner Dashboard</h2>
+            <p className="text-muted-foreground mb-4">Manage your brokerage operations.</p>
+            <a href={`/brokerage/${user.brokerageId}`} className="text-primary hover:underline">Go to Brokerage Dashboard</a>
+          </div>
+        );
+      } else {
+        return <CreateOwnBrokerageForm onSuccess={refreshUser} />;
+      }
+      
+    case 'broker_assistant':
+      return (
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-primary mb-4">Broker Assistant Dashboard</h2>
+          <p className="text-muted-foreground mb-4">Access your broker assistant tools and projects.</p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-background rounded-lg shadow-sm p-6">
+                <h3 className="font-semibold mb-2">Organizations</h3>
+                <p className="text-sm text-muted-foreground mb-4">Manage organizations you're part of</p>
+                <a href="/broker-assistant/organizations" className="text-primary hover:underline">View Organizations</a>
+              </div>
+              <div className="bg-background rounded-lg shadow-sm p-6">
+                <h3 className="font-semibold mb-2">Invitations</h3>
+                <p className="text-sm text-muted-foreground mb-4">Review pending invitations</p>
+                <a href="/broker-assistant/invitations" className="text-primary hover:underline">View Invitations</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+      
+    case 'real_estate_agent':
+      return (
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-primary mb-4">Real Estate Agent Dashboard</h2>
+          <p className="text-muted-foreground mb-4">Access your real estate tools and client projects.</p>
+          <PendingInvitationsWidget />
+        </div>
+      );
+      
+    case 'mortgage_applicant':
+      return (
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-primary mb-4">Mortgage Applicant Dashboard</h2>
+          <p className="text-muted-foreground mb-4">Track your mortgage application progress.</p>
+          <PendingInvitationsWidget />
+        </div>
+      );
+      
+    case 'simulation_collaborator':
+      return (
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-primary mb-4">Simulation Collaborator Dashboard</h2>
+          <p className="text-muted-foreground mb-4">Collaborate on mortgage simulations.</p>
+          <PendingInvitationsWidget />
+        </div>
+      );
+      
+    default:
+      return (
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold text-primary">Welcome {user.firstName} {user.lastName}!</h1>
+          
+          {invitationCount > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{invitationCount}</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-blue-900">
+                    You have {invitationCount} pending invitation{invitationCount > 1 ? 's' : ''}!
+                  </h2>
+                  <p className="text-blue-700 text-sm">
+                    Accept your invitation{invitationCount > 1 ? 's' : ''} below to join project{invitationCount > 1 ? 's' : ''}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-background rounded-lg shadow-sm p-6">
+              <p className="text-muted-foreground">
+                Active role: <span className="font-medium">{activeRole ? activeRole.replace('_', ' ') : 'Loading...'}</span>
+              </p>
+              {!invitationCount && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  No pending invitations at the moment.
+                </p>
+              )}
+            </div>
+            
+            <PendingInvitationsWidget />
+          </div>
+        </div>
+      );
+  }
+};
 
 const Dashboard = () => {
   const { user, loading, refreshUser } = useAuth();
@@ -79,7 +203,24 @@ const Dashboard = () => {
   // Use selected role for routing decisions, fallback to primary role
   const activeRole: string = selectedRole || user.roles[0];
 
-  // Route based on user's active role
+  // For multi-role users, use conditional rendering instead of redirects to allow role switching
+  if (isMultiRole) {
+    // Render dashboard based on selected role with role selector
+    return (
+      <MainLayout 
+        title="Dashboard" 
+        userEmail={user.email}
+        onLogout={handleLogout}
+      >
+        <div className="max-w-4xl mx-auto space-y-6">
+          <RoleSelector />
+          {renderRoleSpecificContent(activeRole, user, refreshUser, handleLogout, invitationCount, invitations)}
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // For single-role users, use traditional routing
   switch (activeRole) {
     case 'superadmin':
       return <Navigate to="/admin" replace />;
@@ -97,7 +238,6 @@ const Dashboard = () => {
             onLogout={handleLogout}
           >
             <div className="max-w-4xl mx-auto">
-              {isMultiRole && <RoleSelector />}
               <CreateOwnBrokerageForm onSuccess={refreshUser} />
             </div>
           </MainLayout>

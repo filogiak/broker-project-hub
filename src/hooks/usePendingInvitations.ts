@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react';
 import { UnifiedInvitationService, type PendingInvitation } from '@/services/unifiedInvitationService';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export const usePendingInvitations = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { refreshRoles } = useRoleSelection();
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,18 +64,34 @@ export const usePendingInvitations = () => {
     try {
       console.log('🎯 [PENDING INVITATIONS] Accepting invitation:', invitationId);
       
+      // Optimistically remove invitation from UI for immediate feedback
+      const originalInvitations = [...invitations];
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      
       const result = await UnifiedInvitationService.acceptInvitationById(invitationId);
       
       if (result.success) {
         console.log('✅ [PENDING INVITATIONS] Invitation accepted successfully:', result);
-        // Refresh invitations list after successful acceptance
+        
+        // Immediately refresh auth state and roles to update user context
+        console.log('🔄 [PENDING INVITATIONS] Refreshing user auth state and roles...');
+        await Promise.all([
+          refreshUser(), // Refresh user data including new roles/memberships
+          refreshRoles() // Refresh role context to show new memberships
+        ]);
+        
+        // Refresh invitations list to ensure consistency
         await loadInvitations();
         return result;
       } else {
+        // Rollback optimistic update on failure
+        setInvitations(originalInvitations);
         throw new Error(result.error || 'Failed to accept invitation');
       }
     } catch (error) {
       console.error('❌ [PENDING INVITATIONS] Error accepting invitation:', error);
+      // Rollback optimistic update on error
+      await loadInvitations();
       throw error;
     }
   };
