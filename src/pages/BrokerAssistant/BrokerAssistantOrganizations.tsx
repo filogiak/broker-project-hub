@@ -113,7 +113,7 @@ const BrokerAssistantOrganizations = () => {
     <div className="flex-1 p-8 space-y-8">
       {/* Main Action Cards */}
       <div>
-        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Le tue Organizzazioni</h2>
+        <h2 className="font-semibold font-dm-sans mb-2 text-2xl text-black">Le tue Organizzazioni</h2>
         <p className="text-muted-foreground font-dm-sans mb-6">
           Organizzazioni dove fornisci assistenza come broker assistant
         </p>
