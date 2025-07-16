@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { LogOut, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { logout } from '@/services/authService';
@@ -28,6 +29,7 @@ const UserProfileBox = ({
   user
 }: UserProfileBoxProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { selectedRole, setSelectedRole, isMultiRole, rolesWithContext } = useRoleSelection();
 
   const handleSignOut = async () => {
@@ -45,6 +47,8 @@ const UserProfileBox = ({
 
   const handleRoleChange = (newRole: UserRole) => {
     setSelectedRole(newRole);
+    // Navigate to dashboard to trigger re-evaluation of which dashboard to show
+    navigate('/dashboard');
   };
 
   if (!user) {

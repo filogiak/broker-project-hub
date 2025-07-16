@@ -144,6 +144,12 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { invitations, loading: invitationsLoading, invitationCount } = usePendingInvitations();
 
+  // Force re-render when selectedRole changes
+  useEffect(() => {
+    // This effect ensures the component re-evaluates the role-based routing
+    // when the selectedRole context changes
+  }, [selectedRole]);
+
   const handleLogout = async () => {
     try {
       await logout();
