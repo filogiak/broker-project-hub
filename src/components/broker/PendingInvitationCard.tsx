@@ -46,20 +46,20 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
   const invitationType = getInvitationType();
 
   return (
-    <Card className="bg-white border-2 border-form-green rounded-[12px] overflow-hidden solid-shadow-green press-down-effect-green transition-all duration-200">
-      <CardContent className="p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-form-green/10 flex items-center justify-center flex-shrink-0">
+    <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-sm transition-all duration-200">
+      <CardContent className="p-4">{/* Reduced padding for smaller cards */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-form-green/10 flex items-center justify-center flex-shrink-0">
             {invitationType.icon}
           </div>
 
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3 items-center">{/* Reduced gap */}
             {/* Column 1: Invitation Type and Name */}
             <div>
-              <h3 className="font-semibold text-black font-dm-sans text-base mb-1">
+              <h3 className="font-semibold text-black font-dm-sans text-sm mb-1">{/* Smaller text */}
                 Invito {invitationType.type}
               </h3>
-              <p className="text-sm text-gray-600 font-dm-sans">
+              <p className="text-xs text-gray-600 font-dm-sans">{/* Smaller text */}
                 {invitationType.name}
               </p>
             </div>
@@ -67,7 +67,7 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
             {/* Column 2: Role */}
             <div className="text-left">
               <p className="text-xs text-gray-500 mb-1">Ruolo</p>
-              <Badge variant="outline" className="text-form-green border-form-green">
+              <Badge variant="outline" className="text-xs text-form-green border-form-green">{/* Smaller badge */}
                 {formatRole(invitation.role)}
               </Badge>
             </div>
@@ -77,7 +77,7 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
               <p className="text-xs text-gray-500 mb-1">Invitato da</p>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-400" />
-                <p className="font-medium text-gray-700 text-sm font-dm-sans">
+                <p className="font-medium text-gray-700 text-xs font-dm-sans">{/* Smaller text */}
                   {invitation.inviter_name}
                 </p>
               </div>
@@ -86,9 +86,9 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
             {/* Column 4: Expiration and Actions */}
             <div className="text-left">
               <p className="text-xs text-gray-500 mb-1">Scadenza</p>
-              <div className="flex items-center gap-2 mb-3">
+               <div className="flex items-center gap-2 mt-2">{/* Reduced margin */}
                 <Clock className="h-4 w-4 text-gray-400" />
-                <p className="font-medium text-form-green text-sm font-dm-sans">
+                <p className="font-medium text-form-green text-xs font-dm-sans">{/* Smaller text */}
                   {invitation.days_remaining > 0 
                     ? `${Math.ceil(invitation.days_remaining)} giorni`
                     : 'Scade presto'
@@ -96,7 +96,7 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
                 </p>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-2">{/* Reduced margin */}
                 <Button
                   onClick={() => onAccept(invitation.id)}
                   disabled={isAccepting}
@@ -123,8 +123,8 @@ const PendingInvitationCard: React.FC<PendingInvitationCardProps> = ({
         </div>
       </CardContent>
       
-      {/* Green accent line at bottom */}
-      <div className="h-1 bg-form-green"></div>
+      {/* Subtle accent line at bottom */}
+      <div className="h-0.5 bg-form-green/20"></div>{/* More subtle accent line */}
     </Card>
   );
 };

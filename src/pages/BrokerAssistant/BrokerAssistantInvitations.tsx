@@ -49,39 +49,43 @@ const BrokerAssistantInvitations = () => {
   }
 
   return (
-    <div className="flex-1 p-8 space-y-8">
-      <div>
-        <h2 className="font-semibold font-dm-sans mb-6 text-2xl text-black">Tutti i Tuoi Inviti</h2>
-        <p className="text-muted-foreground font-dm-sans mb-6">
-          Tutti gli inviti in sospeso per progetti e organizzazioni
-        </p>
-      </div>
-
-      {/* Invitations List */}
-      <div className="space-y-4">
-        {invitations.length === 0 ? (
-          <Card className="bg-white border-2 border-form-green/20 rounded-[12px]">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <MailOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2 font-dm-sans">Nessun invito in sospeso</h3>
-              <p className="text-muted-foreground text-center max-w-md font-dm-sans">
-                Al momento non hai inviti in sospeso. Quando riceverai nuovi inviti, verranno visualizzati qui.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {invitations.map((invitation) => (
-              <PendingInvitationCard
-                key={invitation.id}
-                invitation={invitation}
-                onAccept={handleAcceptInvitation}
-                isAccepting={acceptingId === invitation.id}
-              />
-            ))}
+    <div className="flex-1 p-8">
+      {/* White container box for invitations */}
+      <Card className="bg-white border-2 border-form-green/20 rounded-[12px] overflow-hidden">
+        <CardContent className="p-8">
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className="font-semibold font-dm-sans text-2xl text-black mb-2">Inviti</h2>
+            <p className="text-muted-foreground font-dm-sans">
+              {invitations.length === 1 ? '1 invito' : `${invitations.length} inviti`} in sospeso
+            </p>
           </div>
-        )}
-      </div>
+
+          {/* Invitations List */}
+          <div className="space-y-4">
+            {invitations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <MailOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2 font-dm-sans">Nessun invito in sospeso</h3>
+                <p className="text-muted-foreground text-center max-w-md font-dm-sans">
+                  Al momento non hai inviti in sospeso. Quando riceverai nuovi inviti, verranno visualizzati qui.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {invitations.map((invitation) => (
+                  <PendingInvitationCard
+                    key={invitation.id}
+                    invitation={invitation}
+                    onAccept={handleAcceptInvitation}
+                    isAccepting={acceptingId === invitation.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
