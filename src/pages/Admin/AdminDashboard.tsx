@@ -120,7 +120,7 @@ const AdminDashboard = () => {
           name: 'Filippo',
           email: 'giacometti.filippo@gmail.com',
           phone: '+393519440664',
-          formSlug: 'simulazione-mutuo'
+          formSlug: 'gestionale-progetto'
         }
       });
 
