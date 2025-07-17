@@ -10,7 +10,6 @@ import RoleSelector from '@/components/dashboard/RoleSelector';
 import { toast } from 'sonner';
 import { usePendingInvitations } from '@/hooks/usePendingInvitations';
 import SimulationCollaboratorDashboard from './SimulationCollaboratorDashboard';
-import RealEstateAgentDashboard from './RealEstateAgentDashboard';
 import BrokerAssistantDashboard from './BrokerAssistantDashboard';
 import MortgageApplicantDashboard from './MortgageApplicantDashboard';
 import type { AuthUser } from '@/services/authService';
@@ -216,7 +215,7 @@ const Dashboard = () => {
       case 'broker_assistant':
         return <BrokerAssistantDashboard />;
       case 'real_estate_agent':
-        return <RealEstateAgentDashboard />;
+        return <Navigate to="/agent/dashboard" replace />;
       case 'mortgage_applicant':
         return <MortgageApplicantDashboard />;
       case 'simulation_collaborator':

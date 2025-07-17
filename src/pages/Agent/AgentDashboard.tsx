@@ -2,7 +2,7 @@
 import React from 'react';
 import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, Users, Briefcase, BarChart3 } from 'lucide-react';
+import { Home, Users, Briefcase, BarChart3, Building } from 'lucide-react';
 
 const AgentDashboard = () => {
   return (
