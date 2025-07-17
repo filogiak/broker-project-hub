@@ -111,5 +111,52 @@ export const simulationService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  // Get simulation with participants
+  async getSimulationWithParticipants(simulationId: string): Promise<{
+    simulation: Simulation | null;
+    participants: Database['public']['Tables']['simulation_participants']['Row'][];
+  }> {
+    const [simulationResult, participantsResult] = await Promise.all([
+      this.getSimulation(simulationId),
+      supabase
+        .from('simulation_participants')
+        .select('*')
+        .eq('simulation_id', simulationId)
+        .order('created_at', { ascending: true })
+    ]);
+
+    if (participantsResult.error) throw participantsResult.error;
+
+    return {
+      simulation: simulationResult,
+      participants: participantsResult.data || []
+    };
+  },
+
+  // Complete simulation setup
+  async completeSimulationSetup(simulationId: string, setupData: {
+    applicantCount?: Database['public']['Enums']['applicant_count'];
+    projectContactName?: string;
+    projectContactEmail?: string;
+    projectContactPhone?: string;
+  }): Promise<void> {
+    const updates: Partial<SimulationInsert> = {
+      setup_completed_at: new Date().toISOString(),
+      ...setupData
+    };
+
+    await this.updateSimulation(simulationId, updates);
+  },
+
+  // Update simulation configuration
+  async updateSimulationConfig(simulationId: string, config: {
+    applicantCount?: Database['public']['Enums']['applicant_count'];
+    projectContactName?: string;
+    projectContactEmail?: string;
+    projectContactPhone?: string;
+  }): Promise<void> {
+    await this.updateSimulation(simulationId, config);
   }
 };
