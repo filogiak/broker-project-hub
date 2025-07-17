@@ -191,6 +191,7 @@ export type Database = {
           invited_by: string
           project_id: string | null
           role: Database["public"]["Enums"]["user_role"]
+          simulation_id: string | null
           used_at: string | null
         }
         Insert: {
@@ -206,6 +207,7 @@ export type Database = {
           invited_by: string
           project_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          simulation_id?: string | null
           used_at?: string | null
         }
         Update: {
@@ -221,6 +223,7 @@ export type Database = {
           invited_by?: string
           project_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          simulation_id?: string | null
           used_at?: string | null
         }
         Relationships: [
@@ -243,6 +246,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
             referencedColumns: ["id"]
           },
         ]
@@ -1135,6 +1145,15 @@ export type Database = {
           project_description?: string
         }
         Returns: string
+      }
+      create_simulation_invitation: {
+        Args: {
+          p_simulation_id: string
+          p_email: string
+          p_role: Database["public"]["Enums"]["user_role"]
+          p_invited_by?: string
+        }
+        Returns: Json
       }
       generate_encrypted_invitation_token: {
         Args: Record<PropertyKey, never>
