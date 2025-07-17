@@ -1317,6 +1317,10 @@ export type Database = {
         Args: { p_name: string; p_brokerage_id: string; p_description?: string }
         Returns: string
       }
+      safe_delete_simulation: {
+        Args: { p_simulation_id: string }
+        Returns: Json
+      }
       test_auth_context: {
         Args: Record<PropertyKey, never>
         Returns: Json

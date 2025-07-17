@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SimulationSidebar from '@/components/simulation/SimulationSidebar';
 import SimulationHeaderCard from '@/components/simulation/SimulationHeaderCard';
@@ -10,14 +10,21 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Settings, Save, Trash2 } from 'lucide-react';
 import { useSimulationData } from '@/hooks/useSimulationData';
 import { useAuth } from '@/hooks/useAuth';
+import { simulationService } from '@/services/simulationService';
+import { useToast } from '@/hooks/use-toast';
 
 const SimulationSettings = () => {
   const { simulationId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: simulation, isLoading, error } = useSimulationData(simulationId || '');
+  const { toast } = useToast();
+  const [confirmationName, setConfirmationName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!simulationId) {
     return <Navigate to="/dashboard" replace />;
@@ -68,6 +75,45 @@ const SimulationSettings = () => {
       </SidebarProvider>
     );
   }
+
+  const handleDeleteSimulation = async () => {
+    if (confirmationName !== simulation.name) {
+      toast({
+        title: "Nome non corrispondente",
+        description: "Digita esattamente il nome della simulazione per confermare l'eliminazione.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await simulationService.deleteSimulation(simulation.id);
+      
+      if (result.success) {
+        toast({
+          title: "Simulazione eliminata",
+          description: `${result.simulationName} e ${result.deletedMembers || 0} membri, ${result.deletedInvitations || 0} inviti sono stati eliminati.`,
+        });
+        navigate(`/brokerage/${simulation.brokerage_id}/simulations`);
+      } else {
+        toast({
+          title: "Errore nell'eliminazione",
+          description: result.error || "Si è verificato un errore sconosciuto.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Errore nell'eliminazione",
+        description: "Impossibile eliminare la simulazione. Riprova.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setConfirmationName('');
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -167,17 +213,57 @@ const SimulationSettings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                <div className="p-4 bg-red-50 rounded-lg space-y-4">
                   <div>
                     <h4 className="font-medium text-red-900">Elimina Simulazione</h4>
-                    <p className="text-sm text-red-700">
-                      Questa azione eliminerà permanentemente la simulazione e tutti i dati associati.
+                    <p className="text-sm text-red-700 mb-2">
+                      Questa azione eliminerà permanentemente:
                     </p>
+                    <ul className="text-sm text-red-700 list-disc list-inside ml-4 space-y-1">
+                      <li>La simulazione e tutti i suoi dati</li>
+                      <li>Tutti i membri della simulazione</li>
+                      <li>Tutti gli inviti in sospeso</li>
+                    </ul>
                   </div>
-                  <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Elimina
-                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Elimina Simulazione
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Sei assolutamente sicuro?</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                          <p>
+                            Questa azione non può essere annullata. Eliminerà permanentemente la simulazione
+                            <strong className="font-medium"> "{simulation.name}"</strong> e rimuoverà tutti i dati associati.
+                          </p>
+                          <p>Digita <strong className="font-medium">{simulation.name}</strong> per confermare:</p>
+                          <Input
+                            placeholder="Digita il nome della simulazione"
+                            value={confirmationName}
+                            onChange={(e) => setConfirmationName(e.target.value)}
+                            className="mt-2"
+                          />
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setConfirmationName('')}>
+                          Annulla
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteSimulation}
+                          disabled={confirmationName !== simulation.name || isDeleting}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleting ? "Eliminazione..." : "Elimina simulazione"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

@@ -70,14 +70,28 @@ export const simulationService = {
     if (error) throw error;
   },
 
-  // Delete a simulation
-  async deleteSimulation(simulationId: string): Promise<void> {
-    const { error } = await supabase
-      .from('simulations')
-      .delete()
-      .eq('id', simulationId);
+  // Delete a simulation with proper authorization and cascading
+  async deleteSimulation(simulationId: string): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+    deletedMembers?: number;
+    deletedInvitations?: number;
+    simulationName?: string;
+  }> {
+    const { data, error } = await supabase.rpc('safe_delete_simulation', {
+      p_simulation_id: simulationId
+    });
 
     if (error) throw error;
+    return data as {
+      success: boolean;
+      message?: string;
+      error?: string;
+      deletedMembers?: number;
+      deletedInvitations?: number;
+      simulationName?: string;
+    };
   },
 
   // Get simulation members with profile data
