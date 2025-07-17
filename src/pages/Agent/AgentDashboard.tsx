@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, Users, Briefcase, BarChart3, Building, Mail } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
+import StandardCard from '@/components/ui/standard-card';
 
 const AgentDashboard = () => {
   const { creatableBrokerages, stats, invitations, loading, error, hasInvitations } = useAgentData();
@@ -16,31 +16,25 @@ const AgentDashboard = () => {
     icon: React.ComponentType<any>;
     isLoading: boolean;
   }) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-8 w-12" />
-        ) : (
-          <div className="text-2xl font-bold">{value}</div>
-        )}
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
+    <StandardCard title={title} icon={Icon}>
+      {isLoading ? (
+        <Skeleton className="h-8 w-16" />
+      ) : (
+        <div className="text-3xl font-bold text-black font-dm-sans mb-1">{value}</div>
+      )}
+      <p className="text-gray-600 font-dm-sans text-sm">{description}</p>
+    </StandardCard>
   );
 
   return (
     <RealEstateAgentLayout>
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Dashboard Agente</h2>
+      <div className="flex-1 space-y-6 p-8 pt-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-black font-dm-sans text-3xl font-bold">Dashboard Agente</h1>
         </div>
         
         {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Organizzazioni"
             value={creatableBrokerages.length}
@@ -74,81 +68,79 @@ const AgentDashboard = () => {
           />
         </div>
 
-        {/* Welcome Section */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Benvenuto nel tuo Dashboard Agente</CardTitle>
-              <CardDescription>
-                Gestisci i tuoi progetti, organizzazioni e simulazioni da un unico posto.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Da qui puoi accedere a tutte le tue attività di agente immobiliare:
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-form-green" />
-                    <span>Visualizza le organizzazioni di cui fai parte</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-form-green" />
-                    <span>Gestisci i progetti a cui hai accesso</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-form-green" />
-                    <span>Crea e gestisci simulazioni</span>
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Main Content */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <StandardCard 
+            title="Benvenuto nel tuo Dashboard Agente" 
+            description="Gestisci i tuoi progetti, organizzazioni e simulazioni da un unico posto."
+            className="col-span-4"
+          >
+            <div className="space-y-4">
+              <p className="text-gray-600 font-dm-sans text-sm">
+                Da qui puoi accedere a tutte le tue attività di agente immobiliare:
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3">
+                  <Building className="h-5 w-5 text-[#235c4e]" />
+                  <span className="text-black font-dm-sans text-sm">
+                    Visualizza le organizzazioni di cui fai parte
+                  </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Briefcase className="h-5 w-5 text-[#235c4e]" />
+                  <span className="text-black font-dm-sans text-sm">
+                    Gestisci i progetti a cui hai accesso
+                  </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-[#235c4e]" />
+                  <span className="text-black font-dm-sans text-sm">
+                    Crea e gestisci simulazioni
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </StandardCard>
           
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Inviti in Attesa</CardTitle>
-              <CardDescription>
-                {hasInvitations ? 'I tuoi inviti pendenti' : 'Nessun invito pendente'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                ) : hasInvitations ? (
-                  <div className="space-y-3">
-                    {invitations.slice(0, 3).map((invitation) => (
-                      <div key={invitation.id} className="flex items-center gap-3 p-2 rounded-lg border">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {invitation.project_name || invitation.simulation_name || invitation.brokerage_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            da {invitation.inviter_name} • {invitation.days_remaining} giorni rimasti
-                          </p>
-                        </div>
+          <StandardCard 
+            title="Inviti in Attesa" 
+            description={hasInvitations ? 'I tuoi inviti pendenti' : 'Nessun invito pendente'}
+            className="col-span-3"
+          >
+            <div className="space-y-4">
+              {loading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              ) : hasInvitations ? (
+                <div className="space-y-3">
+                  {invitations.slice(0, 3).map((invitation) => (
+                    <div key={invitation.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-black font-dm-sans text-sm font-medium truncate">
+                          {invitation.project_name || invitation.simulation_name || invitation.brokerage_name}
+                        </p>
+                        <p className="text-gray-500 font-dm-sans text-xs">
+                          da {invitation.inviter_name} • {invitation.days_remaining} giorni rimasti
+                        </p>
                       </div>
-                    ))}
-                    {invitations.length > 3 && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        +{invitations.length - 3} altri inviti
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Nessun invito in attesa
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    </div>
+                  ))}
+                  {invitations.length > 3 && (
+                    <p className="text-gray-500 font-dm-sans text-xs text-center">
+                      +{invitations.length - 3} altri inviti
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 font-dm-sans text-sm text-center py-8">
+                  Nessun invito in attesa
+                </p>
+              )}
+            </div>
+          </StandardCard>
         </div>
       </div>
     </RealEstateAgentLayout>
