@@ -207,5 +207,44 @@ export const simulationService = {
     };
 
     await this.updateSimulation(simulationId, updates);
+  },
+
+  // Member management functions
+  async removeSimulationMember(simulationId: string, memberId: string): Promise<void> {
+    console.log('🗑️ [SIMULATION SERVICE] Removing simulation member:', { simulationId, memberId });
+    
+    const { error } = await supabase
+      .from('simulation_members')
+      .delete()
+      .eq('simulation_id', simulationId)
+      .eq('id', memberId);
+
+    if (error) {
+      console.error('❌ [SIMULATION SERVICE] Error removing simulation member:', error);
+      throw error;
+    }
+
+    console.log('✅ [SIMULATION SERVICE] Successfully removed simulation member');
+  },
+
+  async updateSimulationMemberRole(
+    simulationId: string, 
+    memberId: string, 
+    newRole: Database['public']['Enums']['user_role']
+  ): Promise<void> {
+    console.log('🔄 [SIMULATION SERVICE] Updating simulation member role:', { simulationId, memberId, newRole });
+    
+    const { error } = await supabase
+      .from('simulation_members')
+      .update({ role: newRole })
+      .eq('simulation_id', simulationId)
+      .eq('id', memberId);
+
+    if (error) {
+      console.error('❌ [SIMULATION SERVICE] Error updating simulation member role:', error);
+      throw error;
+    }
+
+    console.log('✅ [SIMULATION SERVICE] Successfully updated simulation member role');
   }
 };

@@ -1,21 +1,29 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SimulationSidebar from '@/components/simulation/SimulationSidebar';
 import SimulationHeaderCard from '@/components/simulation/SimulationHeaderCard';
+import SimulationMemberActionMenu from '@/components/simulation/SimulationMemberActionMenu';
+import SimulationInvitationModal from '@/components/simulation/SimulationInvitationModal';
+import SimulationInvitationsModal from '@/components/simulation/SimulationInvitationsModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, Mail, Calendar } from 'lucide-react';
 import { useSimulationData, useSimulationMembers } from '@/hooks/useSimulationData';
 import { useAuth } from '@/hooks/useAuth';
+import { simulationService } from '@/services/simulationService';
+import { useToast } from '@/hooks/use-toast';
 
 const SimulationMembers = () => {
   const { simulationId } = useParams();
   const { user } = useAuth();
   const { data: simulation, isLoading: simulationLoading, error: simulationError } = useSimulationData(simulationId || '');
-  const { data: members = [], isLoading: membersLoading, error: membersError } = useSimulationMembers(simulationId || '');
+  const { data: members = [], isLoading: membersLoading, error: membersError, refetch } = useSimulationMembers(simulationId || '');
+  const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
+  const [isInvitationsModalOpen, setIsInvitationsModalOpen] = useState(false);
+  const { toast } = useToast();
 
   // Debug logging
   console.log('SimulationMembers - members data:', members);
@@ -71,6 +79,35 @@ const SimulationMembers = () => {
     );
   }
 
+  const handleRemoveMember = async (member: any) => {
+    try {
+      await simulationService.removeSimulationMember(simulationId!, member.id);
+      toast({
+        title: "Member Removed",
+        description: `${member.profiles?.email} has been removed from the simulation`,
+      });
+      refetch();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove member. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMemberAdded = () => {
+    setIsInvitationModalOpen(false);
+    refetch();
+  };
+
+  // Check if current user can manage members
+  const canManageMembers = user && members?.some(member => 
+    member.user_id === user.id && 
+    (member.role === 'brokerage_owner' || member.role === 'simulation_collaborator')
+  );
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -91,10 +128,23 @@ const SimulationMembers = () => {
                       Gestisci i partecipanti alla simulazione
                     </CardDescription>
                   </div>
-                  <Button className="bg-form-green hover:bg-form-green-hover text-white">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invita Partecipante
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setIsInvitationsModalOpen(true)}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      Gestisci Inviti
+                    </Button>
+                    <Button 
+                      className="bg-form-green hover:bg-form-green-hover text-white"
+                      onClick={() => setIsInvitationModalOpen(true)}
+                      disabled={!canManageMembers}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invita Partecipante
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -112,7 +162,11 @@ const SimulationMembers = () => {
                     <p className="text-gray-600 mb-6">
                       Invita altri utenti a collaborare a questa simulazione.
                     </p>
-                    <Button className="bg-form-green hover:bg-form-green-hover text-white">
+                    <Button 
+                      className="bg-form-green hover:bg-form-green-hover text-white"
+                      onClick={() => setIsInvitationModalOpen(true)}
+                      disabled={!canManageMembers}
+                    >
                       <UserPlus className="h-4 w-4 mr-2" />
                       Invita Primo Partecipante
                     </Button>
@@ -152,6 +206,11 @@ const SimulationMembers = () => {
                                 </span>
                               </div>
                             )}
+                            <SimulationMemberActionMenu
+                              member={member}
+                              onDelete={handleRemoveMember}
+                              canDelete={canManageMembers && member.user_id !== user?.id}
+                            />
                           </div>
                         </div>
                       </div>
@@ -163,6 +222,20 @@ const SimulationMembers = () => {
           </div>
         </SidebarInset>
       </div>
+
+      {/* Modals */}
+      <SimulationInvitationModal
+        isOpen={isInvitationModalOpen}
+        onClose={() => setIsInvitationModalOpen(false)}
+        simulationId={simulationId!}
+        onMemberAdded={handleMemberAdded}
+      />
+
+      <SimulationInvitationsModal
+        isOpen={isInvitationsModalOpen}
+        onClose={() => setIsInvitationsModalOpen(false)}
+        simulationId={simulationId!}
+      />
     </SidebarProvider>
   );
 };
