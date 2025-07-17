@@ -60,7 +60,13 @@ export const usePendingInvitations = () => {
     }
   };
 
-  const acceptInvitation = async (invitationId: string) => {
+  const acceptInvitation = async (
+    invitationId: string, 
+    projectName?: string | null, 
+    projectId?: string | null, 
+    brokerageId?: string | null,
+    simulationId?: string | null
+  ) => {
     try {
       console.log('🎯 [PENDING INVITATIONS] Accepting invitation:', invitationId);
       
