@@ -5,11 +5,15 @@ type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 type Simulation = Database['public']['Tables']['simulations']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
 type Invitation = Database['public']['Tables']['invitations']['Row'];
+type UserRole = Database['public']['Enums']['user_role'];
 
 // Agent-specific types
 export interface CreatableBrokerage extends Brokerage {
   access_type: 'member';
   can_create_simulations: boolean;
+  user_roles: UserRole[];
+  primary_role: UserRole;
+  role_count: number;
 }
 
 export interface AgentSimulation extends Simulation {
@@ -33,6 +37,24 @@ export interface AgentInvitation extends Invitation {
   invitation_type: 'project' | 'brokerage' | 'simulation';
 }
 
+// Role priority mapping for determining primary role
+const ROLE_PRIORITY: Record<UserRole, number> = {
+  'brokerage_owner': 1,
+  'broker_assistant': 2,
+  'real_estate_agent': 3,
+  'simulation_collaborator': 4,
+  'mortgage_applicant': 5,
+  'superadmin': 0
+};
+
+function determinePrimaryRole(roles: UserRole[]): UserRole {
+  if (roles.length === 0) return 'real_estate_agent';
+  
+  return roles.reduce((primary, current) => {
+    return ROLE_PRIORITY[current] < ROLE_PRIORITY[primary] ? current : primary;
+  });
+}
+
 export const agentDataService = {
   // Get brokerages where agent can create simulations
   async getAgentCreatableSimulationBrokerages(userId?: string): Promise<CreatableBrokerage[]> {
@@ -42,6 +64,7 @@ export const agentDataService = {
     const { data, error } = await supabase
       .from('brokerage_members')
       .select(`
+        role,
         brokerages (
           id,
           name,
@@ -55,10 +78,33 @@ export const agentDataService = {
 
     if (error) throw error;
 
-    return (data || []).map(item => ({
-      ...item.brokerages!,
+    // Group by brokerage and aggregate roles
+    const brokerageMap = new Map<string, {
+      brokerage: any;
+      roles: UserRole[];
+    }>();
+
+    data?.forEach(item => {
+      const brokerageId = item.brokerages!.id;
+      
+      if (!brokerageMap.has(brokerageId)) {
+        brokerageMap.set(brokerageId, {
+          brokerage: item.brokerages!,
+          roles: []
+        });
+      }
+      
+      brokerageMap.get(brokerageId)!.roles.push(item.role);
+    });
+
+    // Convert to CreatableBrokerage format
+    return Array.from(brokerageMap.values()).map(({ brokerage, roles }) => ({
+      ...brokerage,
       access_type: 'member' as const,
-      can_create_simulations: true
+      can_create_simulations: true,
+      user_roles: roles,
+      primary_role: determinePrimaryRole(roles),
+      role_count: roles.length
     }));
   },
 
