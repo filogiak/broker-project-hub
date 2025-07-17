@@ -20,7 +20,7 @@ serve(async (req) => {
     }
 
     // Get the form slug from request body or use default
-    const { form_slug = 'simulazione-mutuo' } = await req.json().catch(() => ({}))
+    const { form_slug = 'gestionale-progetto' } = await req.json().catch(() => ({}))
 
     console.log('Making API call to external service with form_slug:', form_slug)
 
