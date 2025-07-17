@@ -266,7 +266,7 @@ const Dashboard = () => {
       return <BrokerAssistantDashboard />;
       
     case 'real_estate_agent':
-      return <RealEstateAgentDashboard />;
+      return <Navigate to="/agent/dashboard" replace />;
       
     case 'mortgage_applicant':
       return <MortgageApplicantDashboard />;

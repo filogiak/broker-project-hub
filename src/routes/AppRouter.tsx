@@ -65,6 +65,13 @@ import BrokerAssistantInvitations from '@/pages/BrokerAssistant/BrokerAssistantI
 import BrokerAssistantSettings from '@/pages/BrokerAssistant/BrokerAssistantSettings';
 import { BrokerAssistantLayout } from '@/components/broker/BrokerAssistantLayout';
 
+// Import new agent pages
+import AgentDashboard from '@/pages/Agent/AgentDashboard';
+import AgentOrganizations from '@/pages/Agent/AgentOrganizations';
+import AgentProjects from '@/pages/Agent/AgentProjects';
+import AgentSimulations from '@/pages/Agent/AgentSimulations';
+import AgentSettings from '@/pages/Agent/AgentSettings';
+
 const AppRouter = () => {
   const { loading } = useAuth();
 
@@ -320,6 +327,48 @@ const AppRouter = () => {
         <ProtectedRoute>
           <SimulationSettings />
         </ProtectedRoute>
+      ),
+    },
+    
+    // Real Estate Agent routes with new layout
+    {
+      path: '/agent/dashboard',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentDashboard />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent/organizzazioni',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentOrganizations />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent/progetti',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentProjects />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent/simulazioni',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentSimulations />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent/impostazioni',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentSettings />
+        </RoleBasedRoute>
       ),
     },
     {
