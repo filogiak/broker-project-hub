@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 import { Briefcase, Plus } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,8 +30,7 @@ const AgentProjects = () => {
   );
 
   return (
-    <RealEstateAgentLayout>
-      <div className="flex-1 space-y-6 p-8 pt-6">
+    <div className="flex-1 space-y-6 p-8 pt-6">
         <div className="flex items-center justify-between">
           <h1 className="text-black font-dm-sans text-3xl font-bold">Progetti</h1>
           <Button 
@@ -104,8 +102,7 @@ const AgentProjects = () => {
           </ContentContainer>
         )}
       </div>
-    </RealEstateAgentLayout>
-  );
-};
+    );
+  };
 
 export default AgentProjects;

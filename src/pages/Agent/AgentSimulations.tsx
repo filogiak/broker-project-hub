@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 import { BarChart3, Plus } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,8 +30,7 @@ const AgentSimulations = () => {
   );
 
   return (
-    <RealEstateAgentLayout>
-      <div className="flex-1 space-y-6 p-8 pt-6">
+    <div className="flex-1 space-y-6 p-8 pt-6">
         <div className="flex items-center justify-between">
           <h1 className="text-black font-dm-sans text-3xl font-bold">Simulazioni</h1>
           <Button 
@@ -104,8 +102,7 @@ const AgentSimulations = () => {
           </ContentContainer>
         )}
       </div>
-    </RealEstateAgentLayout>
-  );
-};
+    );
+  };
 
 export default AgentSimulations;
