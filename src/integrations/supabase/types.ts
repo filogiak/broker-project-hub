@@ -1294,6 +1294,10 @@ export type Database = {
         Args: { p_name: string; p_brokerage_id: string; p_description?: string }
         Returns: string
       }
+      test_auth_context: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       user_can_access_brokerage: {
         Args: { brokerage_uuid: string; user_uuid?: string }
         Returns: boolean

@@ -17,8 +17,31 @@ export const createBrokerageInvitation = async (
   console.log('📧 [BROKERAGE INVITATION] Creating brokerage invitation:', { brokerageId, email, role });
 
   try {
+    // Test auth context immediately
+    console.log('🔧 [INVITATION DEBUG] Testing auth context...');
+    const { data: authTest, error: authTestError } = await supabase
+      .rpc('test_auth_context');
+
+    console.log('🔧 [INVITATION DEBUG] Auth context test result:', {
+      authTest,
+      authTestError,
+      timestamp: new Date().toISOString()
+    });
+
     // Get current user session
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    console.log('🔧 [INVITATION DEBUG] Session check:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      sessionError,
+      tokenPresent: !!session?.access_token,
+      expiresAt: session?.expires_at,
+      timestamp: new Date().toISOString()
+    });
+
     if (!session?.user) {
       throw new Error('Authentication required');
     }
@@ -87,11 +110,29 @@ export const createBrokerageInvitation = async (
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
+    console.log('🔧 [INVITATION DEBUG] About to insert invitation:', {
+      ...invitationData,
+      encrypted_token: encryptedToken ? 'present' : 'missing',
+      timestamp: new Date().toISOString()
+    });
+
     const { data: invitation, error: invitationError } = await supabase
       .from('invitations')
       .insert(invitationData)
       .select()
       .single();
+
+    console.log('🔧 [INVITATION DEBUG] Invitation insert result:', {
+      success: !!invitation,
+      invitationId: invitation?.id,
+      insertError: invitationError ? {
+        message: invitationError.message,
+        code: invitationError.code,
+        details: invitationError.details,
+        hint: invitationError.hint
+      } : null,
+      timestamp: new Date().toISOString()
+    });
 
     if (invitationError) {
       console.error('❌ [BROKERAGE INVITATION] Failed to create invitation:', invitationError);
