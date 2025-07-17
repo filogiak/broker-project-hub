@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import AgentProjectCard from '@/components/agent/AgentProjectCard';
 import StandardCard from '@/components/ui/standard-card';
+import ContentContainer from '@/components/ui/content-container';
 
 const AgentProjects = () => {
   const { projects, loading, error, refreshProjects, hasData } = useAgentData();
@@ -57,24 +58,42 @@ const AgentProjects = () => {
           <LoadingSkeleton />
         ) : projects.length > 0 ? (
           <div className="space-y-6">
-            <StandardCard 
-              title={`I tuoi Progetti (${projects.length})`}
-              description="Tutti i progetti a cui hai accesso attraverso le tue organizzazioni o inviti diretti"
-              icon={Briefcase}
-            >
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
+            <ContentContainer className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-[#235c4e]/10 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-[#235c4e]" />
+                </div>
+                <div>
+                  <h2 className="text-black font-dm-sans text-lg font-semibold">
+                    I tuoi Progetti ({projects.length})
+                  </h2>
+                  <p className="text-gray-600 font-dm-sans text-sm">
+                    Tutti i progetti a cui hai accesso attraverso le tue organizzazioni o inviti diretti
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <AgentProjectCard key={project.id} project={project} />
                 ))}
               </div>
-            </StandardCard>
+            </ContentContainer>
           </div>
         ) : (
-          <StandardCard 
-            title="I tuoi Progetti"
-            description="Tutti i progetti a cui hai accesso attraverso le tue organizzazioni o inviti diretti"
-            icon={Briefcase}
-          >
+          <ContentContainer className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-[#235c4e]/10 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-[#235c4e]" />
+              </div>
+              <div>
+                <h2 className="text-black font-dm-sans text-lg font-semibold">
+                  I tuoi Progetti
+                </h2>
+                <p className="text-gray-600 font-dm-sans text-sm">
+                  Tutti i progetti a cui hai accesso attraverso le tue organizzazioni o inviti diretti
+                </p>
+              </div>
+            </div>
             <div className="text-center py-8">
               <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-black font-dm-sans text-lg font-medium mb-2">Nessun progetto trovato</h3>
@@ -82,7 +101,7 @@ const AgentProjects = () => {
                 Non hai ancora accesso a nessun progetto. I progetti appariranno qui quando sarai invitato o quando farai parte di una brokerage.
               </p>
             </div>
-          </StandardCard>
+          </ContentContainer>
         )}
       </div>
     </RealEstateAgentLayout>

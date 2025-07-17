@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import AgentSimulationCard from '@/components/agent/AgentSimulationCard';
 import StandardCard from '@/components/ui/standard-card';
+import ContentContainer from '@/components/ui/content-container';
 
 const AgentSimulations = () => {
   const { simulations, loading, error, refreshSimulations, hasData } = useAgentData();
@@ -57,24 +58,42 @@ const AgentSimulations = () => {
           <LoadingSkeleton />
         ) : simulations.length > 0 ? (
           <div className="space-y-6">
-            <StandardCard 
-              title={`Le tue Simulazioni (${simulations.length})`}
-              description="Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni"
-              icon={BarChart3}
-            >
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
+            <ContentContainer className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-[#235c4e]/10 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-[#235c4e]" />
+                </div>
+                <div>
+                  <h2 className="text-black font-dm-sans text-lg font-semibold">
+                    Le tue Simulazioni ({simulations.length})
+                  </h2>
+                  <p className="text-gray-600 font-dm-sans text-sm">
+                    Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {simulations.map((simulation) => (
                   <AgentSimulationCard key={simulation.id} simulation={simulation} />
                 ))}
               </div>
-            </StandardCard>
+            </ContentContainer>
           </div>
         ) : (
-          <StandardCard 
-            title="Le tue Simulazioni"
-            description="Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni"
-            icon={BarChart3}
-          >
+          <ContentContainer className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-[#235c4e]/10 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-[#235c4e]" />
+              </div>
+              <div>
+                <h2 className="text-black font-dm-sans text-lg font-semibold">
+                  Le tue Simulazioni
+                </h2>
+                <p className="text-gray-600 font-dm-sans text-sm">
+                  Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni
+                </p>
+              </div>
+            </div>
             <div className="text-center py-8">
               <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-black font-dm-sans text-lg font-medium mb-2">Nessuna simulazione trovata</h3>
@@ -82,7 +101,7 @@ const AgentSimulations = () => {
                 Non hai ancora creato nessuna simulazione. Potrai creare simulazioni quando farai parte di una brokerage.
               </p>
             </div>
-          </StandardCard>
+          </ContentContainer>
         )}
       </div>
     </RealEstateAgentLayout>

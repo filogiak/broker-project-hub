@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 import { Home, Users, Briefcase, BarChart3, Building, Mail, LucideIcon } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
 import StandardCard from '@/components/ui/standard-card';
+import ContentContainer from '@/components/ui/content-container';
 
 const AgentDashboard = () => {
   const { creatableBrokerages, stats, invitations, loading, error, hasInvitations } = useAgentData();
@@ -101,11 +103,21 @@ const AgentDashboard = () => {
             </div>
           </StandardCard>
           
-          <StandardCard 
-            title="Inviti in Attesa" 
-            description={hasInvitations ? 'I tuoi inviti pendenti' : 'Nessun invito pendente'}
-            className="col-span-3"
-          >
+          <ContentContainer className="col-span-3 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-[#235c4e]/10 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-[#235c4e]" />
+              </div>
+              <div>
+                <h3 className="text-black font-dm-sans text-lg font-semibold">
+                  Inviti in Attesa
+                </h3>
+                <p className="text-gray-600 font-dm-sans text-sm">
+                  {hasInvitations ? 'I tuoi inviti pendenti' : 'Nessun invito pendente'}
+                </p>
+              </div>
+            </div>
+            
             <div className="space-y-4">
               {loading ? (
                 <div className="space-y-3">
@@ -139,7 +151,7 @@ const AgentDashboard = () => {
                 </p>
               )}
             </div>
-          </StandardCard>
+          </ContentContainer>
         </div>
       </div>
     </RealEstateAgentLayout>

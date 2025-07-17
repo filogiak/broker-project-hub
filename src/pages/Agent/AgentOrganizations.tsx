@@ -4,73 +4,67 @@ import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout'
 import { Skeleton } from '@/components/ui/skeleton';
 import { Building, AlertCircle } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
-import AgentOrganizationCard from '@/components/agent/AgentOrganizationCard';
-import StandardCard from '@/components/ui/standard-card';
+import AgentOrganizationDisplayCard from '@/components/agent/AgentOrganizationDisplayCard';
+import { Card, CardContent } from '@/components/ui/card';
 
 const AgentOrganizations = () => {
   const { creatableBrokerages, loading, error } = useAgentData();
 
+  if (loading) {
+    return (
+      <RealEstateAgentLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-lg">Caricamento organizzazioni...</div>
+        </div>
+      </RealEstateAgentLayout>
+    );
+  }
+
   return (
     <RealEstateAgentLayout>
-      <div className="flex-1 space-y-6 p-8 pt-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-black font-dm-sans text-3xl font-bold">Organizzazioni</h1>
+      <div className="flex-1 p-8 space-y-8">
+        {/* Main Action Cards */}
+        <div>
+          <h2 className="font-semibold font-dm-sans mb-2 text-2xl text-black">Le tue Organizzazioni</h2>
+          <p className="text-muted-foreground font-dm-sans mb-6">
+            Organizzazioni di cui fai parte come agente immobiliare
+          </p>
         </div>
-        
-        <StandardCard 
-          title="Le tue Organizzazioni" 
-          description="Elenco delle brokerages di cui fai parte come agente immobiliare"
-          icon={Building}
-        >
-          {loading && (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="p-6 border border-gray-100 rounded-lg">
-                  <div className="flex items-start justify-between mb-4">
-                    <Skeleton className="w-12 h-12 rounded-xl" />
-                    <Skeleton className="w-20 h-6 rounded" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="w-3/4 h-6" />
-                    <Skeleton className="w-full h-4" />
-                    <Skeleton className="w-1/2 h-4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
-          {error && (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-black font-dm-sans text-lg font-medium mb-2">Errore nel caricamento</h3>
-              <p className="text-gray-600 font-dm-sans text-sm">
-                Si è verificato un errore nel caricamento delle organizzazioni: {error}
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && creatableBrokerages.length === 0 && (
-            <div className="text-center py-8">
-              <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-black font-dm-sans text-lg font-medium mb-2">Nessuna organizzazione trovata</h3>
-              <p className="text-gray-600 font-dm-sans text-sm">
-                Non sei ancora membro di nessuna brokerage. Contatta il tuo broker per ricevere un invito.
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && creatableBrokerages.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Organizations Grid */}
+        <div className="grid gap-6">
+          {error ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2 font-dm-sans">Errore nel caricamento</h3>
+                <p className="text-muted-foreground text-center max-w-md font-dm-sans">
+                  Si è verificato un errore nel caricamento delle organizzazioni: {error}
+                </p>
+              </CardContent>
+            </Card>
+          ) : !creatableBrokerages || creatableBrokerages.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Building className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2 font-dm-sans">Nessuna organizzazione trovata</h3>
+                <p className="text-muted-foreground text-center max-w-md font-dm-sans">
+                  Non sei ancora membro di nessuna organizzazione come agente immobiliare. 
+                  Attendi un invito dal proprietario di un'organizzazione.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {creatableBrokerages.map((brokerage) => (
-                <AgentOrganizationCard 
-                  key={brokerage.id} 
-                  brokerage={brokerage} 
+                <AgentOrganizationDisplayCard
+                  key={brokerage.id}
+                  brokerage={brokerage}
                 />
               ))}
             </div>
           )}
-        </StandardCard>
+        </div>
       </div>
     </RealEstateAgentLayout>
   );
