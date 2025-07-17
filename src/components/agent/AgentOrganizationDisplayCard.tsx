@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users } from 'lucide-react';
+import { ChevronRight, Building2, Users } from 'lucide-react';
 import type { CreatableBrokerage } from '@/services/agentDataService';
 
 interface AgentOrganizationDisplayCardProps {
@@ -20,7 +20,7 @@ const AgentOrganizationDisplayCard = ({ brokerage }: AgentOrganizationDisplayCar
           </div>
           
           <Badge 
-            className="font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans border-[#E3FD53] text-form-green"
+            className="font-medium text-xs px-3 py-1 rounded-[8px] font-dm-sans border-[#E3FD53] text-form-green transition-opacity duration-200"
             style={{ backgroundColor: '#E3FD53' }}
           >
             {brokerage.access_type === 'member' ? 'Membro' : 'Proprietario'}
@@ -42,6 +42,11 @@ const AgentOrganizationDisplayCard = ({ brokerage }: AgentOrganizationDisplayCar
             <span className="text-xs text-gray-500 font-dm-sans">
               Organizzazione attiva
             </span>
+          </div>
+
+          {/* Bottom section with arrow */}
+          <div className="flex justify-end pt-2 border-t border-gray-100">
+            <ChevronRight className="h-5 w-5 text-gray-600" />
           </div>
         </div>
       </CardContent>
