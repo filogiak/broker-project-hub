@@ -1146,6 +1146,15 @@ export type Database = {
           kept_roles: Database["public"]["Enums"]["user_role"][]
         }[]
       }
+      create_brokerage_invitation: {
+        Args: {
+          p_brokerage_id: string
+          p_email: string
+          p_role: Database["public"]["Enums"]["user_role"]
+          p_invited_by?: string
+        }
+        Returns: Json
+      }
       create_project_safe: {
         Args: {
           project_name: string

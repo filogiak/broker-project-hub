@@ -9,6 +9,14 @@ export interface BrokerageInvitationResult {
   invitationId?: string;
 }
 
+interface CreateBrokerageInvitationFunctionResult {
+  success: boolean;
+  invitation_id?: string;
+  encrypted_token?: string;
+  error?: string;
+  message?: string;
+}
+
 export const createBrokerageInvitation = async (
   brokerageId: string,
   email: string,
@@ -17,129 +25,43 @@ export const createBrokerageInvitation = async (
   console.log('📧 [BROKERAGE INVITATION] Creating brokerage invitation:', { brokerageId, email, role });
 
   try {
-    // Test auth context immediately
-    console.log('🔧 [INVITATION DEBUG] Testing auth context...');
-    const { data: authTest, error: authTestError } = await supabase
-      .rpc('test_auth_context');
-
-    console.log('🔧 [INVITATION DEBUG] Auth context test result:', {
-      authTest,
-      authTestError,
-      timestamp: new Date().toISOString()
-    });
-
-    // Get current user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    console.log('🔧 [INVITATION DEBUG] Session check:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      sessionError,
-      tokenPresent: !!session?.access_token,
-      expiresAt: session?.expires_at,
-      timestamp: new Date().toISOString()
-    });
-
+    // Get current user session for email sending
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       throw new Error('Authentication required');
     }
 
-    // Check if user already exists and is a member of this brokerage
-    const { data: existingUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingUser) {
-      // Check if user is already a member of this brokerage with this role
-      const { data: existingMember } = await supabase
-        .from('brokerage_members')
-        .select('id')
-        .eq('user_id', existingUser.id)
-        .eq('brokerage_id', brokerageId)
-        .eq('role', role)
-        .maybeSingle();
-
-      if (existingMember) {
-        console.log('⚠️ [BROKERAGE INVITATION] User already has this role in brokerage');
-        return {
-          success: false,
-          error: 'User already has this role in the brokerage'
-        };
-      }
+    // Validate email format
+    if (!email || !email.includes('@')) {
+      throw new Error('Valid email address is required');
     }
 
-    // Check for existing pending invitation
-    const { data: existingInvitation } = await supabase
-      .from('invitations')
-      .select('id, accepted_at, expires_at')
-      .eq('email', email)
-      .eq('brokerage_id', brokerageId)
-      .eq('role', role)
-      .eq('accepted_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
+    // Use the secure database function to create the invitation
+    const { data: rawResult, error: functionError } = await supabase
+      .rpc('create_brokerage_invitation', {
+        p_brokerage_id: brokerageId,
+        p_email: email.toLowerCase().trim(),
+        p_role: role
+      });
 
-    if (existingInvitation) {
-      console.log('⚠️ [BROKERAGE INVITATION] Pending invitation already exists:', existingInvitation.id);
+    if (functionError) {
+      console.error('❌ [BROKERAGE INVITATION] Function error:', functionError);
+      throw new Error(functionError.message || 'Failed to create invitation');
+    }
+
+    // Cast the result to our expected type
+    const result = rawResult as unknown as CreateBrokerageInvitationFunctionResult;
+
+    if (!result || !result.success) {
+      const errorMessage = result?.error || 'Failed to create invitation';
+      console.error('❌ [BROKERAGE INVITATION] Function returned error:', errorMessage);
       return {
         success: false,
-        error: 'A pending invitation already exists for this email and role'
+        error: errorMessage
       };
     }
 
-    // Generate encrypted token
-    const { data: encryptedToken, error: tokenError } = await supabase
-      .rpc('generate_encrypted_invitation_token');
-
-    if (tokenError || !encryptedToken) {
-      console.error('❌ [BROKERAGE INVITATION] Token generation failed:', tokenError);
-      throw new Error('Failed to generate invitation token');
-    }
-
-    // Create invitation record
-    const invitationData = {
-      email,
-      role,
-      brokerage_id: brokerageId,
-      invited_by: session.user.id,
-      encrypted_token: encryptedToken,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-
-    console.log('🔧 [INVITATION DEBUG] About to insert invitation:', {
-      ...invitationData,
-      encrypted_token: encryptedToken ? 'present' : 'missing',
-      timestamp: new Date().toISOString()
-    });
-
-    const { data: invitation, error: invitationError } = await supabase
-      .from('invitations')
-      .insert(invitationData)
-      .select()
-      .single();
-
-    console.log('🔧 [INVITATION DEBUG] Invitation insert result:', {
-      success: !!invitation,
-      invitationId: invitation?.id,
-      insertError: invitationError ? {
-        message: invitationError.message,
-        code: invitationError.code,
-        details: invitationError.details,
-        hint: invitationError.hint
-      } : null,
-      timestamp: new Date().toISOString()
-    });
-
-    if (invitationError) {
-      console.error('❌ [BROKERAGE INVITATION] Failed to create invitation:', invitationError);
-      throw new Error('Failed to create invitation: ' + invitationError.message);
-    }
-
-    console.log('✅ [BROKERAGE INVITATION] Invitation created:', invitation.id);
+    console.log('✅ [BROKERAGE INVITATION] Invitation created:', result.invitation_id);
 
     // Get current user profile for inviter name
     const { data: inviterProfile } = await supabase
@@ -155,12 +77,12 @@ export const createBrokerageInvitation = async (
     // Send invitation email
     const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
       body: {
-        invitationId: invitation.id,
-        email,
+        invitationId: result.invitation_id,
+        email: email.toLowerCase().trim(),
         projectName: null, // This is a brokerage invitation
         role,
         inviterName,
-        encryptedToken,
+        encryptedToken: result.encrypted_token,
         brokerageId
       },
     });
@@ -170,7 +92,7 @@ export const createBrokerageInvitation = async (
       // Don't throw here - invitation was created, just email failed
       return {
         success: true,
-        invitationId: invitation.id,
+        invitationId: result.invitation_id,
         error: 'Invitation created but email failed to send'
       };
     }
@@ -178,7 +100,7 @@ export const createBrokerageInvitation = async (
     console.log('🎉 [BROKERAGE INVITATION] Brokerage invitation sent successfully');
     return { 
       success: true, 
-      invitationId: invitation.id 
+      invitationId: result.invitation_id 
     };
 
   } catch (error) {
