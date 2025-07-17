@@ -183,7 +183,10 @@ export const simulationService = {
   }): Promise<void> {
     const updates: Partial<SimulationInsert> = {
       setup_completed_at: new Date().toISOString(),
-      ...setupData
+      applicant_count: setupData.applicantCount,
+      project_contact_name: setupData.projectContactName,
+      project_contact_email: setupData.projectContactEmail,
+      project_contact_phone: setupData.projectContactPhone,
     };
 
     await this.updateSimulation(simulationId, updates);
@@ -196,6 +199,13 @@ export const simulationService = {
     projectContactEmail?: string;
     projectContactPhone?: string;
   }): Promise<void> {
-    await this.updateSimulation(simulationId, config);
+    const updates: Partial<SimulationInsert> = {
+      applicant_count: config.applicantCount,
+      project_contact_name: config.projectContactName,
+      project_contact_email: config.projectContactEmail,
+      project_contact_phone: config.projectContactPhone,
+    };
+
+    await this.updateSimulation(simulationId, updates);
   }
 };
