@@ -64,6 +64,7 @@ import SimulationSettings from '@/pages/Simulation/SimulationSettings';
 import BrokerAssistantInvitations from '@/pages/BrokerAssistant/BrokerAssistantInvitations';
 import BrokerAssistantSettings from '@/pages/BrokerAssistant/BrokerAssistantSettings';
 import { BrokerAssistantLayout } from '@/components/broker/BrokerAssistantLayout';
+import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 
 // Import new agent pages
 import AgentDashboard from '@/pages/Agent/AgentDashboard';
@@ -336,7 +337,9 @@ const AppRouter = () => {
       path: '/agent/dashboard',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentDashboard />
+          <RealEstateAgentLayout>
+            <AgentDashboard />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -344,7 +347,9 @@ const AppRouter = () => {
       path: '/agent/organizzazioni',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentOrganizations />
+          <RealEstateAgentLayout>
+            <AgentOrganizations />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -352,7 +357,9 @@ const AppRouter = () => {
       path: '/agent/progetti',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentProjects />
+          <RealEstateAgentLayout>
+            <AgentProjects />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -360,7 +367,9 @@ const AppRouter = () => {
       path: '/agent/simulazioni',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentSimulations />
+          <RealEstateAgentLayout>
+            <AgentSimulations />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -368,7 +377,9 @@ const AppRouter = () => {
       path: '/agent/inviti',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentInvitations />
+          <RealEstateAgentLayout>
+            <AgentInvitations />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -376,7 +387,9 @@ const AppRouter = () => {
       path: '/agent/impostazioni',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <AgentSettings />
+          <RealEstateAgentLayout>
+            <AgentSettings />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
