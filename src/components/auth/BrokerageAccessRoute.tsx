@@ -26,10 +26,25 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
         setLoading(true);
         console.log('🔍 [BrokerageAccessRoute] Checking access for brokerage:', brokerageId);
         
+        // Check if user has brokerage access
         const canAccess = await accessDiscoveryService.canAccessBrokerage(brokerageId);
-        console.log('🔍 [BrokerageAccessRoute] Access check result:', canAccess);
+        console.log('🔍 [BrokerageAccessRoute] Basic access check result:', canAccess);
         
-        setHasAccess(canAccess);
+        // If user has basic access, check if they're a real estate agent only
+        if (canAccess && user.roles) {
+          // Block access for users who only have real_estate_agent role
+          const isOnlyRealEstateAgent = user.roles.length === 1 && user.roles[0] === 'real_estate_agent';
+          
+          if (isOnlyRealEstateAgent) {
+            console.log('🚫 [BrokerageAccessRoute] Access denied: user is only a real estate agent');
+            setHasAccess(false);
+          } else {
+            console.log('✅ [BrokerageAccessRoute] Access granted: user has authorized roles');
+            setHasAccess(true);
+          }
+        } else {
+          setHasAccess(canAccess);
+        }
       } catch (error) {
         console.error('❌ [BrokerageAccessRoute] Error checking brokerage access:', error);
         setHasAccess(false);
