@@ -109,7 +109,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-xl">
         {hasInvitation && (
           <div className="text-center mb-8">
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -129,7 +129,7 @@ const AuthPage = () => {
         )}
         
         <Card className="bg-white shadow-none border-none">
-          <CardHeader className="space-y-1">
+          <CardHeader className="space-y-1 px-12 py-8">
             <CardTitle className="text-2xl font-bold text-center">
               {hasInvitation ? 'Join Your Team' : 'Benvenuto'}
             </CardTitle>
@@ -140,7 +140,7 @@ const AuthPage = () => {
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-12 pb-12">
             {hasInvitation ? (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList className="grid w-full grid-cols-2">
