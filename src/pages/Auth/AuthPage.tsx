@@ -109,7 +109,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         {hasInvitation && (
           <div className="text-center mb-8">
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
