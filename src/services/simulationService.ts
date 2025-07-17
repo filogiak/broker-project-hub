@@ -60,6 +60,45 @@ export const simulationService = {
     return data;
   },
 
+  // Create a simulation with complete setup (new streamlined method)
+  async createSimulationWithSetup(setupData: {
+    name: string;
+    description?: string;
+    brokerageId: string;
+    applicantCount: Database['public']['Enums']['applicant_count'];
+    projectContactName: string;
+    projectContactEmail: string;
+    projectContactPhone?: string;
+    participants: Array<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      participantDesignation: Database['public']['Enums']['participant_designation'];
+    }>;
+  }): Promise<string> {
+    // Create the simulation first
+    const simulationId = await this.createSimulation({
+      name: setupData.name,
+      description: setupData.description,
+      brokerageId: setupData.brokerageId
+    });
+
+    // Complete the setup immediately
+    await this.completeSimulationSetup(simulationId, {
+      applicantCount: setupData.applicantCount,
+      projectContactName: setupData.projectContactName,
+      projectContactEmail: setupData.projectContactEmail,
+      projectContactPhone: setupData.projectContactPhone,
+    });
+
+    // Create participants
+    const { simulationParticipantService } = await import('@/services/simulationParticipantService');
+    await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+
+    return simulationId;
+  },
+
   // Update a simulation
   async updateSimulation(simulationId: string, updates: Partial<SimulationInsert>): Promise<void> {
     const { error } = await supabase

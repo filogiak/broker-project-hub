@@ -5,13 +5,10 @@ import { useToast } from '@/hooks/use-toast';
 import { simulationService } from '@/services/simulationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Plus, Play, CheckCircle, Archive } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
+import SimulationCreationWizard from '@/components/simulation/SimulationCreationWizard';
 import type { Database } from '@/integrations/supabase/types';
 
 type Simulation = Database['public']['Tables']['simulations']['Row'];
@@ -22,12 +19,7 @@ const BrokerageSimulations = () => {
   const { toast } = useToast();
   const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newSimulation, setNewSimulation] = useState({
-    name: '',
-    description: ''
-  });
-  const [creating, setCreating] = useState(false);
+  const [createWizardOpen, setCreateWizardOpen] = useState(false);
 
   useEffect(() => {
     loadSimulations();
@@ -52,35 +44,8 @@ const BrokerageSimulations = () => {
     }
   };
 
-  const handleCreateSimulation = async () => {
-    if (!brokerageId || !newSimulation.name.trim()) return;
-
-    try {
-      setCreating(true);
-      await simulationService.createSimulation({
-        name: newSimulation.name,
-        description: newSimulation.description,
-        brokerageId
-      });
-
-      toast({
-        title: "Success",
-        description: "Simulation created successfully.",
-      });
-
-      setCreateModalOpen(false);
-      setNewSimulation({ name: '', description: '' });
-      loadSimulations();
-    } catch (error) {
-      console.error('Error creating simulation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create simulation.",
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-    }
+  const handleSimulationCreated = () => {
+    loadSimulations();
   };
 
   const getStatusIcon = (status: string) => {
@@ -137,52 +102,13 @@ const BrokerageSimulations = () => {
                 </p>
               </div>
               
-              <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-form-green hover:bg-form-green-dark text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuova Simulazione
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Crea Nuova Simulazione</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Nome Simulazione</Label>
-                      <Input
-                        id="name"
-                        value={newSimulation.name}
-                        onChange={(e) => setNewSimulation(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Inserisci il nome della simulazione"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Descrizione (opzionale)</Label>
-                      <Textarea
-                        id="description"
-                        value={newSimulation.description}
-                        onChange={(e) => setNewSimulation(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Descrivi la simulazione..."
-                        rows={3}
-                      />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
-                        Annulla
-                      </Button>
-                      <Button 
-                        onClick={handleCreateSimulation}
-                        disabled={!newSimulation.name.trim() || creating}
-                        className="bg-form-green hover:bg-form-green-dark text-white"
-                      >
-                        {creating ? 'Creando...' : 'Crea Simulazione'}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                onClick={() => setCreateWizardOpen(true)}
+                className="bg-form-green hover:bg-form-green-dark text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuova Simulazione
+              </Button>
             </div>
 
             {simulations.length === 0 ? (
@@ -196,7 +122,7 @@ const BrokerageSimulations = () => {
                     Inizia creando la tua prima simulazione per i clienti.
                   </p>
                   <Button 
-                    onClick={() => setCreateModalOpen(true)}
+                    onClick={() => setCreateWizardOpen(true)}
                     className="bg-form-green hover:bg-form-green-dark text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -247,6 +173,13 @@ const BrokerageSimulations = () => {
           </div>
         </SidebarInset>
       </div>
+
+      <SimulationCreationWizard
+        isOpen={createWizardOpen}
+        onClose={() => setCreateWizardOpen(false)}
+        brokerageId={brokerageId!}
+        onSimulationCreated={handleSimulationCreated}
+      />
     </SidebarProvider>
   );
 };

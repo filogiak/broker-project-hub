@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Check, UserPlus, Mail, Phone, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { simulationService } from '@/services/simulationService';
 import { simulationParticipantService, type ParticipantData } from '@/services/simulationParticipantService';
@@ -15,44 +16,47 @@ import type { Database } from '@/integrations/supabase/types';
 type ApplicantCount = Database['public']['Enums']['applicant_count'];
 type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
-interface SimulationSetupData {
+interface SimulationCreationData {
+  name: string;
+  description: string;
   applicantCount: ApplicantCount;
-  projectContactName: string;
-  projectContactEmail: string;
-  projectContactPhone: string;
   participants: ParticipantData[];
 }
 
-interface SimulationSetupWizardProps {
+interface SimulationCreationWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  simulationId: string;
-  simulationName: string;
-  onSetupComplete: () => void;
+  brokerageId: string;
+  onSimulationCreated: () => void;
 }
 
 const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
-  one_applicant: 'Single Applicant',
-  two_applicants: 'Two Applicants',
-  three_or_more_applicants: 'Three or More Applicants'
+  one_applicant: 'Un Richiedente',
+  two_applicants: 'Due Richiedenti',
+  three_or_more_applicants: 'Tre o Più Richiedenti'
 };
 
 const PARTICIPANT_DESIGNATION_LABELS = {
-  solo_applicant: 'Solo Applicant',
-  applicant_one: 'Primary Applicant',
-  applicant_two: 'Secondary Applicant'
+  solo_applicant: 'Richiedente Unico',
+  applicant_one: 'Primo Richiedente',
+  applicant_two: 'Secondo Richiedente'
 };
 
-const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, onSetupComplete }: SimulationSetupWizardProps) => {
+const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCreated }: SimulationCreationWizardProps) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [setupData, setSetupData] = useState<SimulationSetupData>({
+  const [creationData, setCreationData] = useState<SimulationCreationData>({
+    name: '',
+    description: '',
     applicantCount: 'one_applicant',
-    projectContactName: '',
-    projectContactEmail: '',
-    projectContactPhone: '',
-    participants: []
+    participants: [{
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      participantDesignation: 'solo_applicant'
+    }]
   });
 
   const totalSteps = 4;
@@ -74,7 +78,7 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
   };
 
   const handleApplicantCountChange = (count: ApplicantCount) => {
-    setSetupData(prev => ({
+    setCreationData(prev => ({
       ...prev,
       applicantCount: count,
       participants: generateParticipants(count)
@@ -82,7 +86,7 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
   };
 
   const handleParticipantChange = (index: number, field: keyof ParticipantData, value: string) => {
-    setSetupData(prev => ({
+    setCreationData(prev => ({
       ...prev,
       participants: prev.participants.map((p, i) => 
         i === index ? { ...p, [field]: value } : p
@@ -107,45 +111,51 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
     try {
       // Validate participants
       const validationErrors: string[] = [];
-      setupData.participants.forEach((participant, index) => {
+      creationData.participants.forEach((participant, index) => {
         const errors = simulationParticipantService.validateParticipant(participant);
         if (errors.length > 0) {
-          validationErrors.push(`Participant ${index + 1}: ${errors.join(', ')}`);
+          validationErrors.push(`Partecipante ${index + 1}: ${errors.join(', ')}`);
         }
       });
 
       if (validationErrors.length > 0) {
         toast({
-          title: "Validation Error",
+          title: "Errore di Validazione",
           description: validationErrors.join('\n'),
           variant: "destructive",
         });
         return;
       }
 
-      // Update simulation with setup data
-      await simulationService.completeSimulationSetup(simulationId, {
-        applicantCount: setupData.applicantCount,
-        projectContactName: setupData.projectContactName,
-        projectContactEmail: setupData.projectContactEmail,
-        projectContactPhone: setupData.projectContactPhone,
-      });
+      // Get project contact info from first participant (applicant_one)
+      const primaryParticipant = creationData.participants.find(p => 
+        p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
+      );
 
-      // Create participants
-      await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+      // Create simulation with complete setup
+      const simulationId = await simulationService.createSimulationWithSetup({
+        name: creationData.name,
+        description: creationData.description,
+        brokerageId: brokerageId,
+        applicantCount: creationData.applicantCount,
+        projectContactName: primaryParticipant ? `${primaryParticipant.firstName} ${primaryParticipant.lastName}` : '',
+        projectContactEmail: primaryParticipant?.email || '',
+        projectContactPhone: primaryParticipant?.phone || '',
+        participants: creationData.participants
+      });
 
       toast({
-        title: "Setup Complete",
-        description: "Simulation setup has been completed successfully.",
+        title: "Successo",
+        description: "Simulazione creata con successo.",
       });
 
-      onSetupComplete();
+      onSimulationCreated();
       handleClose();
     } catch (error) {
-      console.error('Error completing setup:', error);
+      console.error('Error creating simulation:', error);
       toast({
-        title: "Setup Error",
-        description: "Failed to complete simulation setup. Please try again.",
+        title: "Errore di Creazione",
+        description: "Impossibile creare la simulazione. Riprova.",
         variant: "destructive",
       });
     } finally {
@@ -156,12 +166,17 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
   const handleClose = () => {
     if (!isSubmitting) {
       setCurrentStep(1);
-      setSetupData({
+      setCreationData({
+        name: '',
+        description: '',
         applicantCount: 'one_applicant',
-        projectContactName: '',
-        projectContactEmail: '',
-        projectContactPhone: '',
-        participants: []
+        participants: [{
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          participantDesignation: 'solo_applicant'
+        }]
       });
       onClose();
     }
@@ -170,12 +185,11 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return true; // applicantCount always has a default value
+        return creationData.name.trim().length > 0;
       case 2:
-        return setupData.projectContactName.trim().length > 0 && 
-               setupData.projectContactEmail.trim().length > 0;
+        return true; // applicantCount always has a default value
       case 3:
-        return setupData.participants.every(p => 
+        return creationData.participants.every(p => 
           p.firstName.trim().length > 0 && 
           p.lastName.trim().length > 0 && 
           p.email.trim().length > 0
@@ -193,15 +207,48 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium mb-2">Number of Applicants</h3>
+              <h3 className="text-lg font-medium mb-2">Dettagli Simulazione</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                How many applicants will participate in this mortgage simulation?
+                Fornisci le informazioni di base per la nuova simulazione.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome Simulazione *</Label>
+                <Input
+                  id="name"
+                  value={creationData.name}
+                  onChange={(e) => setCreationData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Inserisci il nome della simulazione"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrizione</Label>
+                <Textarea
+                  id="description"
+                  value={creationData.description}
+                  onChange={(e) => setCreationData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descrivi la simulazione..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Numero di Richiedenti</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Quanti richiedenti parteciperanno a questa simulazione mutuo?
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Applicant Count *</Label>
+              <Label>Numero Richiedenti *</Label>
               <Select
-                value={setupData.applicantCount}
+                value={creationData.applicantCount}
                 onValueChange={(value) => handleApplicantCountChange(value as ApplicantCount)}
               >
                 <SelectTrigger>
@@ -219,60 +266,17 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
           </div>
         );
 
-      case 2:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Project Contact Details</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Provide contact information for this simulation project.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="contact-name">Contact Name *</Label>
-                <Input
-                  id="contact-name"
-                  value={setupData.projectContactName}
-                  onChange={(e) => setSetupData(prev => ({ ...prev, projectContactName: e.target.value }))}
-                  placeholder="Enter contact name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-email">Contact Email *</Label>
-                <Input
-                  id="contact-email"
-                  type="email"
-                  value={setupData.projectContactEmail}
-                  onChange={(e) => setSetupData(prev => ({ ...prev, projectContactEmail: e.target.value }))}
-                  placeholder="Enter contact email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-phone">Contact Phone</Label>
-                <Input
-                  id="contact-phone"
-                  type="tel"
-                  value={setupData.projectContactPhone}
-                  onChange={(e) => setSetupData(prev => ({ ...prev, projectContactPhone: e.target.value }))}
-                  placeholder="Enter contact phone"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
       case 3:
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium mb-2">Participant Information</h3>
+              <h3 className="text-lg font-medium mb-2">Informazioni Partecipanti</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Enter details for each simulation participant.
+                Inserisci i dettagli per ogni partecipante alla simulazione.
               </p>
             </div>
             <div className="space-y-4">
-              {setupData.participants.map((participant, index) => (
+              {creationData.participants.map((participant, index) => (
                 <Card key={index}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -283,19 +287,19 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label>First Name *</Label>
+                        <Label>Nome *</Label>
                         <Input
                           value={participant.firstName}
                           onChange={(e) => handleParticipantChange(index, 'firstName', e.target.value)}
-                          placeholder="Enter first name"
+                          placeholder="Inserisci il nome"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Last Name *</Label>
+                        <Label>Cognome *</Label>
                         <Input
                           value={participant.lastName}
                           onChange={(e) => handleParticipantChange(index, 'lastName', e.target.value)}
-                          placeholder="Enter last name"
+                          placeholder="Inserisci il cognome"
                         />
                       </div>
                     </div>
@@ -305,16 +309,16 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
                         type="email"
                         value={participant.email}
                         onChange={(e) => handleParticipantChange(index, 'email', e.target.value)}
-                        placeholder="Enter email address"
+                        placeholder="Inserisci l'indirizzo email"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Phone</Label>
+                      <Label>Telefono</Label>
                       <Input
                         type="tel"
                         value={participant.phone}
                         onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
-                        placeholder="Enter phone number"
+                        placeholder="Inserisci il numero di telefono"
                       />
                     </div>
                   </CardContent>
@@ -325,53 +329,57 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
         );
 
       case 4:
+        const primaryParticipant = creationData.participants.find(p => 
+          p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
+        );
+        
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium mb-2">Review & Confirm</h3>
+              <h3 className="text-lg font-medium mb-2">Conferma e Crea</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Please review your simulation setup before completing.
+                Rivedi la configurazione della simulazione prima di completare.
               </p>
             </div>
             
             <Card className="bg-accent/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Simulation Setup Summary</CardTitle>
+                <CardTitle className="text-sm">Riepilogo Simulazione</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Simulation:</span>
-                  <span className="font-medium">{simulationName}</span>
+                  <span className="text-muted-foreground">Nome:</span>
+                  <span className="font-medium">{creationData.name}</span>
                 </div>
+                {creationData.description && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Descrizione:</span>
+                    <span className="font-medium">{creationData.description}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Applicants:</span>
+                  <span className="text-muted-foreground">Richiedenti:</span>
                   <Badge variant="secondary">
-                    {APPLICANT_COUNT_LABELS[setupData.applicantCount]}
+                    {APPLICANT_COUNT_LABELS[creationData.applicantCount]}
                   </Badge>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Contact Details:</span>
+                  <span className="text-sm text-muted-foreground">Contatto Progetto:</span>
                   <div className="text-sm space-y-1 pl-2">
                     <div className="flex items-center gap-2">
                       <User className="h-3 w-3" />
-                      {setupData.projectContactName}
+                      {primaryParticipant ? `${primaryParticipant.firstName} ${primaryParticipant.lastName}` : 'N/A'}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-3 w-3" />
-                      {setupData.projectContactEmail}
+                      <span className="text-xs">📧</span>
+                      {primaryParticipant?.email || 'N/A'}
                     </div>
-                    {setupData.projectContactPhone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3" />
-                        {setupData.projectContactPhone}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Participants:</span>
+                  <span className="text-sm text-muted-foreground">Partecipanti:</span>
                   <div className="text-sm space-y-1 pl-2">
-                    {setupData.participants.map((participant, index) => (
+                    {creationData.participants.map((participant, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <UserPlus className="h-3 w-3" />
                         {participant.firstName} {participant.lastName} ({participant.email})
@@ -393,9 +401,9 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Simulation Setup</DialogTitle>
+          <DialogTitle>Crea Nuova Simulazione</DialogTitle>
           <DialogDescription>
-            Step {currentStep} of {totalSteps}: Configure your simulation
+            Passo {currentStep} di {totalSteps}: Configura la tua simulazione
           </DialogDescription>
         </DialogHeader>
 
@@ -436,23 +444,25 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
             disabled={currentStep === 1 || isSubmitting}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
+            Indietro
           </Button>
           
           {currentStep < totalSteps ? (
             <Button
               onClick={handleNext}
               disabled={!isStepValid() || isSubmitting}
+              className="bg-form-green hover:bg-form-green-dark text-white"
             >
-              Next
+              Avanti
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
             <Button
               onClick={handleSubmit}
               disabled={!isStepValid() || isSubmitting}
+              className="bg-form-green hover:bg-form-green-dark text-white"
             >
-              {isSubmitting ? 'Completing...' : 'Complete Setup'}
+              {isSubmitting ? 'Creando...' : 'Crea Simulazione'}
             </Button>
           )}
         </div>
@@ -461,4 +471,4 @@ const SimulationSetupWizard = ({ isOpen, onClose, simulationId, simulationName, 
   );
 };
 
-export default SimulationSetupWizard;
+export default SimulationCreationWizard;
