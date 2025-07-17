@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building, Briefcase, BarChart3, Settings } from 'lucide-react';
+import { Home, Building, Briefcase, BarChart3, Mail, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +44,12 @@ export function RealEstateAgentSidebar() {
       icon: BarChart3,
       path: '/agent/simulazioni',
       isActive: location.pathname === '/agent/simulazioni',
+    },
+    {
+      title: 'Inviti',
+      icon: Mail,
+      path: '/agent/inviti',
+      isActive: location.pathname === '/agent/inviti',
     },
     {
       title: 'Impostazioni',

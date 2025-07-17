@@ -24,7 +24,7 @@ const StandardCard = ({
   
   return (
     <Card 
-      className={`bg-white border border-[#BEB8AE] rounded-[12px] ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
+      className={`bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light ${isClickable ? 'cursor-pointer hover:shadow-md press-down-effect' : ''} ${className}`}
       onClick={onClick}
     >
       <CardHeader className="pb-4">

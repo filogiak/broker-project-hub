@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
-import { Home, Users, Briefcase, BarChart3, Building, Mail } from 'lucide-react';
+import { Home, Users, Briefcase, BarChart3, Building, Mail, LucideIcon } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
 import StandardCard from '@/components/ui/standard-card';
@@ -13,7 +12,7 @@ const AgentDashboard = () => {
     title: string;
     value: number | string;
     description: string;
-    icon: React.ComponentType<any>;
+    icon: LucideIcon;
     isLoading: boolean;
   }) => (
     <StandardCard title={title} icon={Icon}>

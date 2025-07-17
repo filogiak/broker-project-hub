@@ -71,6 +71,7 @@ import AgentOrganizations from '@/pages/Agent/AgentOrganizations';
 import AgentProjects from '@/pages/Agent/AgentProjects';
 import AgentSimulations from '@/pages/Agent/AgentSimulations';
 import AgentSettings from '@/pages/Agent/AgentSettings';
+import AgentInvitations from '@/pages/Agent/AgentInvitations';
 
 const AppRouter = () => {
   const { loading } = useAuth();
@@ -360,6 +361,14 @@ const AppRouter = () => {
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
           <AgentSimulations />
+        </RoleBasedRoute>
+      ),
+    },
+    {
+      path: '/agent/inviti',
+      element: (
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <AgentInvitations />
         </RoleBasedRoute>
       ),
     },

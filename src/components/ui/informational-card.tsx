@@ -22,7 +22,7 @@ const InformationalCard = ({
   className = ""
 }: InformationalCardProps) => {
   return (
-    <Card className={`bg-white border border-[#BEB8AE] rounded-[12px] ${className}`}>
+    <Card className={`bg-white border border-[#BEB8AE] rounded-[12px] solid-shadow-light ${className}`}>
       <CardContent className="p-6">
         <div className="flex items-start gap-4 mb-4">
           {Icon && (
