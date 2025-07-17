@@ -130,8 +130,13 @@ export type Database = {
           created_by: string | null
           expires_at: string
           form_slug: string
+          form_type: string | null
           id: string
           link: string
+          participant_designation:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          simulation_id: string | null
           token: string
           updated_at: string
           user_id: string | null
@@ -142,8 +147,13 @@ export type Database = {
           created_by?: string | null
           expires_at: string
           form_slug: string
+          form_type?: string | null
           id?: string
           link: string
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          simulation_id?: string | null
           token: string
           updated_at?: string
           user_id?: string | null
@@ -154,8 +164,13 @@ export type Database = {
           created_by?: string | null
           expires_at?: string
           form_slug?: string
+          form_type?: string | null
           id?: string
           link?: string
+          participant_designation?:
+            | Database["public"]["Enums"]["participant_designation"]
+            | null
+          simulation_id?: string | null
           token?: string
           updated_at?: string
           user_id?: string | null
@@ -166,6 +181,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_links_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
             referencedColumns: ["id"]
           },
           {
@@ -1025,40 +1047,106 @@ export type Database = {
           },
         ]
       }
+      simulation_participants: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
+          phone: string | null
+          simulation_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          participant_designation: Database["public"]["Enums"]["participant_designation"]
+          phone?: string | null
+          simulation_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          participant_designation?: Database["public"]["Enums"]["participant_designation"]
+          phone?: string | null
+          simulation_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_participants_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulations: {
         Row: {
+          applicant_count: Database["public"]["Enums"]["applicant_count"] | null
           brokerage_id: string
           converted_at: string | null
           converted_to_project_id: string | null
           created_at: string
           created_by: string
           description: string | null
+          forms_generated_at: string | null
           id: string
           name: string
+          project_contact_email: string | null
+          project_contact_name: string | null
+          project_contact_phone: string | null
+          setup_completed_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          applicant_count?:
+            | Database["public"]["Enums"]["applicant_count"]
+            | null
           brokerage_id: string
           converted_at?: string | null
           converted_to_project_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
+          forms_generated_at?: string | null
           id?: string
           name: string
+          project_contact_email?: string | null
+          project_contact_name?: string | null
+          project_contact_phone?: string | null
+          setup_completed_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          applicant_count?:
+            | Database["public"]["Enums"]["applicant_count"]
+            | null
           brokerage_id?: string
           converted_at?: string | null
           converted_to_project_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
+          forms_generated_at?: string | null
           id?: string
           name?: string
+          project_contact_email?: string | null
+          project_contact_name?: string | null
+          project_contact_phone?: string | null
+          setup_completed_at?: string | null
           status?: string
           updated_at?: string
         }
