@@ -18,6 +18,7 @@ interface InvitationEmailRequest {
   inviterName: string;
   encryptedToken?: string;
   brokerageId?: string;
+  simulationId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -38,7 +39,8 @@ const handler = async (req: Request): Promise<Response> => {
       role, 
       inviterName, 
       encryptedToken,
-      brokerageId 
+      brokerageId,
+      simulationId 
     }: InvitationEmailRequest = await req.json();
 
     console.log("📧 Sending invitation email:", { 
@@ -46,7 +48,8 @@ const handler = async (req: Request): Promise<Response> => {
       email, 
       projectName, 
       role, 
-      isBrokerageInvitation: !!brokerageId 
+      isBrokerageInvitation: !!brokerageId,
+      isSimulationInvitation: !!simulationId 
     });
 
     // Get the invitation details if encryptedToken is not provided
@@ -75,14 +78,30 @@ const handler = async (req: Request): Promise<Response> => {
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000";
 
     // Determine the invitation type and content
-    const isBrokerageInvitation = !!brokerageId && !projectName;
+    const isBrokerageInvitation = !!brokerageId && !projectName && !simulationId;
+    const isSimulationInvitation = !!simulationId;
     const inviteUrl = `${baseUrl}/auth?invitation=true&email=${encodeURIComponent(email)}`;
     
     let subject: string;
     let mainMessage: string;
     let instructions: string;
+    let entityName: string;
 
-    if (isBrokerageInvitation) {
+    if (isSimulationInvitation) {
+      // Get simulation name
+      const { data: simulation } = await supabase
+        .from('simulations')
+        .select('name')
+        .eq('id', simulationId)
+        .single();
+
+      entityName = simulation?.name || 'a simulation';
+      subject = `You're invited to join the simulation "${entityName}"`;
+      mainMessage = `You've been invited to join the simulation <strong>${entityName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      instructions = userExists 
+        ? "Login to your account and check your dashboard to accept this invitation."
+        : "Create your account to join the simulation. After signup, check your dashboard to accept the invitation.";
+    } else if (isBrokerageInvitation) {
       // Get brokerage name
       const { data: brokerage } = await supabase
         .from('brokerages')
@@ -90,17 +109,17 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('id', brokerageId)
         .single();
 
-      const brokerageName = brokerage?.name || 'a brokerage';
-      
-      subject = `You're invited to join ${brokerageName}`;
-      mainMessage = `You've been invited to join <strong>${brokerageName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      entityName = brokerage?.name || 'a brokerage';
+      subject = `You're invited to join ${entityName}`;
+      mainMessage = `You've been invited to join <strong>${entityName}</strong> as a <strong>${roleDisplayName}</strong>.`;
       instructions = userExists 
         ? "Login to your account and check your dashboard to accept this invitation."
         : "Create your account to join the brokerage. After signup, check your dashboard to accept the invitation.";
     } else {
       // Project invitation
-      subject = `You're invited to join ${projectName}`;
-      mainMessage = `You've been invited to join the project <strong>${projectName}</strong> as a <strong>${roleDisplayName}</strong>.`;
+      entityName = projectName || 'a project';
+      subject = `You're invited to join ${entityName}`;
+      mainMessage = `You've been invited to join the project <strong>${entityName}</strong> as a <strong>${roleDisplayName}</strong>.`;
       instructions = userExists 
         ? "Login to your account and check your dashboard to accept this invitation."
         : "Create your account to join the project. After signup, check your dashboard to accept the invitation.";
@@ -124,7 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
             <h1 style="margin: 0; font-size: 28px;">You're Invited!</h1>
             <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
-              ${isBrokerageInvitation ? `Join as ${roleDisplayName}` : `Join ${projectName} as ${roleDisplayName}`}
+              ${isSimulationInvitation ? `Join simulation as ${roleDisplayName}` : isBrokerageInvitation ? `Join as ${roleDisplayName}` : `Join ${entityName} as ${roleDisplayName}`}
             </p>
           </div>
           
@@ -134,7 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              <strong>${inviterName}</strong> has invited you to ${isBrokerageInvitation ? 'join their brokerage' : `join the project <strong>${projectName}</strong>`} as a <strong>${roleDisplayName}</strong>.
+              <strong>${inviterName}</strong> has invited you to ${isSimulationInvitation ? `join the simulation <strong>${entityName}</strong>` : isBrokerageInvitation ? 'join their brokerage' : `join the project <strong>${entityName}</strong>`} as a <strong>${roleDisplayName}</strong>.
             </p>
 
             <p style="font-size: 16px; margin-bottom: 20px; color: #666;">

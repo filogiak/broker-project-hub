@@ -82,27 +82,51 @@ export const getSimulationInvitations = async (simulationId: string): Promise<Si
 export const resendInvitation = async (invitationId: string): Promise<void> => {
   console.log('📧 [SIMULATION INVITATION SERVICE] Resending invitation:', invitationId);
   
+  // Get full invitation details for email
+  const { data: invitation, error: fetchError } = await supabase
+    .from('invitations')
+    .select(`
+      id,
+      email,
+      role,
+      simulation_id,
+      invited_by,
+      profiles!invited_by(first_name, last_name, email)
+    `)
+    .eq('id', invitationId)
+    .single();
+
+  if (fetchError || !invitation) {
+    console.error('❌ [SIMULATION INVITATION SERVICE] Error fetching invitation details:', fetchError);
+    throw fetchError || new Error('Invitation not found');
+  }
+
+  // Get simulation details
+  const { data: simulation } = await supabase
+    .from('simulations')
+    .select('name')
+    .eq('id', invitation.simulation_id)
+    .single();
+
+  const inviterProfile = Array.isArray(invitation.profiles) ? invitation.profiles[0] : invitation.profiles;
+  const inviterName = inviterProfile ? 
+    `${inviterProfile.first_name} ${inviterProfile.last_name}`.trim() || inviterProfile.email : 
+    'Someone';
+
   const { error } = await supabase.functions.invoke('send-invitation-email', {
-    body: { invitationId }
+    body: {
+      invitationId,
+      email: invitation.email,
+      role: invitation.role,
+      inviterName,
+      simulationId: invitation.simulation_id,
+      simulationName: simulation?.name
+    }
   });
 
   if (error) {
     console.error('❌ [SIMULATION INVITATION SERVICE] Error resending invitation:', error);
     throw error;
-  }
-
-  // Update the invitation to mark email as sent
-  const { error: updateError } = await supabase
-    .from('invitations')
-    .update({ 
-      email_sent: true,
-      email_sent_at: new Date().toISOString()
-    })
-    .eq('id', invitationId);
-
-  if (updateError) {
-    console.error('❌ [SIMULATION INVITATION SERVICE] Error updating invitation status:', updateError);
-    throw updateError;
   }
 
   console.log('✅ [SIMULATION INVITATION SERVICE] Successfully resent invitation');
@@ -148,6 +172,7 @@ export const createSimulationInvitation = async (
   console.log('✉️ [SIMULATION INVITATION SERVICE] Creating simulation invitation:', { simulationId, role, email });
   
   try {
+    // Create the invitation
     const { data, error } = await supabase.rpc('create_simulation_invitation', {
       p_simulation_id: simulationId,
       p_email: email,
@@ -163,11 +188,43 @@ export const createSimulationInvitation = async (
     }
 
     const result = data as any;
-    if (result && typeof result === 'object') {
+    if (!result?.success) {
       return {
-        success: result.success || false,
-        error: result.error
+        success: false,
+        error: result?.error || 'Failed to create invitation'
       };
+    }
+
+    // Get invitation details for email
+    const invitationId = result.invitation_id;
+    if (invitationId) {
+      // Get simulation and inviter details
+      const [simulationResult, currentUserResult] = await Promise.all([
+        supabase.from('simulations').select('name').eq('id', simulationId).single(),
+        supabase.from('profiles').select('first_name, last_name, email').eq('id', (await supabase.auth.getUser()).data.user?.id || '').single()
+      ]);
+
+      const simulationName = simulationResult.data?.name || 'Simulation';
+      const currentUser = currentUserResult.data;
+      const inviterName = currentUser ? `${currentUser.first_name} ${currentUser.last_name}`.trim() || currentUser.email : 'Someone';
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            invitationId,
+            email,
+            role,
+            inviterName,
+            simulationId,
+            simulationName
+          }
+        });
+        console.log('✅ [SIMULATION INVITATION SERVICE] Email sent successfully');
+      } catch (emailError) {
+        console.error('⚠️ [SIMULATION INVITATION SERVICE] Email sending failed but invitation created:', emailError);
+        // Don't fail the entire operation if email fails
+      }
     }
 
     return {
