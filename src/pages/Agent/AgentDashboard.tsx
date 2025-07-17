@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 import { Home, Users, Briefcase, BarChart3, Building, Mail, LucideIcon } from 'lucide-react';
 import { useAgentData } from '@/hooks/useAgentData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,8 +27,7 @@ const AgentDashboard = () => {
   );
 
   return (
-    <RealEstateAgentLayout>
-      <div className="flex-1 space-y-6 p-8 pt-6">
+    <div className="flex-1 space-y-6 p-8 pt-6">
         <div className="flex items-center justify-between">
           <h1 className="text-black font-dm-sans text-3xl font-bold">Dashboard Agente</h1>
         </div>
@@ -154,8 +152,7 @@ const AgentDashboard = () => {
           </ContentContainer>
         </div>
       </div>
-    </RealEstateAgentLayout>
-  );
-};
+    );
+  };
 
 export default AgentDashboard;

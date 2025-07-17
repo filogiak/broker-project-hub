@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MailOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PendingInvitationCard from '@/components/broker/PendingInvitationCard';
-import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 
 const AgentInvitations = () => {
   const { user } = useAuth();
@@ -64,19 +63,16 @@ const AgentInvitations = () => {
 
   if (isLoading) {
     return (
-      <RealEstateAgentLayout>
-        <div className="flex-1 p-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-lg font-dm-sans">Caricamento inviti...</div>
-          </div>
+      <div className="flex-1 p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-lg font-dm-sans">Caricamento inviti...</div>
         </div>
-      </RealEstateAgentLayout>
+      </div>
     );
   }
 
   return (
-    <RealEstateAgentLayout>
-      <div className="flex-1 p-8">
+    <div className="flex-1 p-8">
         {/* White container box for invitations */}
         <Card className="bg-white border-2 border-form-green/20 rounded-[12px] overflow-hidden solid-shadow-light">
           <CardContent className="p-8">
@@ -114,9 +110,8 @@ const AgentInvitations = () => {
               )}
             </div>
           </CardContent>
-        </Card>
-      </div>
-    </RealEstateAgentLayout>
+      </Card>
+    </div>
   );
 };
 
