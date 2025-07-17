@@ -110,10 +110,8 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">Broker Project Hub</h1>
-          <p className="text-muted-foreground">AI-powered mortgage intermediation platform</p>
-          {hasInvitation && (
+        {hasInvitation && (
+          <div className="text-center mb-8">
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-700 font-medium">
                 🎯 You've been invited to join a project
@@ -127,125 +125,159 @@ const AuthPage = () => {
                 {activeTab === 'signup' ? 'Create your account below to get started' : 'Sign in to view your invitations'}
               </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         
-        <Card className="card-primary">
+        <Card className="bg-white shadow-none border-none">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
-              {hasInvitation ? 'Join Your Team' : 'Welcome'}
+              {hasInvitation ? 'Join Your Team' : 'Benvenuto'}
             </CardTitle>
             <CardDescription className="text-center">
               {hasInvitation && invitationEmail
                 ? `Complete your ${activeTab === 'signup' ? 'registration' : 'sign in'} to access your project invitation`
-                : "Sign in to your account or create a new one"
+                : "Accedi al tuo account"
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={loginForm.email}
-                      onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      disabled={Boolean(hasInvitation && invitationEmail)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={loginForm.password}
-                      onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Signing in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+            {hasInvitation ? (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-firstName">First Name</Label>
+                      <Label htmlFor="login-email">Email</Label>
                       <Input
-                        id="signup-firstName"
-                        placeholder="John"
-                        value={signupForm.firstName}
-                        onChange={(e) => setSignupForm(prev => ({ ...prev, firstName: e.target.value }))}
+                        id="login-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
                         required
+                        disabled={Boolean(hasInvitation && invitationEmail)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-lastName">Last Name</Label>
+                      <Label htmlFor="login-password">Password</Label>
                       <Input
-                        id="signup-lastName"
-                        placeholder="Doe"
-                        value={signupForm.lastName}
-                        onChange={(e) => setSignupForm(prev => ({ ...prev, lastName: e.target.value }))}
+                        id="login-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
                         required
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signupForm.email}
-                      onChange={(e) => setSignupForm(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      disabled={Boolean(hasInvitation && invitationEmail)}
-                    />
-                    {hasInvitation && invitationEmail && (
-                      <p className="text-xs text-blue-600">
-                        This email was pre-filled from your invitation
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={signupForm.password}
-                      onChange={(e) => setSignupForm(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Creating account...' : 'Create Account'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Signing in...' : 'Sign In'}
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-firstName">First Name</Label>
+                        <Input
+                          id="signup-firstName"
+                          placeholder="John"
+                          value={signupForm.firstName}
+                          onChange={(e) => setSignupForm(prev => ({ ...prev, firstName: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-lastName">Last Name</Label>
+                        <Input
+                          id="signup-lastName"
+                          placeholder="Doe"
+                          value={signupForm.lastName}
+                          onChange={(e) => setSignupForm(prev => ({ ...prev, lastName: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={signupForm.email}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, email: e.target.value }))}
+                        required
+                        disabled={Boolean(hasInvitation && invitationEmail)}
+                      />
+                      {hasInvitation && invitationEmail && (
+                        <p className="text-xs text-blue-600">
+                          This email was pre-filled from your invitation
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Create a password"
+                        value={signupForm.password}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, password: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Creating account...' : 'Create Account'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="Inserisci la tua email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="Inserisci la tua password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Accesso in corso...' : 'Accedi'}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>
