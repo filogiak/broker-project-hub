@@ -135,3 +135,16 @@ export const getBrokerageMembers = async (brokerageId: string) => {
   if (error) throw error;
   return data;
 };
+
+export const getBrokerageInvitations = async (brokerageId: string) => {
+  const { data, error } = await supabase.rpc('get_brokerage_outgoing_invitations', {
+    p_brokerage_id: brokerageId
+  });
+
+  if (error) {
+    console.error('Error fetching brokerage invitations:', error);
+    throw error;
+  }
+
+  return data || [];
+};

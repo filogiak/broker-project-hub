@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { createBrokerageInvitation, resendBrokerageInvitation, cancelBrokerageInvitation } from '@/services/brokerageInvitationService';
+import { getBrokerageInvitations } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -82,36 +83,18 @@ const BrokerageUsersSection = () => {
       if (usersError) throw usersError;
       setUsers(usersData || []);
 
-      // Load invitations
-      const { data: invitationsData, error: invitationsError } = await supabase
-        .from('invitations')
-        .select(`
-          id,
-          email,
-          role,
-          created_at,
-          expires_at,
-          accepted_at,
-          email_sent,
-          invited_by,
-          profiles!invitations_invited_by_fkey(first_name, last_name, email)
-        `)
-        .eq('brokerage_id', brokerageId)
-        .order('created_at', { ascending: false });
-
-      if (invitationsError) throw invitationsError;
-
-      const formattedInvitations = (invitationsData || []).map(inv => ({
+      // Load invitations using secure service function
+      const invitationsData = await getBrokerageInvitations(brokerageId);
+      
+      const formattedInvitations = invitationsData.map(inv => ({
         id: inv.id,
         email: inv.email,
         role: inv.role,
         created_at: inv.created_at,
         expires_at: inv.expires_at,
         accepted_at: inv.accepted_at,
-        email_sent: inv.email_sent,
-        inviter_name: inv.profiles 
-          ? `${inv.profiles.first_name || ''} ${inv.profiles.last_name || ''}`.trim() || inv.profiles.email
-          : 'Unknown',
+        email_sent: inv.email_sent || false,
+        inviter_name: inv.inviter_name,
         days_remaining: Math.max(0, Math.ceil((new Date(inv.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
       }));
 

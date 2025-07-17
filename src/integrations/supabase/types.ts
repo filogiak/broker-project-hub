@@ -1220,6 +1220,20 @@ export type Database = {
           access_type: string
         }[]
       }
+      get_brokerage_outgoing_invitations: {
+        Args: { p_brokerage_id: string }
+        Returns: {
+          id: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          created_at: string
+          expires_at: string
+          accepted_at: string
+          email_sent: boolean
+          email_sent_at: string
+          inviter_name: string
+        }[]
+      }
       get_brokerage_users: {
         Args: { brokerage_uuid: string }
         Returns: {
