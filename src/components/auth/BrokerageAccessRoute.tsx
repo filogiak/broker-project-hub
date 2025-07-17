@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { accessDiscoveryService } from '@/services/accessDiscoveryService';
 
 interface BrokerageAccessRouteProps {
@@ -14,6 +15,7 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
   fallbackPath = '/dashboard' 
 }) => {
   const { user, loading: authLoading } = useAuth();
+  const { selectedRole } = useRoleSelection();
   const { brokerageId } = useParams();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,26 +27,20 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
       try {
         setLoading(true);
         console.log('🔍 [BrokerageAccessRoute] Checking access for brokerage:', brokerageId);
+        console.log('🔍 [BrokerageAccessRoute] Current selected role:', selectedRole);
+        
+        // Block access immediately if current selected role is real_estate_agent
+        if (selectedRole === 'real_estate_agent') {
+          console.log('🚫 [BrokerageAccessRoute] Access denied: current role is real_estate_agent');
+          setHasAccess(false);
+          return;
+        }
         
         // Check if user has brokerage access
         const canAccess = await accessDiscoveryService.canAccessBrokerage(brokerageId);
         console.log('🔍 [BrokerageAccessRoute] Basic access check result:', canAccess);
         
-        // If user has basic access, check if they're a real estate agent only
-        if (canAccess && user.roles) {
-          // Block access for users who only have real_estate_agent role
-          const isOnlyRealEstateAgent = user.roles.length === 1 && user.roles[0] === 'real_estate_agent';
-          
-          if (isOnlyRealEstateAgent) {
-            console.log('🚫 [BrokerageAccessRoute] Access denied: user is only a real estate agent');
-            setHasAccess(false);
-          } else {
-            console.log('✅ [BrokerageAccessRoute] Access granted: user has authorized roles');
-            setHasAccess(true);
-          }
-        } else {
-          setHasAccess(canAccess);
-        }
+        setHasAccess(canAccess);
       } catch (error) {
         console.error('❌ [BrokerageAccessRoute] Error checking brokerage access:', error);
         setHasAccess(false);
@@ -54,7 +50,7 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
     };
 
     checkAccess();
-  }, [user, brokerageId, authLoading]);
+  }, [user, brokerageId, authLoading, selectedRole]);
 
   if (authLoading || loading) {
     return (
