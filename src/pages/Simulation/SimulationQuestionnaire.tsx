@@ -5,15 +5,21 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SimulationSidebar from '@/components/simulation/SimulationSidebar';
 import SimulationHeaderCard from '@/components/simulation/SimulationHeaderCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, Play, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { useSimulationData } from '@/hooks/useSimulationData';
+import { useSimulationParticipants } from '@/hooks/useSimulationParticipants';
+import { useFormLink } from '@/hooks/useFormLink';
 import { useAuth } from '@/hooks/useAuth';
+import QuestionnaireBox from '@/components/simulation/QuestionnaireBox';
+import { useToast } from '@/hooks/use-toast';
 
 const SimulationQuestionnaire = () => {
   const { simulationId } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
   const { data: simulation, isLoading, error } = useSimulationData(simulationId || '');
+  const { data: participants, isLoading: participantsLoading } = useSimulationParticipants(simulationId || '');
+  const formLinkMutation = useFormLink();
 
   if (!simulationId) {
     return <Navigate to="/dashboard" replace />;
@@ -23,7 +29,112 @@ const SimulationQuestionnaire = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (isLoading) {
+  const handleQuestionnaireClick = async (name: string, email: string, phone: string, formSlug: string) => {
+    try {
+      const formLink = await formLinkMutation.mutateAsync({
+        name,
+        email,
+        phone,
+        formSlug,
+      });
+      
+      // Open the form in a new window
+      window.open(formLink, '_blank');
+    } catch (error) {
+      console.error('Failed to open questionnaire:', error);
+    }
+  };
+
+  const renderQuestionnaireBoxes = () => {
+    if (!simulation || !participants) return null;
+
+    const applicantCount = simulation.applicant_count;
+    const boxes = [];
+
+    // Always show Project box
+    const projectParticipant = participants.find(p => p.participant_designation === 'applicant_one') || 
+                               participants.find(p => p.participant_designation === 'solo_applicant');
+    
+    if (projectParticipant) {
+      boxes.push(
+        <QuestionnaireBox
+          key="progetto"
+          title="Progetto"
+          description="Informazioni generali sul progetto mutuo"
+          onClick={() => handleQuestionnaireClick(
+            `${projectParticipant.first_name} ${projectParticipant.last_name}`,
+            projectParticipant.email,
+            projectParticipant.phone || '',
+            'gestionale-progetto'
+          )}
+          loading={formLinkMutation.isPending}
+        />
+      );
+    }
+
+    if (applicantCount === 'one_applicant') {
+      // One applicant: show "Domande sul Richiedente"
+      const applicant = participants.find(p => p.participant_designation === 'solo_applicant');
+      if (applicant) {
+        boxes.push(
+          <QuestionnaireBox
+            key="richiedente"
+            title="Domande sul Richiedente"
+            description="Questionario per il richiedente principale"
+            onClick={() => handleQuestionnaireClick(
+              `${applicant.first_name} ${applicant.last_name}`,
+              applicant.email,
+              applicant.phone || '',
+              'gestionale-intestatario'
+            )}
+            loading={formLinkMutation.isPending}
+          />
+        );
+      }
+    } else {
+      // Two applicants: show "Domande Richiedente 1" and "Domande Richiedente 2"
+      const applicant1 = participants.find(p => p.participant_designation === 'applicant_one');
+      const applicant2 = participants.find(p => p.participant_designation === 'applicant_two');
+
+      if (applicant1) {
+        boxes.push(
+          <QuestionnaireBox
+            key="richiedente1"
+            title="Domande Richiedente 1"
+            description="Questionario per il primo richiedente"
+            onClick={() => handleQuestionnaireClick(
+              `${applicant1.first_name} ${applicant1.last_name}`,
+              applicant1.email,
+              applicant1.phone || '',
+              'gestionale-intestatario'
+            )}
+            loading={formLinkMutation.isPending}
+          />
+        );
+      }
+
+      if (applicant2) {
+        boxes.push(
+          <QuestionnaireBox
+            key="richiedente2"
+            title="Domande Richiedente 2"
+            description="Questionario per il secondo richiedente"
+            onClick={() => handleQuestionnaireClick(
+              `${applicant2.first_name} ${applicant2.last_name}`,
+              applicant2.email,
+              applicant2.phone || '',
+              'gestionale-intestatario'
+            )}
+            loading={formLinkMutation.isPending}
+          />
+        );
+      }
+    }
+
+    return boxes;
+  };
+
+  if (isLoading || participantsLoading) {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex w-full">
@@ -80,24 +191,22 @@ const SimulationQuestionnaire = () => {
                   Questionario Simulazione
                 </CardTitle>
                 <CardDescription className="font-dm-sans">
-                  Compila il questionario per configurare la tua simulazione mutuo
+                  Compila i questionari per configurare la tua simulazione mutuo
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-full bg-form-green/10 flex items-center justify-center mx-auto mb-4">
-                    <FileText className="h-8 w-8 text-form-green" />
+                {participants && participants.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {renderQuestionnaireBoxes()}
                   </div>
-                  <h3 className="font-semibold text-xl mb-2">Questionario Pronto</h3>
-                  <p className="text-gray-600 mb-6">
-                    La configurazione è completa. Ora puoi procedere con il questionario
-                    per raccogliere i dati necessari per la simulazione.
-                  </p>
-                  <Button className="bg-form-green hover:bg-form-green-dark text-white">
-                    <Play className="h-4 w-4 mr-2" />
-                    Inizia Questionario
-                  </Button>
-                </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">
+                      Nessun partecipante trovato per questa simulazione.
+                      Assicurati che i partecipanti siano stati configurati correttamente.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
