@@ -5,6 +5,14 @@ import type { Database } from '@/integrations/supabase/types';
 type SimulationParticipant = Database['public']['Tables']['simulation_participants']['Row'];
 type SimulationParticipantInsert = Database['public']['Tables']['simulation_participants']['Insert'];
 
+export interface ParticipantData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  participantDesignation: Database['public']['Enums']['participant_designation'];
+}
+
 export const simulationParticipantService = {
   // Get all participants for a simulation
   async getSimulationParticipants(simulationId: string): Promise<SimulationParticipant[]> {
@@ -52,6 +60,26 @@ export const simulationParticipantService = {
       .eq('id', participantId);
 
     if (error) throw error;
+  },
+
+  validateParticipant: (participant: ParticipantData): string[] => {
+    const errors: string[] = [];
+    
+    if (!participant.firstName.trim()) {
+      errors.push('Nome richiesto');
+    }
+    
+    if (!participant.lastName.trim()) {
+      errors.push('Cognome richiesto');
+    }
+    
+    if (!participant.email.trim()) {
+      errors.push('Email richiesta');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.email)) {
+      errors.push('Email non valida');
+    }
+    
+    return errors;
   },
 
   // Delete a participant

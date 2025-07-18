@@ -194,8 +194,8 @@ const SimulationsFullSection = ({
                           <FolderOpen className="h-9 w-9 text-form-green" />
                         </div>
 
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                          <div>
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                          <div className="md:col-span-2">
                             <h3 className="font-semibold text-black font-dm-sans text-lg">
                               {simulation.name}
                             </h3>
@@ -262,7 +262,7 @@ const SimulationsFullSection = ({
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             brokerageId={brokerageId}
-            onSimulationCreated={handleCreateSimulation}
+            onSimulationCreated={() => handleCreateSimulation({})}
           />
 
           {/* Delete Confirmation Dialog */}
