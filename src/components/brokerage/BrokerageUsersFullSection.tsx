@@ -83,7 +83,7 @@ const BrokerageUsersFullSection = () => {
         .select(`
           joined_at,
           role,
-          profiles!brokerage_members_user_id_fkey (
+          profiles:user_id (
             id,
             email,
             first_name,
