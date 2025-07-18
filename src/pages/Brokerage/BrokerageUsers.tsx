@@ -2,15 +2,15 @@
 import React from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
-import BrokerageUsersSection from '@/components/brokerage/BrokerageUsersSection';
+import BrokerageUsersFullSection from '@/components/brokerage/BrokerageUsersFullSection';
 
 const BrokerageUsers = () => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background-light">
         <BrokerageSidebar />
         <SidebarInset>
-          <BrokerageUsersSection />
+          <BrokerageUsersFullSection />
         </SidebarInset>
       </div>
     </SidebarProvider>
