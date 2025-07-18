@@ -20,7 +20,7 @@ const SimulationQuestionnaire = () => {
   const { toast } = useToast();
   const { data: simulation, isLoading, error } = useSimulationData(simulationId || '');
   const { data: participants, isLoading: participantsLoading } = useSimulationParticipants(simulationId || '');
-  const { getFormLink, isLoading: formLinksLoading } = useSimulationFormLinks(simulationId || '');
+  const { getFormLink, isLoading: formLinksLoading, hasFormLinks } = useSimulationFormLinks(simulationId || '');
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
   if (!simulationId) {
@@ -172,16 +172,25 @@ const SimulationQuestionnaire = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {participants && participants.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {renderQuestionnaireBoxes()}
-                  </div>
-                ) : (
+                {!participants || participants.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-600">
                       Nessun partecipante trovato per questa simulazione.
                       Assicurati che i partecipanti siano stati configurati correttamente.
                     </p>
+                  </div>
+                ) : !hasFormLinks ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600 mb-4">
+                      I link dei questionari non sono ancora stati generati per questa simulazione.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Questo può accadere se la simulazione è stata creata prima dell'implementazione della generazione automatica dei link.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {renderQuestionnaireBoxes()}
                   </div>
                 )}
               </CardContent>

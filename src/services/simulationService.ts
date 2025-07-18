@@ -94,7 +94,19 @@ export const simulationService = {
 
     // Create participants
     const { simulationParticipantService } = await import('@/services/simulationParticipantService');
-    await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+    const createdParticipants = await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+
+    // Generate all form links in parallel after participants are created
+    const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
+    const formLinkResult = await batchFormLinkGeneration.generateAllFormLinks({
+      simulationId,
+      participants: createdParticipants
+    });
+
+    if (!formLinkResult.success) {
+      console.error('Some form links failed to generate:', formLinkResult.errors);
+      // Continue anyway - links can be regenerated later if needed
+    }
 
     return simulationId;
   },

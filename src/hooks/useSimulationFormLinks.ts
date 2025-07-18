@@ -22,32 +22,8 @@ export const useSimulationFormLinks = (simulationId: string) => {
     enabled: !!simulationId,
   });
 
-  // Generate missing links when participants are loaded (only if no existing links)
-  useEffect(() => {
-    const generateMissingLinks = async () => {
-      if (!participants || participants.length === 0 || participantsLoading || isGenerating) {
-        return;
-      }
-
-      // Only generate if we don't have existing links
-      const hasExistingLinks = existingLinks && existingLinks.length > 0;
-      if (hasExistingLinks) {
-        return;
-      }
-
-      setIsGenerating(true);
-      try {
-        const generatedLinks = await simulationFormLinksService.generateAllFormLinks(simulationId, participants);
-        setFormLinks(prev => ({ ...prev, ...generatedLinks }));
-      } catch (error) {
-        console.error('Error generating form links:', error);
-      } finally {
-        setIsGenerating(false);
-      }
-    };
-
-    generateMissingLinks();
-  }, [participants, participantsLoading, simulationId, isGenerating, existingLinks]);
+  // No longer generate links on-demand - they should be pre-generated at simulation creation
+  // If links are missing, we'll show an error state instead of trying to generate them
 
   // Map existing links from database to our state format
   useEffect(() => {
@@ -76,7 +52,8 @@ export const useSimulationFormLinks = (simulationId: string) => {
   return {
     formLinks,
     getFormLink,
-    isLoading: participantsLoading || linksLoading || isGenerating,
+    isLoading: participantsLoading || linksLoading,
     existingLinks,
+    hasFormLinks: existingLinks && existingLinks.length > 0,
   };
 };
