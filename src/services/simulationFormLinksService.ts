@@ -128,7 +128,7 @@ export const simulationFormLinksService = {
       const participantLink = await this.getOrCreateFormLink({
         simulationId,
         participantDesignation: participant.participant_designation as ParticipantDesignation,
-        formType: 'participant',
+        formType: 'applicant',
         formSlug: 'gestionale-intestatario',
         participantName: `${participant.first_name} ${participant.last_name}`,
         participantEmail: participant.email,

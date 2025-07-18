@@ -12,6 +12,7 @@ import { useSimulationFormLinks } from '@/hooks/useSimulationFormLinks';
 import { useAuth } from '@/hooks/useAuth';
 import QuestionnaireBox from '@/components/simulation/QuestionnaireBox';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 const SimulationQuestionnaire = () => {
   const { simulationId } = useParams();
@@ -20,6 +21,7 @@ const SimulationQuestionnaire = () => {
   const { data: simulation, isLoading, error } = useSimulationData(simulationId || '');
   const { data: participants, isLoading: participantsLoading } = useSimulationParticipants(simulationId || '');
   const { getFormLink, isLoading: formLinksLoading } = useSimulationFormLinks(simulationId || '');
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
   if (!simulationId) {
     return <Navigate to="/dashboard" replace />;
@@ -29,9 +31,14 @@ const SimulationQuestionnaire = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const handleQuestionnaireClick = (link: string | undefined) => {
+  const handleQuestionnaireClick = (link: string | undefined, boxId: string) => {
     if (link) {
+      setLoadingStates(prev => ({ ...prev, [boxId]: true }));
       window.open(link, '_blank');
+      // Reset loading state after a short delay
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, [boxId]: false }));
+      }, 1000);
     } else {
       toast({
         title: "Errore",
@@ -55,28 +62,28 @@ const SimulationQuestionnaire = () => {
         key="progetto"
         title="Progetto"
         description="Informazioni generali sul progetto mutuo"
-        onClick={() => handleQuestionnaireClick(projectLink)}
-        loading={formLinksLoading}
+        onClick={() => handleQuestionnaireClick(projectLink, 'progetto')}
+        loading={formLinksLoading || loadingStates['progetto']}
       />
     );
 
     if (applicantCount === 'one_applicant') {
       // One applicant: show "Domande sul Richiedente"
-      const applicantLink = getFormLink('solo_applicant', 'participant');
+      const applicantLink = getFormLink('solo_applicant', 'applicant');
       boxes.push(
         <QuestionnaireBox
           id="richiedente"
           key="richiedente"
           title="Domande sul Richiedente"
           description="Questionario per il richiedente principale"
-          onClick={() => handleQuestionnaireClick(applicantLink)}
-          loading={formLinksLoading}
+          onClick={() => handleQuestionnaireClick(applicantLink, 'richiedente')}
+          loading={formLinksLoading || loadingStates['richiedente']}
         />
       );
     } else {
       // Two applicants: show "Domande Richiedente 1" and "Domande Richiedente 2"
-      const applicant1Link = getFormLink('applicant_one', 'participant');
-      const applicant2Link = getFormLink('applicant_two', 'participant');
+      const applicant1Link = getFormLink('applicant_one', 'applicant');
+      const applicant2Link = getFormLink('applicant_two', 'applicant');
 
       boxes.push(
         <QuestionnaireBox
@@ -84,8 +91,8 @@ const SimulationQuestionnaire = () => {
           key="richiedente1"
           title="Domande Richiedente 1"
           description="Questionario per il primo richiedente"
-          onClick={() => handleQuestionnaireClick(applicant1Link)}
-          loading={formLinksLoading}
+          onClick={() => handleQuestionnaireClick(applicant1Link, 'richiedente1')}
+          loading={formLinksLoading || loadingStates['richiedente1']}
         />
       );
 
@@ -95,8 +102,8 @@ const SimulationQuestionnaire = () => {
           key="richiedente2"
           title="Domande Richiedente 2"
           description="Questionario per il secondo richiedente"
-          onClick={() => handleQuestionnaireClick(applicant2Link)}
-          loading={formLinksLoading}
+          onClick={() => handleQuestionnaireClick(applicant2Link, 'richiedente2')}
+          loading={formLinksLoading || loadingStates['richiedente2']}
         />
       );
     }

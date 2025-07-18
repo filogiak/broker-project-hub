@@ -22,17 +22,23 @@ export const useSimulationFormLinks = (simulationId: string) => {
     enabled: !!simulationId,
   });
 
-  // Generate missing links when participants are loaded
+  // Generate missing links when participants are loaded (only if no existing links)
   useEffect(() => {
     const generateMissingLinks = async () => {
       if (!participants || participants.length === 0 || participantsLoading || isGenerating) {
         return;
       }
 
+      // Only generate if we don't have existing links
+      const hasExistingLinks = existingLinks && existingLinks.length > 0;
+      if (hasExistingLinks) {
+        return;
+      }
+
       setIsGenerating(true);
       try {
         const generatedLinks = await simulationFormLinksService.generateAllFormLinks(simulationId, participants);
-        setFormLinks(generatedLinks);
+        setFormLinks(prev => ({ ...prev, ...generatedLinks }));
       } catch (error) {
         console.error('Error generating form links:', error);
       } finally {
@@ -41,7 +47,7 @@ export const useSimulationFormLinks = (simulationId: string) => {
     };
 
     generateMissingLinks();
-  }, [participants, participantsLoading, simulationId, isGenerating]);
+  }, [participants, participantsLoading, simulationId, isGenerating, existingLinks]);
 
   // Map existing links from database to our state format
   useEffect(() => {
@@ -51,7 +57,7 @@ export const useSimulationFormLinks = (simulationId: string) => {
       existingLinks.forEach(link => {
         if (link.form_type === 'project') {
           mappedLinks.project = link.link;
-        } else if (link.form_type === 'participant') {
+        } else if (link.form_type === 'applicant') {
           mappedLinks[link.participant_designation as keyof FormLinksState] = link.link;
         }
       });
@@ -60,7 +66,7 @@ export const useSimulationFormLinks = (simulationId: string) => {
     }
   }, [existingLinks]);
 
-  const getFormLink = (participantDesignation: string, formType: 'project' | 'participant'): string | undefined => {
+  const getFormLink = (participantDesignation: string, formType: 'project' | 'applicant'): string | undefined => {
     if (formType === 'project') {
       return formLinks.project;
     }
