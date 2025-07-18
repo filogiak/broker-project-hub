@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -81,7 +82,15 @@ const Dashboard = () => {
 
   // Role-based dashboard routing
   if (roles.includes('brokerage_owner')) {
-    return <Navigate to="/brokerage" replace />;
+    // Check if user has a brokerage_id in their profile
+    if (user.brokerageId) {
+      return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
+    } else {
+      // Handle case where brokerage owner doesn't have a brokerageId
+      console.error('❌ [DASHBOARD] Brokerage owner missing brokerageId:', user.email);
+      toast.error('Brokerage configuration missing. Please contact support.');
+      // Fallback to default dashboard for now
+    }
   }
 
   if (roles.includes('real_estate_agent')) {
