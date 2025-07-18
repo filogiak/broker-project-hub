@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { login, signUp } from '@/services/authService';
+import { validateAndProcessInvitationToken } from '@/services/invitationTokenService';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
@@ -21,10 +23,41 @@ const AuthPage = () => {
     firstName: '', 
     lastName: '' 
   });
+  const [invitationContext, setInvitationContext] = useState<any>(null);
 
   const redirectPath = searchParams.get('redirect') || '/dashboard';
-  const hasInvitation = searchParams.has('invitation') || searchParams.has('accept_invitation');
+  const invitationToken = searchParams.get('invitation_token');
   const invitationEmail = searchParams.get('email');
+  const suggestedAction = searchParams.get('action'); // 'login' or 'signup'
+  const hasInvitation = Boolean(invitationToken);
+
+  // Load invitation context if token is provided
+  useEffect(() => {
+    const loadInvitationContext = async () => {
+      if (invitationToken) {
+        try {
+          console.log('🔍 [AUTH] Loading invitation context for token');
+          const tokenValidation = await validateAndProcessInvitationToken(invitationToken);
+          
+          if (tokenValidation.invitation) {
+            setInvitationContext({
+              invitation: tokenValidation.invitation,
+              role: tokenValidation.invitation.role,
+              projectName: tokenValidation.invitation.project_id ? 'project invitation' : null,
+              brokerageName: tokenValidation.invitation.brokerage_id ? 'brokerage invitation' : null,
+              simulationName: tokenValidation.invitation.simulation_id ? 'simulation invitation' : null
+            });
+            console.log('✅ [AUTH] Invitation context loaded:', tokenValidation.invitation);
+          }
+        } catch (error) {
+          console.error('❌ [AUTH] Failed to load invitation context:', error);
+          toast.error('Failed to load invitation details');
+        }
+      }
+    };
+
+    loadInvitationContext();
+  }, [invitationToken]);
 
   // Set up initial form state and tab based on invitation context
   useEffect(() => {
@@ -32,10 +65,18 @@ const AuthPage = () => {
       // Pre-fill email in both forms
       setLoginForm(prev => ({ ...prev, email: invitationEmail }));
       setSignupForm(prev => ({ ...prev, email: invitationEmail }));
-      // Default to signup tab for new users coming from invitation
-      setActiveTab('signup');
+      
+      // Set tab based on suggested action
+      if (suggestedAction === 'signup') {
+        setActiveTab('signup');
+      } else if (suggestedAction === 'login') {
+        setActiveTab('login');
+      } else {
+        // Default to signup tab for new users coming from invitation
+        setActiveTab('signup');
+      }
     }
-  }, [hasInvitation, invitationEmail]);
+  }, [hasInvitation, invitationEmail, suggestedAction]);
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -54,6 +95,13 @@ const AuthPage = () => {
       await login(loginForm.email, loginForm.password);
       console.log('✅ [LOGIN] Login successful');
       toast.success('Logged in successfully!');
+      
+      // Store invitation context for post-login processing
+      if (hasInvitation && invitationToken) {
+        sessionStorage.setItem('pending_invitation_token', invitationToken);
+        console.log('💾 [LOGIN] Stored invitation token for post-login processing');
+      }
+      
       // Navigation will be handled by the auth state change
     } catch (error: any) {
       console.error('❌ [LOGIN] Login error:', error);
@@ -71,6 +119,12 @@ const AuthPage = () => {
     console.log('📝 [SIGNUP] Has invitation:', hasInvitation);
     
     try {
+      // Store invitation context before signup for post-signup processing
+      if (hasInvitation && invitationToken) {
+        sessionStorage.setItem('pending_invitation_token', invitationToken);
+        console.log('💾 [SIGNUP] Stored invitation token for post-signup processing');
+      }
+      
       const signupResult = await signUp(
         signupForm.email, 
         signupForm.password, 
@@ -107,22 +161,38 @@ const AuthPage = () => {
     );
   }
 
+  const getInvitationDescription = () => {
+    if (!invitationContext) return null;
+    
+    const { role, invitation } = invitationContext;
+    let entityName = 'an organization';
+    
+    if (invitation.project_id) entityName = 'a project';
+    else if (invitation.brokerage_id) entityName = 'a brokerage';
+    else if (invitation.simulation_id) entityName = 'a simulation';
+    
+    return `You've been invited to join ${entityName} as ${role.replace(/_/g, ' ')}`;
+  };
+
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center p-4">
       <div className="w-full max-w-xl">
         {hasInvitation && (
           <div className="text-center mb-8">
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-700 font-medium">
-                🎯 You've been invited to join a project
+                🎯 {getInvitationDescription()}
               </p>
               {invitationEmail && (
                 <p className="text-xs text-blue-600 mt-1">
                   Invitation for: {invitationEmail}
                 </p>
               )}
-              <p className="text-xs text-blue-600 mt-1">
-                {activeTab === 'signup' ? 'Create your account below to get started' : 'Sign in to view your invitations'}
+              <p className="text-xs text-blue-600 mt-2">
+                {activeTab === 'signup' 
+                  ? 'Create your account below to accept this invitation' 
+                  : 'Sign in to accept this invitation and access your new role'
+                }
               </p>
             </div>
           </div>
@@ -135,7 +205,7 @@ const AuthPage = () => {
             </CardTitle>
             <CardDescription className="text-center">
               {hasInvitation && invitationEmail
-                ? `Complete your ${activeTab === 'signup' ? 'registration' : 'sign in'} to access your project invitation`
+                ? `Complete your ${activeTab === 'signup' ? 'registration' : 'sign in'} to accept your invitation`
                 : "Accedi al tuo account"
               }
             </CardDescription>

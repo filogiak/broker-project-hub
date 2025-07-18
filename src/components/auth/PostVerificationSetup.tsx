@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Loader2, XCircle, User, Users, UserCheck, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedInvitationService } from '@/services/unifiedInvitationService';
+import { PostAuthInvitationService } from '@/services/postAuthInvitationService';
 import { debugAuthState, validateSessionBeforeOperation } from '@/services/authDebugService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -43,8 +44,14 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       icon: <User className="h-4 w-4" />
     },
     {
+      id: 'invitation',
+      label: 'Processing your invitation',
+      status: 'pending',
+      icon: <Users className="h-4 w-4" />
+    },
+    {
       id: 'redirect',
-      label: 'Redirecting to dashboard',
+      label: 'Completing setup',
       status: 'pending',
       icon: <UserCheck className="h-4 w-4" />
     }
@@ -99,7 +106,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
 
   const runSetup = async () => {
     try {
-      console.log('🔄 [POST-VERIFICATION] Starting simplified setup process...');
+      console.log('🔄 [POST-VERIFICATION] Starting setup process...');
       setHasError(false);
       setErrorMessage('');
       setRetryAttempt(prev => prev + 1);
@@ -175,11 +182,37 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       updateStepStatus('profile', 'complete');
       await delay(300);
 
-      // Step 2: Redirect to dashboard
-      updateStepStatus('redirect', 'loading');
+      // Step 2: Process invitation
+      updateStepStatus('invitation', 'loading');
       setCurrentStep(2);
 
-      console.log('🎯 [POST-VERIFICATION] Redirecting to dashboard for invitation acceptance...');
+      console.log('🎯 [POST-VERIFICATION] Processing invitation...');
+      
+      try {
+        const acceptResult = await UnifiedInvitationService.acceptInvitationById(invitation.id);
+        
+        if (!acceptResult.success) {
+          console.error('❌ [POST-VERIFICATION] Failed to accept invitation:', acceptResult.error);
+          throw new Error(acceptResult.error || 'Failed to accept invitation');
+        }
+        
+        console.log('✅ [POST-VERIFICATION] Invitation accepted successfully');
+        updateStepStatus('invitation', 'complete');
+        await delay(300);
+      } catch (invitationError) {
+        console.error('❌ [POST-VERIFICATION] Invitation processing error:', invitationError);
+        // Don't fail the entire setup if invitation processing fails
+        // The user can accept it manually from the dashboard
+        updateStepStatus('invitation', 'error');
+        console.log('⚠️ [POST-VERIFICATION] Continuing setup despite invitation error');
+        await delay(300);
+      }
+
+      // Step 3: Complete setup
+      updateStepStatus('redirect', 'loading');
+      setCurrentStep(3);
+
+      console.log('🎯 [POST-VERIFICATION] Completing setup...');
       
       updateStepStatus('redirect', 'complete');
       await delay(300);
@@ -187,8 +220,8 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       console.log('🎉 [POST-VERIFICATION] Setup completed successfully');
 
       toast({
-        title: "Account Setup Complete!",
-        description: "Welcome! Please check your pending invitations on the dashboard.",
+        title: "Welcome!",
+        description: "Your account is ready. You'll be redirected to your dashboard.",
       });
 
       setTimeout(() => {
@@ -250,7 +283,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Setting Up Your Account</CardTitle>
         <p className="text-muted-foreground">
-          Configuring your access and permissions...
+          Configuring your access and processing your invitation...
         </p>
         {retryAttempt > 1 && (
           <p className="text-xs text-muted-foreground">
@@ -288,7 +321,7 @@ const PostVerificationSetup: React.FC<PostVerificationSetupProps> = ({
         )}
 
         <div className="text-xs text-muted-foreground text-center">
-          You will be redirected to the dashboard to accept invitations.
+          You will be redirected to your dashboard once setup is complete.
         </div>
       </CardContent>
     </Card>
