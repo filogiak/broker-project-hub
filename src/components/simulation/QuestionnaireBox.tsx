@@ -9,6 +9,7 @@ interface QuestionnaireBoxProps {
   onClick: () => void;
   loading?: boolean;
   disabled?: boolean;
+  id: string; // unique identifier for this box
 }
 
 const QuestionnaireBox: React.FC<QuestionnaireBoxProps> = ({
@@ -17,6 +18,7 @@ const QuestionnaireBox: React.FC<QuestionnaireBoxProps> = ({
   onClick,
   loading = false,
   disabled = false,
+  id,
 }) => {
   return (
     <Card className="bg-white border border-[#BEB8AE] rounded-[12px] hover:shadow-md transition-shadow">

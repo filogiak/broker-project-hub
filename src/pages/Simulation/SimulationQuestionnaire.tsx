@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle } from 'lucide-react';
 import { useSimulationData } from '@/hooks/useSimulationData';
 import { useSimulationParticipants } from '@/hooks/useSimulationParticipants';
-import { useFormLink } from '@/hooks/useFormLink';
+import { useSimulationFormLinks } from '@/hooks/useSimulationFormLinks';
 import { useAuth } from '@/hooks/useAuth';
 import QuestionnaireBox from '@/components/simulation/QuestionnaireBox';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +19,7 @@ const SimulationQuestionnaire = () => {
   const { toast } = useToast();
   const { data: simulation, isLoading, error } = useSimulationData(simulationId || '');
   const { data: participants, isLoading: participantsLoading } = useSimulationParticipants(simulationId || '');
-  const formLinkMutation = useFormLink();
+  const { getFormLink, isLoading: formLinksLoading } = useSimulationFormLinks(simulationId || '');
 
   if (!simulationId) {
     return <Navigate to="/dashboard" replace />;
@@ -29,19 +29,15 @@ const SimulationQuestionnaire = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const handleQuestionnaireClick = async (name: string, email: string, phone: string, formSlug: string) => {
-    try {
-      const formLink = await formLinkMutation.mutateAsync({
-        name,
-        email,
-        phone,
-        formSlug,
+  const handleQuestionnaireClick = (link: string | undefined) => {
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      toast({
+        title: "Errore",
+        description: "Link del modulo non disponibile. Riprova più tardi.",
+        variant: "destructive",
       });
-      
-      // Open the form in a new window
-      window.open(formLink, '_blank');
-    } catch (error) {
-      console.error('Failed to open questionnaire:', error);
     }
   };
 
@@ -52,89 +48,63 @@ const SimulationQuestionnaire = () => {
     const boxes = [];
 
     // Always show Project box
-    const projectParticipant = participants.find(p => p.participant_designation === 'applicant_one') || 
-                               participants.find(p => p.participant_designation === 'solo_applicant');
-    
-    if (projectParticipant) {
-      boxes.push(
-        <QuestionnaireBox
-          key="progetto"
-          title="Progetto"
-          description="Informazioni generali sul progetto mutuo"
-          onClick={() => handleQuestionnaireClick(
-            `${projectParticipant.first_name} ${projectParticipant.last_name}`,
-            projectParticipant.email,
-            projectParticipant.phone || '',
-            'gestionale-progetto'
-          )}
-          loading={formLinkMutation.isPending}
-        />
-      );
-    }
+    const projectLink = getFormLink('project', 'project');
+    boxes.push(
+      <QuestionnaireBox
+        id="progetto"
+        key="progetto"
+        title="Progetto"
+        description="Informazioni generali sul progetto mutuo"
+        onClick={() => handleQuestionnaireClick(projectLink)}
+        loading={formLinksLoading}
+      />
+    );
 
     if (applicantCount === 'one_applicant') {
       // One applicant: show "Domande sul Richiedente"
-      const applicant = participants.find(p => p.participant_designation === 'solo_applicant');
-      if (applicant) {
-        boxes.push(
-          <QuestionnaireBox
-            key="richiedente"
-            title="Domande sul Richiedente"
-            description="Questionario per il richiedente principale"
-            onClick={() => handleQuestionnaireClick(
-              `${applicant.first_name} ${applicant.last_name}`,
-              applicant.email,
-              applicant.phone || '',
-              'gestionale-intestatario'
-            )}
-            loading={formLinkMutation.isPending}
-          />
-        );
-      }
+      const applicantLink = getFormLink('solo_applicant', 'participant');
+      boxes.push(
+        <QuestionnaireBox
+          id="richiedente"
+          key="richiedente"
+          title="Domande sul Richiedente"
+          description="Questionario per il richiedente principale"
+          onClick={() => handleQuestionnaireClick(applicantLink)}
+          loading={formLinksLoading}
+        />
+      );
     } else {
       // Two applicants: show "Domande Richiedente 1" and "Domande Richiedente 2"
-      const applicant1 = participants.find(p => p.participant_designation === 'applicant_one');
-      const applicant2 = participants.find(p => p.participant_designation === 'applicant_two');
+      const applicant1Link = getFormLink('applicant_one', 'participant');
+      const applicant2Link = getFormLink('applicant_two', 'participant');
 
-      if (applicant1) {
-        boxes.push(
-          <QuestionnaireBox
-            key="richiedente1"
-            title="Domande Richiedente 1"
-            description="Questionario per il primo richiedente"
-            onClick={() => handleQuestionnaireClick(
-              `${applicant1.first_name} ${applicant1.last_name}`,
-              applicant1.email,
-              applicant1.phone || '',
-              'gestionale-intestatario'
-            )}
-            loading={formLinkMutation.isPending}
-          />
-        );
-      }
+      boxes.push(
+        <QuestionnaireBox
+          id="richiedente1"
+          key="richiedente1"
+          title="Domande Richiedente 1"
+          description="Questionario per il primo richiedente"
+          onClick={() => handleQuestionnaireClick(applicant1Link)}
+          loading={formLinksLoading}
+        />
+      );
 
-      if (applicant2) {
-        boxes.push(
-          <QuestionnaireBox
-            key="richiedente2"
-            title="Domande Richiedente 2"
-            description="Questionario per il secondo richiedente"
-            onClick={() => handleQuestionnaireClick(
-              `${applicant2.first_name} ${applicant2.last_name}`,
-              applicant2.email,
-              applicant2.phone || '',
-              'gestionale-intestatario'
-            )}
-            loading={formLinkMutation.isPending}
-          />
-        );
-      }
+      boxes.push(
+        <QuestionnaireBox
+          id="richiedente2"
+          key="richiedente2"
+          title="Domande Richiedente 2"
+          description="Questionario per il secondo richiedente"
+          onClick={() => handleQuestionnaireClick(applicant2Link)}
+          loading={formLinksLoading}
+        />
+      );
     }
 
     return boxes;
   };
 
-  if (isLoading || participantsLoading) {
+  if (isLoading || participantsLoading || formLinksLoading) {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex w-full">
