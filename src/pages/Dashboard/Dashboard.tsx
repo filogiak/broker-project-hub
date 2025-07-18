@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PostAuthInvitationService } from '@/services/postAuthInvitationService';
-import MainLayout from '@/layouts/MainLayout';
+import MainLayout from '@/components/layout/MainLayout';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import AccessibleBrokerages from '@/components/dashboard/AccessibleBrokerages';
 import SimulationCollaboratorDashboard from './SimulationCollaboratorDashboard';
@@ -103,7 +103,7 @@ const Dashboard = () => {
 
   // Default dashboard for users without specific roles
   return (
-    <MainLayout>
+    <MainLayout title="Dashboard" userEmail={user.email}>
       <div className="container mx-auto py-8">
         <h1 className="text-2xl font-bold mb-6">Welcome to GoMutuo</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
