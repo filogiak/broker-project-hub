@@ -1,6 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { agentDataService, type AgentSimulation, type AgentProject, type AgentInvitation, type CreatableBrokerage } from '@/services/agentDataService';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface AgentDataState {
   creatableBrokerages: CreatableBrokerage[];
@@ -32,7 +36,7 @@ const initialState: AgentDataState = {
   error: null
 };
 
-export const useAgentData = () => {
+export const useAgentData = (roleFilter?: UserRole) => {
   const { user } = useAuth();
   const [data, setData] = useState<AgentDataState>(initialState);
 
@@ -43,11 +47,11 @@ export const useAgentData = () => {
 
     try {
       const [brokerages, simulations, projects, invitations, stats] = await Promise.all([
-        agentDataService.getAgentCreatableSimulationBrokerages(user.id),
-        agentDataService.getAgentDirectSimulations(user.id),
-        agentDataService.getAgentDirectProjects(user.id),
-        agentDataService.getAgentPendingInvitations(user.id),
-        agentDataService.getAgentStats(user.id)
+        agentDataService.getAgentCreatableSimulationBrokerages(user.id, roleFilter),
+        agentDataService.getAgentDirectSimulations(user.id, roleFilter),
+        agentDataService.getAgentDirectProjects(user.id, roleFilter),
+        agentDataService.getAgentPendingInvitations(user.id), // Invitations not filtered
+        agentDataService.getAgentStats(user.id, roleFilter)
       ]);
 
       setData({
@@ -76,8 +80,8 @@ export const useAgentData = () => {
 
     try {
       const [invitations, stats] = await Promise.all([
-        agentDataService.getAgentPendingInvitations(user.id),
-        agentDataService.getAgentStats(user.id)
+        agentDataService.getAgentPendingInvitations(user.id), // Invitations not filtered
+        agentDataService.getAgentStats(user.id, roleFilter)
       ]);
 
       setData(prev => ({
@@ -95,8 +99,8 @@ export const useAgentData = () => {
 
     try {
       const [simulations, stats] = await Promise.all([
-        agentDataService.getAgentDirectSimulations(user.id),
-        agentDataService.getAgentStats(user.id)
+        agentDataService.getAgentDirectSimulations(user.id, roleFilter),
+        agentDataService.getAgentStats(user.id, roleFilter)
       ]);
 
       setData(prev => ({
@@ -114,8 +118,8 @@ export const useAgentData = () => {
 
     try {
       const [projects, stats] = await Promise.all([
-        agentDataService.getAgentDirectProjects(user.id),
-        agentDataService.getAgentStats(user.id)
+        agentDataService.getAgentDirectProjects(user.id, roleFilter),
+        agentDataService.getAgentStats(user.id, roleFilter)
       ]);
 
       setData(prev => ({
@@ -135,7 +139,7 @@ export const useAgentData = () => {
     } else {
       setData(initialState);
     }
-  }, [user?.id]);
+  }, [user?.id, roleFilter]);
 
   return {
     ...data,

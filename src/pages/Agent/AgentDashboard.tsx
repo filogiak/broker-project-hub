@@ -7,7 +7,8 @@ import StandardCard from '@/components/ui/standard-card';
 import ContentContainer from '@/components/ui/content-container';
 
 const AgentDashboard = () => {
-  const { creatableBrokerages, stats, invitations, loading, error, hasInvitations } = useAgentData();
+  // Apply role filter for real_estate_agent to show only relevant content
+  const { creatableBrokerages, stats, invitations, loading, error, hasInvitations } = useAgentData('real_estate_agent');
 
   const StatCard = ({ title, value, description, icon: Icon, isLoading }: {
     title: string;
@@ -94,7 +95,7 @@ const AgentDashboard = () => {
                 <li className="flex items-center gap-3">
                   <BarChart3 className="h-5 w-5 text-[#235c4e]" />
                   <span className="text-black font-dm-sans text-sm">
-                    Crea e gestisci simulazioni
+                    Visualizza le simulazioni rilevanti per il tuo ruolo
                   </span>
                 </li>
               </ul>

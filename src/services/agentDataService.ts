@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -57,11 +58,11 @@ function determinePrimaryRole(roles: UserRole[]): UserRole {
 
 export const agentDataService = {
   // Get brokerages where agent can create simulations
-  async getAgentCreatableSimulationBrokerages(userId?: string): Promise<CreatableBrokerage[]> {
+  async getAgentCreatableSimulationBrokerages(userId?: string, roleFilter?: UserRole): Promise<CreatableBrokerage[]> {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
     if (!targetUserId) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('brokerage_members')
       .select(`
         role,
@@ -76,6 +77,12 @@ export const agentDataService = {
       `)
       .eq('user_id', targetUserId);
 
+    // Apply role filter if provided
+    if (roleFilter) {
+      query = query.eq('role', roleFilter);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
 
     // Group by brokerage and aggregate roles
@@ -109,11 +116,11 @@ export const agentDataService = {
   },
 
   // Get simulations agent created or was explicitly invited to
-  async getAgentDirectSimulations(userId?: string): Promise<AgentSimulation[]> {
+  async getAgentDirectSimulations(userId?: string, roleFilter?: UserRole): Promise<AgentSimulation[]> {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
     if (!targetUserId) return [];
 
-    // Get simulations where user is creator or explicit member
+    // Get simulations where user is creator
     const { data: createdSimulations, error: createdError } = await supabase
       .from('simulations')
       .select(`
@@ -124,7 +131,8 @@ export const agentDataService = {
 
     if (createdError) throw createdError;
 
-    const { data: memberSimulations, error: memberError } = await supabase
+    // Get simulations where user is explicit member
+    let memberQuery = supabase
       .from('simulation_members')
       .select(`
         role,
@@ -136,6 +144,12 @@ export const agentDataService = {
       .eq('user_id', targetUserId)
       .neq('simulations.created_by', targetUserId); // Exclude ones already in created list
 
+    // Apply role filter if provided
+    if (roleFilter) {
+      memberQuery = memberQuery.eq('role', roleFilter);
+    }
+
+    const { data: memberSimulations, error: memberError } = await memberQuery;
     if (memberError) throw memberError;
 
     const created: AgentSimulation[] = (createdSimulations || []).map(sim => ({
@@ -157,11 +171,11 @@ export const agentDataService = {
   },
 
   // Get projects where agent is explicit member
-  async getAgentDirectProjects(userId?: string): Promise<AgentProject[]> {
+  async getAgentDirectProjects(userId?: string, roleFilter?: UserRole): Promise<AgentProject[]> {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
     if (!targetUserId) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('project_members')
       .select(`
         role,
@@ -173,6 +187,12 @@ export const agentDataService = {
       `)
       .eq('user_id', targetUserId);
 
+    // Apply role filter if provided
+    if (roleFilter) {
+      query = query.eq('role', roleFilter);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
 
     return (data || []).map(item => ({
@@ -183,7 +203,7 @@ export const agentDataService = {
     }));
   },
 
-  // Get pending invitations relevant to agents (project and simulation)
+  // Get pending invitations relevant to agents (project and simulation) - NOT filtered by role
   async getAgentPendingInvitations(userId?: string): Promise<AgentInvitation[]> {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
     if (!targetUserId) return [];
@@ -238,7 +258,7 @@ export const agentDataService = {
   },
 
   // Get agent stats
-  async getAgentStats(userId?: string): Promise<{
+  async getAgentStats(userId?: string, roleFilter?: UserRole): Promise<{
     totalProjects: number;
     totalSimulations: number;
     pendingInvitations: number;
@@ -250,9 +270,9 @@ export const agentDataService = {
     }
 
     const [projects, simulations, invitations, createdSims] = await Promise.all([
-      this.getAgentDirectProjects(targetUserId),
-      this.getAgentDirectSimulations(targetUserId),
-      this.getAgentPendingInvitations(targetUserId),
+      this.getAgentDirectProjects(targetUserId, roleFilter),
+      this.getAgentDirectSimulations(targetUserId, roleFilter),
+      this.getAgentPendingInvitations(targetUserId), // Invitations not filtered by role
       supabase.from('simulations').select('id').eq('created_by', targetUserId)
     ]);
 

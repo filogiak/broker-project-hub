@@ -9,7 +9,8 @@ import StandardCard from '@/components/ui/standard-card';
 import ContentContainer from '@/components/ui/content-container';
 
 const AgentSimulations = () => {
-  const { simulations, loading, error, refreshSimulations, hasData } = useAgentData();
+  // Apply role filter for real_estate_agent to show only relevant simulations
+  const { simulations, loading, error, refreshSimulations, hasData } = useAgentData('real_estate_agent');
 
   const LoadingSkeleton = () => (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -63,10 +64,10 @@ const AgentSimulations = () => {
                 </div>
                 <div>
                   <h2 className="text-black font-dm-sans text-lg font-semibold">
-                    Le tue Simulazioni ({simulations.length})
+                    Le tue Simulazioni come Agente ({simulations.length})
                   </h2>
                   <p className="text-gray-600 font-dm-sans text-sm">
-                    Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni
+                    Simulazioni dove hai il ruolo di agente immobiliare
                   </p>
                 </div>
               </div>
@@ -85,10 +86,10 @@ const AgentSimulations = () => {
               </div>
               <div>
                 <h2 className="text-black font-dm-sans text-lg font-semibold">
-                  Le tue Simulazioni
+                  Le tue Simulazioni come Agente
                 </h2>
                 <p className="text-gray-600 font-dm-sans text-sm">
-                  Simulazioni che hai creato o a cui hai accesso attraverso le tue organizzazioni
+                  Simulazioni dove hai il ruolo di agente immobiliare
                 </p>
               </div>
             </div>
@@ -96,7 +97,7 @@ const AgentSimulations = () => {
               <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-black font-dm-sans text-lg font-medium mb-2">Nessuna simulazione trovata</h3>
               <p className="text-gray-600 font-dm-sans text-sm">
-                Non hai ancora creato nessuna simulazione. Potrai creare simulazioni quando farai parte di una brokerage.
+                Non hai simulazioni dove ricopri il ruolo di agente immobiliare. Le simulazioni dove sei collaboratore sono visibili dalla dashboard dedicata.
               </p>
             </div>
           </ContentContainer>
