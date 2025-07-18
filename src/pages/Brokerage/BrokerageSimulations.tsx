@@ -3,67 +3,151 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { simulationService } from '@/services/simulationService';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Play, CheckCircle, Archive } from 'lucide-react';
+import { simulationParticipantService } from '@/services/simulationParticipantService';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
-import SimulationCreationWizard from '@/components/simulation/SimulationCreationWizard';
+import SimulationsFullSection from '@/components/brokerage/SimulationsFullSection';
+import { useAuth } from '@/hooks/useAuth';
+import { getBrokerageByAccess } from '@/services/brokerageService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Simulation = Database['public']['Tables']['simulations']['Row'];
+type SimulationParticipant = Database['public']['Tables']['simulation_participants']['Row'];
+type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 
 const BrokerageSimulations = () => {
   const { brokerageId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
   const [simulations, setSimulations] = useState<Simulation[]>([]);
+  const [participants, setParticipants] = useState<SimulationParticipant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createWizardOpen, setCreateWizardOpen] = useState(false);
 
   useEffect(() => {
-    loadSimulations();
-  }, [brokerageId]);
+    const loadData = async () => {
+      if (!user?.id) {
+        navigate('/auth');
+        return;
+      }
 
-  const loadSimulations = async () => {
-    if (!brokerageId) return;
-    
+      try {
+        setLoading(true);
+        
+        // Load brokerage using the access logic
+        const brokerageData = await getBrokerageByAccess(user.id);
+        if (!brokerageData || brokerageData.id !== brokerageId) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have access to this brokerage.",
+            variant: "destructive",
+          });
+          navigate('/dashboard');
+          return;
+        }
+        setBrokerage(brokerageData);
+
+        // Load simulations for this brokerage
+        const simulationsData = await simulationService.getBrokerageSimulations(brokerageData.id);
+        setSimulations(simulationsData);
+
+        // Load all participants for these simulations
+        const allParticipants: SimulationParticipant[] = [];
+        for (const simulation of simulationsData) {
+          try {
+            const simulationParticipants = await simulationParticipantService.getSimulationParticipants(simulation.id);
+            allParticipants.push(...simulationParticipants);
+          } catch (error) {
+            console.error(`Error loading participants for simulation ${simulation.id}:`, error);
+          }
+        }
+        setParticipants(allParticipants);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load simulations data.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user, brokerageId, navigate, toast]);
+
+  const handleCreateSimulation = async (simulationData: any) => {
+    if (!brokerage) return;
+
     try {
-      setLoading(true);
-      const data = await simulationService.getBrokerageSimulations(brokerageId);
-      setSimulations(data);
+      await simulationService.createSimulationWithSetup({
+        name: simulationData.name,
+        description: simulationData.description,
+        brokerageId: brokerage.id,
+        applicantCount: simulationData.applicantCount,
+        projectContactName: simulationData.projectContactName,
+        projectContactEmail: simulationData.projectContactEmail,
+        projectContactPhone: simulationData.projectContactPhone,
+        participants: simulationData.participants,
+      });
+
+      // Reload data after creation
+      const simulationsData = await simulationService.getBrokerageSimulations(brokerage.id);
+      setSimulations(simulationsData);
+
+      // Reload participants
+      const allParticipants: SimulationParticipant[] = [];
+      for (const simulation of simulationsData) {
+        try {
+          const simulationParticipants = await simulationParticipantService.getSimulationParticipants(simulation.id);
+          allParticipants.push(...simulationParticipants);
+        } catch (error) {
+          console.error(`Error loading participants for simulation ${simulation.id}:`, error);
+        }
+      }
+      setParticipants(allParticipants);
+      
+      toast({
+        title: "Simulation Created Successfully",
+        description: `${simulationData.name} has been created.`,
+      });
     } catch (error) {
-      console.error('Error loading simulations:', error);
+      console.error('Error creating simulation:', error);
       toast({
         title: "Error",
-        description: "Failed to load simulations.",
+        description: "Failed to create simulation.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleSimulationCreated = () => {
-    loadSimulations();
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'draft': return <Archive className="h-4 w-4 text-gray-500" />;
-      case 'in_progress': return <Play className="h-4 w-4 text-blue-500" />;
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      default: return <Archive className="h-4 w-4 text-gray-500" />;
+  const handleDeleteSimulation = async (simulationId: string) => {
+    try {
+      const result = await simulationService.deleteSimulation(simulationId);
+      if (result.success) {
+        setSimulations(prev => prev.filter(simulation => simulation.id !== simulationId));
+        setParticipants(prev => prev.filter(participant => participant.simulation_id !== simulationId));
+        toast({
+          title: "Simulation Deleted",
+          description: "Simulation has been deleted successfully.",
+        });
+      } else {
+        throw new Error(result.error || 'Failed to delete simulation');
+      }
+    } catch (error) {
+      console.error('Error deleting simulation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete simulation.",
+        variant: "destructive",
+      });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'text-gray-600 bg-gray-100';
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'completed': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
+  const handleOpenSimulation = (simulationId: string) => {
+    navigate(`/simulation/${simulationId}`);
   };
 
   if (loading) {
@@ -72,14 +156,29 @@ const BrokerageSimulations = () => {
         <div className="min-h-screen flex w-full">
           <BrokerageSidebar />
           <SidebarInset>
-            <div className="flex-1 p-8">
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white border border-[#BEB8AE] rounded-[12px] p-6 animate-pulse">
-                    <div className="h-4 bg-form-placeholder rounded w-48 mb-2"></div>
-                    <div className="h-3 bg-form-placeholder rounded w-32"></div>
-                  </div>
-                ))}
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-lg text-form-green font-dm-sans">Loading...</div>
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (!brokerage) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <BrokerageSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2 text-destructive font-dm-sans">
+                  No Brokerage Found
+                </h2>
+                <p className="text-muted-foreground font-dm-sans">
+                  You don't have access to this brokerage.
+                </p>
               </div>
             </div>
           </SidebarInset>
@@ -93,93 +192,16 @@ const BrokerageSimulations = () => {
       <div className="min-h-screen flex w-full">
         <BrokerageSidebar />
         <SidebarInset>
-          <div className="flex-1 p-8 space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="font-semibold font-dm-sans text-3xl text-black mb-2">Simulazioni</h1>
-                <p className="text-gray-600 font-dm-sans">
-                  Crea e gestisci simulazioni per i tuoi clienti prima di trasformarle in progetti.
-                </p>
-              </div>
-              
-              <Button 
-                onClick={() => setCreateWizardOpen(true)}
-                className="bg-form-green hover:bg-form-green-dark text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova Simulazione
-              </Button>
-            </div>
-
-            {simulations.length === 0 ? (
-              <Card className="bg-white border border-[#BEB8AE] rounded-[12px]">
-                <CardContent className="p-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-form-green/10 flex items-center justify-center mx-auto mb-4">
-                    <Play className="h-8 w-8 text-form-green" />
-                  </div>
-                  <h3 className="font-semibold text-xl mb-2">Nessuna simulazione trovata</h3>
-                  <p className="text-gray-600 mb-6">
-                    Inizia creando la tua prima simulazione per i clienti.
-                  </p>
-                  <Button 
-                    onClick={() => setCreateWizardOpen(true)}
-                    className="bg-form-green hover:bg-form-green-dark text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crea Prima Simulazione
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6">
-                {simulations.map((simulation) => (
-                  <Card 
-                    key={simulation.id} 
-                    className="bg-white border border-[#BEB8AE] rounded-[12px] cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => navigate(`/simulation/${simulation.id}`)}
-                  >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="font-dm-sans text-xl text-black mb-2">
-                            {simulation.name}
-                          </CardTitle>
-                          {simulation.description && (
-                            <p className="text-gray-600 text-sm">{simulation.description}</p>
-                          )}
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(simulation.status)}`}>
-                          {getStatusIcon(simulation.status)}
-                          {simulation.status === 'draft' && 'Bozza'}
-                          {simulation.status === 'in_progress' && 'In Corso'}
-                          {simulation.status === 'completed' && 'Completata'}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>
-                          Creata il {new Date(simulation.created_at).toLocaleDateString('it-IT')}
-                        </span>
-                        <span>
-                          Ultima modifica: {new Date(simulation.updated_at).toLocaleDateString('it-IT')}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+          <SimulationsFullSection
+            simulations={simulations}
+            participants={participants}
+            brokerageId={brokerage.id}
+            onCreateSimulation={handleCreateSimulation}
+            onDeleteSimulation={handleDeleteSimulation}
+            onOpenSimulation={handleOpenSimulation}
+          />
         </SidebarInset>
       </div>
-
-      <SimulationCreationWizard
-        isOpen={createWizardOpen}
-        onClose={() => setCreateWizardOpen(false)}
-        brokerageId={brokerageId!}
-        onSimulationCreated={handleSimulationCreated}
-      />
     </SidebarProvider>
   );
 };
