@@ -238,7 +238,7 @@ const BrokerageUsersFullSection = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center justify-between font-dm-sans text-black">
-              Membri Attivi del Brokerage
+              Collaboratori dell'organizzazione
               <span className="text-sm font-normal text-muted-foreground ml-4">
                 {users.length} {users.length === 1 ? 'membro' : 'membri'}
               </span>
