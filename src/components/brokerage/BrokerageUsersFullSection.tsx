@@ -77,29 +77,32 @@ const BrokerageUsersFullSection = () => {
       if (brokerageError) throw brokerageError;
       setBrokerageName(brokerageData?.name || '');
 
-      // Load users using working service function
-      const usersData = await getBrokerageMembers(brokerageId);
+      // Load users with join dates from brokerage_members using the correct foreign key
+      const { data: usersData, error: usersError } = await supabase
+        .from('brokerage_members')
+        .select(`
+          joined_at,
+          role,
+          profiles!brokerage_members_user_id_profiles_fkey (
+            id,
+            email,
+            first_name,
+            last_name,
+            phone
+          )
+        `)
+        .eq('brokerage_id', brokerageId);
+
+      if (usersError) throw usersError;
 
       // Transform the data to match our interface
       const transformedUsers: BrokerageUser[] = [];
       const userMap = new Map<string, BrokerageUser>();
 
       usersData?.forEach(member => {
-        // Check if member has valid profile data
-        if (!member.profiles || !member.profiles.id) {
-          console.warn('Member missing profile data:', member);
-          return;
-        }
+        if (!member.profiles) return;
         
-        // Type assertion to help TypeScript understand the structure
-        const profiles = member.profiles as {
-          id: string;
-          email: string;
-          first_name: string | null;
-          last_name: string | null;
-        };
-        
-        const userId = profiles.id;
+        const userId = member.profiles.id;
         if (userMap.has(userId)) {
           // Add role to existing user
           const existingUser = userMap.get(userId)!;
@@ -107,11 +110,11 @@ const BrokerageUsersFullSection = () => {
         } else {
           // Create new user entry
           const newUser: BrokerageUser = {
-            id: profiles.id,
-            email: profiles.email || '',
-            first_name: profiles.first_name || null,
-            last_name: profiles.last_name || null,
-            phone: null, // not available in service response
+            id: member.profiles.id,
+            email: member.profiles.email,
+            first_name: member.profiles.first_name,
+            last_name: member.profiles.last_name,
+            phone: member.profiles.phone,
             roles: [member.role],
             joined_at: member.joined_at
           };

@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "brokerages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "brokerage_members_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       brokerages: {
