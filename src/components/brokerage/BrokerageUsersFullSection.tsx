@@ -10,11 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, User, Mail, ChevronDown, ChevronRight } from 'lucide-react';
+import { UserPlus, User, Mail } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { createBrokerageInvitation } from '@/services/brokerageInvitationService';
 import { getBrokerageInvitations, getBrokerageMembers } from '@/services/brokerageService';
+import BrokerageInvitationsSection from './BrokerageInvitationsSection';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -29,28 +29,14 @@ interface BrokerageUser {
   joined_at: string | null;
 }
 
-interface BrokerageInvitation {
-  id: string;
-  email: string;
-  role: UserRole;
-  created_at: string;
-  expires_at: string;
-  accepted_at: string | null;
-  email_sent: boolean;
-  inviter_name: string;
-  days_remaining: number;
-}
-
 const BrokerageUsersFullSection = () => {
   const { brokerageId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<BrokerageUser[]>([]);
-  const [invitations, setInvitations] = useState<BrokerageInvitation[]>([]);
   const [brokerageName, setBrokerageName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [invitationsOpen, setInvitationsOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     email: '',
     role: 'simulation_collaborator' as UserRole
@@ -124,23 +110,6 @@ const BrokerageUsersFullSection = () => {
       });
 
       setUsers(transformedUsers);
-
-      // Load invitations
-      const invitationsData = await getBrokerageInvitations(brokerageId);
-      
-      const formattedInvitations = invitationsData.map(inv => ({
-        id: inv.id,
-        email: inv.email,
-        role: inv.role,
-        created_at: inv.created_at,
-        expires_at: inv.expires_at,
-        accepted_at: inv.accepted_at,
-        email_sent: inv.email_sent || false,
-        inviter_name: inv.inviter_name,
-        days_remaining: Math.max(0, Math.ceil((new Date(inv.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
-      }));
-
-      setInvitations(formattedInvitations);
     } catch (error) {
       console.error('Error loading brokerage data:', error);
       toast({
@@ -221,8 +190,6 @@ const BrokerageUsersFullSection = () => {
     return new Date(dateString).toLocaleDateString('it-IT');
   };
 
-  const pendingInvitations = invitations.filter(inv => !inv.accepted_at && inv.days_remaining > 0);
-
   if (loading) {
     return (
       <div className="flex-1 p-8">
@@ -237,12 +204,14 @@ const BrokerageUsersFullSection = () => {
       <Card className="bg-white border-0 shadow-none">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center justify-between font-dm-sans text-black">
-              Collaboratori dell'organizzazione
-              <span className="text-sm font-normal text-muted-foreground ml-4">
+            <div className="flex items-center gap-4">
+              <CardTitle className="font-dm-sans text-black">
+                Collaboratori dell'organizzazione
+              </CardTitle>
+              <span className="text-sm font-normal text-muted-foreground">
                 {users.length} {users.length === 1 ? 'membro' : 'membri'}
               </span>
-            </CardTitle>
+            </div>
             <Button onClick={() => setInviteModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Aggiungi Membro
@@ -308,40 +277,9 @@ const BrokerageUsersFullSection = () => {
           )}
 
           {/* Invitations Section */}
-          {pendingInvitations.length > 0 && (
+          {brokerageId && (
             <div className="mt-6 pt-4 border-t border-gray-100">
-              <Collapsible open={invitationsOpen} onOpenChange={setInvitationsOpen}>
-                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
-                  {invitationsOpen ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                  Visualizza Inviti ({pendingInvitations.length})
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4 space-y-3">
-                  {pendingInvitations.map((invitation) => (
-                    <div key={invitation.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-form-green/10 flex items-center justify-center">
-                            <Mail className="h-4 w-4 text-form-green" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{invitation.email}</p>
-                            <p className="text-xs text-gray-500">
-                              Invitato come {getRoleLabel(invitation.role)} • {invitation.days_remaining} giorni rimanenti
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          In Attesa
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
+              <BrokerageInvitationsSection brokerageId={brokerageId} />
             </div>
           )}
         </CardContent>
