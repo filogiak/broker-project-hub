@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Check, User, UserPlus, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, UserPlus, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { simulationService } from '@/services/simulationService';
+import { simulationService, type SimulationCreationResult } from '@/services/simulationService';
 import { simulationParticipantService, type ParticipantData } from '@/services/simulationParticipantService';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -47,11 +46,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [creationResult, setCreationResult] = useState<{
-    simulationId?: string;
-    formLinksGenerated?: boolean;
-    formLinkErrors?: string[];
-  } | null>(null);
+  const [creationStep, setCreationStep] = useState<string>('');
+  const [creationResult, setCreationResult] = useState<SimulationCreationResult | null>(null);
   const [creationData, setCreationData] = useState<SimulationCreationData>({
     name: '',
     description: '',
@@ -67,7 +63,6 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
 
   const totalSteps = 4;
 
-  // Generate initial participants based on applicant count
   const generateParticipants = (count: ApplicantCount): ParticipantData[] => {
     const designations: ParticipantDesignation[] = 
       count === 'one_applicant' 
@@ -116,6 +111,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     if (!creationResult?.simulationId) return;
 
     setIsSubmitting(true);
+    setCreationStep('Rigenerando link dei moduli...');
+    
     try {
       const retryResult = await simulationService.retryFormLinkGeneration(creationResult.simulationId);
       
@@ -146,20 +143,34 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       });
     } finally {
       setIsSubmitting(false);
+      setCreationStep('');
     }
   };
 
   const handleSubmit = async () => {
+    console.log('🚀 [CREATION WIZARD] Starting submission process');
+    
     setIsSubmitting(true);
+    setCreationStep('Validando dati...');
+    
     try {
-      // Validate participants
+      // Enhanced validation
       const validationErrors: string[] = [];
-      creationData.participants.forEach((participant, index) => {
-        const errors = simulationParticipantService.validateParticipant(participant);
-        if (errors.length > 0) {
-          validationErrors.push(`Partecipante ${index + 1}: ${errors.join(', ')}`);
-        }
-      });
+      
+      if (!creationData.name?.trim()) {
+        validationErrors.push('Il nome della simulazione è obbligatorio');
+      }
+      
+      if (!creationData.participants || creationData.participants.length === 0) {
+        validationErrors.push('Almeno un partecipante è obbligatorio');
+      } else {
+        creationData.participants.forEach((participant, index) => {
+          const errors = simulationParticipantService.validateParticipant(participant);
+          if (errors.length > 0) {
+            validationErrors.push(`Partecipante ${index + 1}: ${errors.join(', ')}`);
+          }
+        });
+      }
 
       if (validationErrors.length > 0) {
         toast({
@@ -170,56 +181,78 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
         return;
       }
 
-      // Get project contact info from first participant (applicant_one)
+      // Get project contact info from primary participant
       const primaryParticipant = creationData.participants.find(p => 
         p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
       );
 
-      // Create simulation with complete setup
+      if (!primaryParticipant) {
+        toast({
+          title: "Errore",
+          description: "Nessun partecipante principale trovato",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create simulation with enhanced setup
+      setCreationStep('Creando simulazione...');
+      console.log('📝 [CREATION WIZARD] Creating simulation with setup');
+      
       const result = await simulationService.createSimulationWithSetup({
-        name: creationData.name,
-        description: creationData.description,
+        name: creationData.name.trim(),
+        description: creationData.description?.trim(),
         brokerageId: brokerageId,
         applicantCount: creationData.applicantCount,
-        projectContactName: primaryParticipant ? `${primaryParticipant.firstName} ${primaryParticipant.lastName}` : '',
-        projectContactEmail: primaryParticipant?.email || '',
-        projectContactPhone: primaryParticipant?.phone || '',
+        projectContactName: `${primaryParticipant.firstName} ${primaryParticipant.lastName}`,
+        projectContactEmail: primaryParticipant.email,
+        projectContactPhone: primaryParticipant.phone || '',
         participants: creationData.participants
       });
 
       setCreationResult(result);
+      console.log('✅ [CREATION WIZARD] Simulation creation completed:', result);
 
-      // Show appropriate success message
-      if (result.formLinksGenerated) {
-        toast({
-          title: "Successo",
-          description: "Simulazione creata con successo e tutti i link generati.",
-        });
-        onSimulationCreated();
-        handleClose();
-      } else {
-        toast({
-          title: "Simulazione Creata",
-          description: result.formLinkErrors 
-            ? "Simulazione creata ma alcuni link dei moduli non sono stati generati."
-            : "Simulazione creata con successo. Generazione dei link in corso...",
-          variant: result.formLinkErrors ? "destructive" : "default",
-        });
-        // Don't close immediately if there were form link issues
-        if (!result.formLinkErrors) {
+      // Show appropriate success/warning message
+      if (result.success) {
+        if (result.formLinksGenerated) {
+          toast({
+            title: "Successo Completo",
+            description: "Simulazione creata con successo e tutti i link generati.",
+          });
+          // Immediately call success callback and close
           onSimulationCreated();
           handleClose();
+        } else {
+          toast({
+            title: "Simulazione Creata",
+            description: result.formLinkErrors 
+              ? "Simulazione creata ma alcuni link dei moduli sono in attesa."
+              : "Simulazione creata con successo. Link dei moduli in generazione...",
+            variant: result.formLinkErrors ? "destructive" : "default",
+          });
+          // Don't close immediately - show the result to user
         }
+      } else {
+        toast({
+          title: "Errore Parziale",
+          description: "La simulazione potrebbe non essere stata creata completamente.",
+          variant: "destructive",
+        });
       }
+      
     } catch (error) {
-      console.error('Error creating simulation:', error);
+      console.error('❌ [CREATION WIZARD] Error creating simulation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
       toast({
         title: "Errore di Creazione",
-        description: "Impossibile creare la simulazione. Riprova.",
+        description: `Impossibile creare la simulazione: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+      setCreationStep('');
     }
   };
 
@@ -227,6 +260,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     if (!isSubmitting) {
       setCurrentStep(1);
       setCreationResult(null);
+      setCreationStep('');
       setCreationData({
         name: '',
         description: '',
@@ -403,6 +437,25 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
               </p>
             </div>
             
+            {/* Enhanced loading state */}
+            {isSubmitting && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm mb-1">
+                        Creando Simulazione...
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {creationStep || 'Elaborazione in corso...'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             <Card className="bg-accent/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Riepilogo Simulazione</CardTitle>
@@ -451,7 +504,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
               </CardContent>
             </Card>
 
-            {/* Show creation result if available */}
+            {/* Enhanced creation result display */}
             {creationResult && (
               <Card className={creationResult.formLinksGenerated ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
                 <CardContent className="pt-6">
@@ -465,14 +518,35 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                       <h4 className="font-medium text-sm mb-1">
                         {creationResult.formLinksGenerated ? 'Simulazione Creata con Successo' : 'Simulazione Creata - Link in Sospeso'}
                       </h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {creationResult.formLinksGenerated 
-                          ? 'La simulazione e tutti i link dei moduli sono stati generati correttamente.'
-                          : 'La simulazione è stata creata ma alcuni link dei moduli non sono stati generati.'}
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {creationResult.message || 'Operazione completata'}
                       </p>
+                      
+                      {/* Show creation summary */}
+                      <div className="text-sm space-y-1 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-3 w-3 text-green-600" />
+                          <span>Simulazione creata: {creationResult.simulationId}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Check className="h-3 w-3 text-green-600" />
+                          <span>Partecipanti aggiunti: {creationResult.participantsCreated}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {creationResult.formLinksGenerated ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>
+                            Link moduli: {creationResult.formLinksGenerated ? 'Generati' : 'In attesa'}
+                          </span>
+                        </div>
+                      </div>
+                      
                       {creationResult.formLinkErrors && (
                         <div className="space-y-2">
-                          <p className="text-sm font-medium text-red-700">Errori:</p>
+                          <p className="text-sm font-medium text-red-700">Dettagli errori:</p>
                           <ul className="text-sm text-red-600 space-y-1">
                             {creationResult.formLinkErrors.map((error, index) => (
                               <li key={index} className="flex items-start gap-2">
@@ -544,7 +618,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
           {renderStepContent()}
         </div>
 
-        {/* Navigation */}
+        {/* Enhanced navigation */}
         <div className="flex justify-between pt-4">
           <Button
             variant="outline"
@@ -561,12 +635,13 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
               disabled={!isStepValid() || isSubmitting}
               className="bg-form-green hover:bg-form-green-dark text-white"
             >
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Avanti
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
             <div className="flex gap-2">
-              {creationResult && !creationResult.formLinksGenerated && (
+              {creationResult && creationResult.success && (
                 <Button
                   onClick={() => {
                     onSimulationCreated();
@@ -575,7 +650,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                   variant="outline"
                   disabled={isSubmitting}
                 >
-                  Continua Comunque
+                  {creationResult.formLinksGenerated ? 'Chiudi' : 'Continua Comunque'}
                 </Button>
               )}
               <Button
@@ -583,7 +658,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                 disabled={(!isStepValid() || isSubmitting) && !creationResult}
                 className="bg-form-green hover:bg-form-green-dark text-white"
               >
-                {isSubmitting ? 'Creando...' : creationResult ? 'Chiudi' : 'Crea Simulazione'}
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isSubmitting ? creationStep || 'Elaborando...' : creationResult ? 'Completa' : 'Crea Simulazione'}
               </Button>
             </div>
           )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -25,25 +24,40 @@ const BrokerageSimulations = () => {
   const [participants, setParticipants] = useState<SimulationParticipant[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Enhanced parallel participant loading with better error handling
   const loadParticipantsInParallel = async (simulationsData: Simulation[]) => {
     console.log('👥 [BROKERAGE SIMULATIONS] Loading participants for', simulationsData.length, 'simulations in parallel');
     
-    // Load all participants in parallel instead of sequentially
+    if (!simulationsData || simulationsData.length === 0) {
+      console.log('👥 [BROKERAGE SIMULATIONS] No simulations to load participants for');
+      return [];
+    }
+    
+    // Load all participants in parallel with enhanced error handling
     const participantPromises = simulationsData.map(async (simulation) => {
       try {
         console.log('👥 [BROKERAGE SIMULATIONS] Loading participants for simulation:', simulation.id);
-        return await simulationParticipantService.getSimulationParticipants(simulation.id);
+        const simulationParticipants = await simulationParticipantService.getSimulationParticipants(simulation.id);
+        return simulationParticipants || [];
       } catch (error) {
         console.error(`❌ [BROKERAGE SIMULATIONS] Error loading participants for simulation ${simulation.id}:`, error);
-        return []; // Return empty array for failed requests
+        return []; // Return empty array for failed requests to prevent Promise.all failure
       }
     });
 
-    const participantResults = await Promise.all(participantPromises);
-    const allParticipants = participantResults.flat();
-    
-    console.log('✅ [BROKERAGE SIMULATIONS] Loaded', allParticipants.length, 'participants total');
-    return allParticipants;
+    try {
+      const participantResults = await Promise.allSettled(participantPromises);
+      const allParticipants = participantResults
+        .filter((result): result is PromiseFulfilledResult<SimulationParticipant[]> => result.status === 'fulfilled')
+        .map(result => result.value)
+        .flat();
+      
+      console.log('✅ [BROKERAGE SIMULATIONS] Loaded', allParticipants.length, 'participants total');
+      return allParticipants;
+    } catch (error) {
+      console.error('❌ [BROKERAGE SIMULATIONS] Error in parallel participant loading:', error);
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -55,7 +69,7 @@ const BrokerageSimulations = () => {
 
       try {
         setLoading(true);
-        console.log('🚀 [BROKERAGE SIMULATIONS] Starting data load for user:', user.id);
+        console.log('🚀 [BROKERAGE SIMULATIONS] Starting enhanced data load for user:', user.id);
         
         // Load brokerage using the access logic
         console.log('🏢 [BROKERAGE SIMULATIONS] Loading brokerage data...');
@@ -76,16 +90,18 @@ const BrokerageSimulations = () => {
         // Load simulations for this brokerage
         console.log('📊 [BROKERAGE SIMULATIONS] Loading simulations...');
         const simulationsData = await simulationService.getBrokerageSimulations(brokerageData.id);
-        setSimulations(simulationsData);
-        console.log('✅ [BROKERAGE SIMULATIONS] Loaded', simulationsData.length, 'simulations');
+        setSimulations(simulationsData || []);
+        console.log('✅ [BROKERAGE SIMULATIONS] Loaded', simulationsData?.length || 0, 'simulations');
 
-        // Load all participants in parallel (improved performance)
-        if (simulationsData.length > 0) {
+        // Load all participants in parallel (enhanced with better error handling)
+        if (simulationsData && simulationsData.length > 0) {
           const allParticipants = await loadParticipantsInParallel(simulationsData);
           setParticipants(allParticipants);
+        } else {
+          setParticipants([]);
         }
 
-        console.log('✅ [BROKERAGE SIMULATIONS] Data loading completed successfully');
+        console.log('✅ [BROKERAGE SIMULATIONS] Enhanced data loading completed successfully');
       } catch (error) {
         console.error('❌ [BROKERAGE SIMULATIONS] Error loading data:', error);
         toast({
@@ -101,10 +117,11 @@ const BrokerageSimulations = () => {
     loadData();
   }, [user, brokerageId, navigate, toast]);
 
+  // Enhanced simulation creation handler with optimistic updates
   const handleCreateSimulation = async (simulationData: any) => {
     if (!brokerage) return;
 
-    console.log('🚀 [BROKERAGE SIMULATIONS] Creating simulation:', simulationData.name);
+    console.log('🚀 [BROKERAGE SIMULATIONS] Creating simulation with enhanced handling:', simulationData.name);
     
     try {
       const result = await simulationService.createSimulationWithSetup({
@@ -118,37 +135,54 @@ const BrokerageSimulations = () => {
         participants: simulationData.participants,
       });
 
-      console.log('✅ [BROKERAGE SIMULATIONS] Simulation creation result:', result);
+      console.log('✅ [BROKERAGE SIMULATIONS] Enhanced simulation creation result:', result);
 
-      // Reload data after creation (using parallel loading)
-      console.log('🔄 [BROKERAGE SIMULATIONS] Reloading data after creation...');
-      const simulationsData = await simulationService.getBrokerageSimulations(brokerage.id);
-      setSimulations(simulationsData);
+      // Optimized data reloading - only if creation was successful
+      if (result.success) {
+        console.log('🔄 [BROKERAGE SIMULATIONS] Performing optimized data reload...');
+        
+        // Load simulations and participants in parallel for better performance
+        const [simulationsData, allParticipants] = await Promise.all([
+          simulationService.getBrokerageSimulations(brokerage.id),
+          // Reload participants for all simulations including the new one
+          (async () => {
+            const updatedSimulations = await simulationService.getBrokerageSimulations(brokerage.id);
+            return loadParticipantsInParallel(updatedSimulations || []);
+          })()
+        ]);
 
-      // Reload participants in parallel
-      const allParticipants = await loadParticipantsInParallel(simulationsData);
-      setParticipants(allParticipants);
-      
-      // Show appropriate success message
-      if (result.formLinksGenerated) {
-        toast({
-          title: "Simulation Created Successfully",
-          description: `${simulationData.name} has been created with all form links.`,
-        });
+        setSimulations(simulationsData || []);
+        setParticipants(allParticipants);
+        
+        // Enhanced success messaging
+        if (result.formLinksGenerated) {
+          toast({
+            title: "Simulazione Creata con Successo",
+            description: `${simulationData.name} è stata creata con tutti i link dei form.`,
+          });
+        } else {
+          toast({
+            title: "Simulazione Creata",
+            description: result.formLinkErrors 
+              ? `${simulationData.name} è stata creata ma alcuni link dei form sono in attesa di generazione.`
+              : `${simulationData.name} è stata creata. I link dei form sono in generazione.`,
+            variant: result.formLinkErrors ? "destructive" : "default",
+          });
+        }
       } else {
         toast({
-          title: "Simulation Created",
-          description: result.formLinkErrors 
-            ? `${simulationData.name} has been created but some form links failed to generate.`
-            : `${simulationData.name} has been created. Form links are being generated.`,
-          variant: result.formLinkErrors ? "destructive" : "default",
+          title: "Errore Parziale",
+          description: "La simulazione potrebbe non essere stata creata completamente.",
+          variant: "destructive",
         });
       }
     } catch (error) {
       console.error('❌ [BROKERAGE SIMULATIONS] Error creating simulation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
       toast({
-        title: "Error",
-        description: "Failed to create simulation.",
+        title: "Errore di Creazione",
+        description: `Impossibile creare la simulazione: ${errorMessage}`,
         variant: "destructive",
       });
     }
@@ -231,7 +265,7 @@ const BrokerageSimulations = () => {
           <SimulationsFullSection
             simulations={simulations}
             participants={participants}
-            brokerageId={brokerage.id}
+            brokerageId={brokerage?.id || ''}
             onCreateSimulation={handleCreateSimulation}
             onDeleteSimulation={handleDeleteSimulation}
             onOpenSimulation={handleOpenSimulation}
