@@ -31,8 +31,13 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const body = await req.json();
+    // Parse request body with timeout
+    const requestPromise = req.json();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request parsing timeout')), 5000);
+    });
+    
+    const body = await Promise.race([requestPromise, timeoutPromise]);
     console.log('📥 Input values received:', {
       name: body.name ? '✓' : '❌',
       email: body.email ? '✓' : '❌',
@@ -73,72 +78,148 @@ serve(async (req) => {
     url.searchParams.append('name', name);
     url.searchParams.append('email', email);
     url.searchParams.append('phone', phone);
-    url.searchParams.append('form-slug', formSlug); // Note: formSlug becomes form-slug
+    url.searchParams.append('form-slug', formSlug);
 
     console.log('🔗 Built URL:', url.toString());
 
-    // Make GET request to external API
+    // Make GET request to external API with enhanced timeout and retry logic
     console.log('📡 Making request to external API...');
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json'
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+    
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'User-Agent': 'Supabase-Edge-Function/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      console.log('📊 Response status:', response.status);
+
+      // Handle different response statuses with better error messages
+      if (response.status === 403) {
+        console.log('🚫 Unauthorized or not found (403)');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Unauthorized access to form generation API',
+            details: 'API key may be invalid or form slug not found'
+          }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
-    });
 
-    console.log('📊 Response status:', response.status);
+      if (response.status === 429) {
+        console.log('⏳ Rate limit exceeded (429)');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded',
+            details: 'Too many requests to form generation API'
+          }),
+          { 
+            status: 429, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
 
-    // Handle different response statuses
-    if (response.status === 403) {
-      console.log('🚫 Unauthorized or not found (403)');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized or not found' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.log(`❌ API request failed with status: ${response.status}, body: ${errorText}`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'External API request failed', 
+            status: response.status,
+            details: errorText
+          }),
+          { 
+            status: response.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
 
-    if (!response.ok) {
-      console.log(`❌ API request failed with status: ${response.status}`);
+      // Parse successful response with validation
+      const data = await response.json();
+      console.log('✅ Final parsed result:', data);
+
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
+        console.log('❌ Invalid response structure');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid response from form generation API',
+            details: 'Response is not a valid JSON object'
+          }),
+          { 
+            status: 502, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
       return new Response(
         JSON.stringify({ 
-          error: 'API request failed', 
-          status: response.status 
+          success: true, 
+          data: data 
         }),
         { 
-          status: response.status, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
-    }
 
-    // Parse successful response
-    const data = await response.json();
-    console.log('✅ Final parsed result:', data);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: data 
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.log('⏰ Request timeout (45s)');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Request timeout',
+            details: 'Form generation API took too long to respond'
+          }),
+          { 
+            status: 504, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
-    );
+      
+      throw fetchError; // Re-throw non-timeout errors
+    }
 
   } catch (error) {
     console.error('💥 Error in getFormLink function:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    
+    if (error.message.includes('timeout')) {
+      errorMessage = 'Request timeout - external API is not responding';
+      statusCode = 504;
+    } else if (error.message.includes('network')) {
+      errorMessage = 'Network error - unable to reach external API';
+      statusCode = 502;
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error', 
-        message: error.message 
+        error: errorMessage, 
+        details: error.message,
+        timestamp: new Date().toISOString()
       }),
       { 
-        status: 500, 
+        status: statusCode, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );

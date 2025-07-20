@@ -14,6 +14,14 @@ type Simulation = Database['public']['Tables']['simulations']['Row'];
 type SimulationParticipant = Database['public']['Tables']['simulation_participants']['Row'];
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
 
+// Enhanced progress tracking interface
+interface CreationProgress {
+  step: string;
+  message: string;
+  progress: number;
+  formLinksStatus?: 'completed' | 'pending' | 'partial' | 'failed';
+}
+
 const BrokerageSimulations = () => {
   const { brokerageId } = useParams();
   const navigate = useNavigate();
@@ -23,6 +31,8 @@ const BrokerageSimulations = () => {
   const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [participants, setParticipants] = useState<SimulationParticipant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationProgress, setCreationProgress] = useState<CreationProgress | undefined>();
 
   // Enhanced parallel participant loading with better error handling
   const loadParticipantsInParallel = async (simulationsData: Simulation[]) => {
@@ -117,13 +127,27 @@ const BrokerageSimulations = () => {
     loadData();
   }, [user, brokerageId, navigate, toast]);
 
-  // Enhanced simulation creation handler with optimistic updates
+  // Enhanced simulation creation handler with optimistic updates and detailed progress
   const handleCreateSimulation = async (simulationData: any) => {
     if (!brokerage) return;
 
     console.log('🚀 [BROKERAGE SIMULATIONS] Creating simulation with enhanced handling:', simulationData.name);
     
+    setIsCreating(true);
+    setCreationProgress({
+      step: 'Initializing',
+      message: 'Preparing simulation creation...',
+      progress: 10
+    });
+
     try {
+      // Step 1: Creating simulation
+      setCreationProgress({
+        step: 'Creating Simulation',
+        message: 'Setting up simulation structure...',
+        progress: 30
+      });
+
       const result = await simulationService.createSimulationWithSetup({
         name: simulationData.name,
         description: simulationData.description,
@@ -137,10 +161,25 @@ const BrokerageSimulations = () => {
 
       console.log('✅ [BROKERAGE SIMULATIONS] Enhanced simulation creation result:', result);
 
-      // Optimized data reloading - only if creation was successful
+      // Step 2: Update progress based on result
+      setCreationProgress({
+        step: result.formLinksStatus === 'completed' ? 'Completed' : 'Processing Form Links',
+        message: result.message || 'Simulation created successfully',
+        progress: result.formLinksStatus === 'completed' ? 100 : 80,
+        formLinksStatus: result.formLinksStatus
+      });
+
+      // Step 3: Optimized data reloading - only if creation was successful
       if (result.success) {
         console.log('🔄 [BROKERAGE SIMULATIONS] Performing optimized data reload...');
         
+        setCreationProgress(prev => prev ? {
+          ...prev,
+          step: 'Refreshing Data',
+          message: 'Loading updated simulation list...',
+          progress: 90
+        } : undefined);
+
         // Load simulations and participants in parallel for better performance
         const [simulationsData, allParticipants] = await Promise.all([
           simulationService.getBrokerageSimulations(brokerage.id),
@@ -154,37 +193,91 @@ const BrokerageSimulations = () => {
         setSimulations(simulationsData || []);
         setParticipants(allParticipants);
         
-        // Enhanced success messaging
-        if (result.formLinksGenerated) {
-          toast({
-            title: "Simulazione Creata con Successo",
-            description: `${simulationData.name} è stata creata con tutti i link dei form.`,
-          });
-        } else {
-          toast({
-            title: "Simulazione Creata",
-            description: result.formLinkErrors 
-              ? `${simulationData.name} è stata creata ma alcuni link dei form sono in attesa di generazione.`
-              : `${simulationData.name} è stata creata. I link dei form sono in generazione.`,
-            variant: result.formLinkErrors ? "destructive" : "default",
-          });
-        }
+        // Final progress update
+        setCreationProgress({
+          step: 'Complete',
+          message: result.message || 'Simulation created successfully',
+          progress: 100,
+          formLinksStatus: result.formLinksStatus
+        });
+
+        // Enhanced success messaging based on form links status
+        const getToastConfig = (formLinksStatus: string) => {
+          switch (formLinksStatus) {
+            case 'completed':
+              return {
+                title: "Simulazione Creata con Successo",
+                description: `${simulationData.name} è stata creata con tutti i link dei form.`,
+                variant: "default" as const
+              };
+            case 'pending':
+              return {
+                title: "Simulazione Creata",
+                description: `${simulationData.name} è stata creata. I link dei form sono in generazione.`,
+                variant: "default" as const
+              };
+            case 'partial':
+              return {
+                title: "Simulazione Creata",
+                description: `${simulationData.name} è stata creata. Alcuni link dei form sono in attesa - puoi riprovare più tardi.`,
+                variant: "default" as const
+              };
+            case 'failed':
+              return {
+                title: "Simulazione Creata",
+                description: `${simulationData.name} è stata creata. La generazione dei link dei form è fallita - puoi riprovare più tardi.`,
+                variant: "default" as const
+              };
+            default:
+              return {
+                title: "Simulazione Creata",
+                description: `${simulationData.name} è stata creata.`,
+                variant: "default" as const
+              };
+          }
+        };
+
+        const toastConfig = getToastConfig(result.formLinksStatus);
+        toast({
+          title: toastConfig.title,
+          description: toastConfig.description,
+          variant: toastConfig.variant,
+        });
+
+        // Clear progress after a delay to show completion
+        setTimeout(() => {
+          setCreationProgress(undefined);
+          setIsCreating(false);
+        }, 2000);
       } else {
         toast({
           title: "Errore Parziale",
           description: "La simulazione potrebbe non essere stata creata completamente.",
           variant: "destructive",
         });
+        setIsCreating(false);
+        setCreationProgress(undefined);
       }
     } catch (error) {
       console.error('❌ [BROKERAGE SIMULATIONS] Error creating simulation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      setCreationProgress({
+        step: 'Error',
+        message: `Errore: ${errorMessage}`,
+        progress: 0
+      });
       
       toast({
         title: "Errore di Creazione",
         description: `Impossibile creare la simulazione: ${errorMessage}`,
         variant: "destructive",
       });
+
+      setTimeout(() => {
+        setIsCreating(false);
+        setCreationProgress(undefined);
+      }, 3000);
     }
   };
 
@@ -269,6 +362,8 @@ const BrokerageSimulations = () => {
             onCreateSimulation={handleCreateSimulation}
             onDeleteSimulation={handleDeleteSimulation}
             onOpenSimulation={handleOpenSimulation}
+            isCreating={isCreating}
+            creationProgress={creationProgress}
           />
         </SidebarInset>
       </div>
