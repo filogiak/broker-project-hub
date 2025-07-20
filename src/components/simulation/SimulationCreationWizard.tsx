@@ -1,317 +1,671 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Loader2, Users, FileText, Phone, Mail, User, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, UserPlus, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { simulationService, type SimulationCreationResult } from '@/services/simulationService';
+import { simulationParticipantService, type ParticipantData } from '@/services/simulationParticipantService';
 import type { Database } from '@/integrations/supabase/types';
 
-const applicantCountEnum = z.enum(['solo', 'duo']);
+type ApplicantCount = Database['public']['Enums']['applicant_count'];
+type ParticipantDesignation = Database['public']['Enums']['participant_designation'];
 
-const participantSchema = z.object({
-  firstName: z.string().min(2, {
-    message: "First name must be at least 2 characters.",
-  }),
-  lastName: z.string().min(2, {
-    message: "Last name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Invalid email address.",
-  }),
-  phone: z.string().optional(),
-  participantDesignation: z.enum(['applicant_one', 'applicant_two', 'solo_applicant']),
-});
-
-const simulationFormSchema = z.object({
-  name: z.string().min(3, {
-    message: "Simulation name must be at least 3 characters.",
-  }),
-  description: z.string().optional(),
-  applicantCount: applicantCountEnum,
-  projectContactName: z.string().min(2, {
-    message: "Project contact name must be at least 2 characters.",
-  }),
-  projectContactEmail: z.string().email({
-    message: "Invalid email address.",
-  }),
-  projectContactPhone: z.string().optional(),
-  participants: z.array(participantSchema).min(1, {
-    message: "At least one participant is required.",
-  }),
-});
-
-type SimulationFormData = z.infer<typeof simulationFormSchema>;
-
-interface SimulationCreationWizardProps {
-  onCreateSimulation: (data: SimulationFormData) => Promise<void>;
-  isCreating?: boolean;
-  creationProgress?: {
-    step: string;
-    message: string;
-    progress: number;
-    formLinksStatus?: 'completed' | 'pending' | 'partial' | 'failed';
-  };
+interface SimulationCreationData {
+  name: string;
+  description: string;
+  applicantCount: ApplicantCount;
+  participants: ParticipantData[];
 }
 
-const SimulationCreationWizard: React.FC<SimulationCreationWizardProps> = ({ 
-  onCreateSimulation, 
-  isCreating = false,
-  creationProgress
-}) => {
-  const [applicantCount, setApplicantCount] = useState<"solo" | "duo">("solo");
+interface SimulationCreationWizardProps {
+  isOpen: boolean;
+  onClose: () => void;
+  brokerageId: string;
+  onSimulationCreated: () => void;
+}
 
-  const { register, handleSubmit, watch, control, formState: { errors } } = useForm<SimulationFormData>({
-    resolver: zodResolver(simulationFormSchema),
-    defaultValues: {
-      applicantCount: "solo",
-      participants: [{ participantDesignation: 'solo_applicant' } as any],
-    },
+const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
+  one_applicant: 'Un Richiedente',
+  two_applicants: 'Due Richiedenti',
+  three_or_more_applicants: 'Tre o Più Richiedenti'
+};
+
+const PARTICIPANT_DESIGNATION_LABELS = {
+  solo_applicant: 'Richiedente Unico',
+  applicant_one: 'Primo Richiedente',
+  applicant_two: 'Secondo Richiedente'
+};
+
+const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCreated }: SimulationCreationWizardProps) => {
+  const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [creationStep, setCreationStep] = useState<string>('');
+  const [creationResult, setCreationResult] = useState<SimulationCreationResult | null>(null);
+  const [creationData, setCreationData] = useState<SimulationCreationData>({
+    name: '',
+    description: '',
+    applicantCount: 'one_applicant',
+    participants: [{
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      participantDesignation: 'solo_applicant'
+    }]
   });
 
-  const watchApplicantCount = watch("applicantCount");
+  const totalSteps = 4;
 
-  const onSubmit = async (data: SimulationFormData) => {
-    await onCreateSimulation(data);
+  const generateParticipants = (count: ApplicantCount): ParticipantData[] => {
+    const designations: ParticipantDesignation[] = 
+      count === 'one_applicant' 
+        ? ['solo_applicant']
+        : ['applicant_one', 'applicant_two'];
+
+    return designations.map(designation => ({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      participantDesignation: designation
+    }));
   };
 
-  const renderApplicantFields = (applicantNumber: 1 | 2, designation: 'applicant_one' | 'applicant_two') => (
-    <div key={applicantNumber} className="space-y-2">
-      <h3 className="text-lg font-medium">Applicant {applicantNumber}</h3>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor={`firstName${applicantNumber}`}>First Name</Label>
-            <Input type="text" id={`firstName${applicantNumber}`}  {...register(`participants.${applicantNumber - 1}.firstName`)} />
-            {errors.participants?.[applicantNumber - 1]?.firstName && (
-              <p className="text-sm text-red-500">{errors.participants[applicantNumber - 1].firstName?.message}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor={`lastName${applicantNumber}`}>Last Name</Label>
-            <Input type="text" id={`lastName${applicantNumber}`}  {...register(`participants.${applicantNumber - 1}.lastName`)} />
-            {errors.participants?.[applicantNumber - 1]?.lastName && (
-              <p className="text-sm text-red-500">{errors.participants[applicantNumber - 1].lastName?.message}</p>
-            )}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor={`email${applicantNumber}`}>Email</Label>
-            <Input type="email" id={`email${applicantNumber}`}  {...register(`participants.${applicantNumber - 1}.email`)} />
-            {errors.participants?.[applicantNumber - 1]?.email && (
-              <p className="text-sm text-red-500">{errors.participants[applicantNumber - 1].email?.message}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor={`phone${applicantNumber}`}>Phone (Optional)</Label>
-            <Input type="tel" id={`phone${applicantNumber}`}  {...register(`participants.${applicantNumber - 1}.phone`)} />
-            {errors.participants?.[applicantNumber - 1]?.phone && (
-              <p className="text-sm text-red-500">{errors.participants[applicantNumber - 1].phone?.message}</p>
-            )}
-          </div>
-        </div>
-        <input type="hidden" {...register(`participants.${applicantNumber - 1}.participantDesignation`)} value={designation} />
-      </div>
-    </div>
-  );
+  const handleApplicantCountChange = (count: ApplicantCount) => {
+    setCreationData(prev => ({
+      ...prev,
+      applicantCount: count,
+      participants: generateParticipants(count)
+    }));
+  };
 
-  const getProgressIcon = (status?: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'partial':
-        return <AlertCircle className="h-4 w-4 text-orange-500" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Loader2 className="h-4 w-4 animate-spin" />;
+  const handleParticipantChange = (index: number, field: keyof ParticipantData, value: string) => {
+    setCreationData(prev => ({
+      ...prev,
+      participants: prev.participants.map((p, i) => 
+        i === index ? { ...p, [field]: value } : p
+      )
+    }));
+  };
+
+  const handleNext = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
-  const getProgressMessage = (progress?: typeof creationProgress) => {
-    if (!progress) return null;
-
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          {getProgressIcon(progress.formLinksStatus)}
-          <span className="text-sm font-medium">{progress.step}</span>
-        </div>
-        <Progress value={progress.progress} className="w-full" />
-        <p className="text-sm text-muted-foreground">{progress.message}</p>
-        
-        {progress.formLinksStatus && progress.formLinksStatus !== 'completed' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium text-blue-700">Form Links Status</span>
-            </div>
-            <p className="text-xs text-blue-600">
-              {progress.formLinksStatus === 'pending' && "Form links are being generated in the background"}
-              {progress.formLinksStatus === 'partial' && "Some form links failed - you can retry later"}
-              {progress.formLinksStatus === 'failed' && "Form link generation failed - you can retry later"}
-            </p>
-          </div>
-        )}
-      </div>
-    );
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
-  const renderForm = () => (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="space-y-2">
-        <Label htmlFor="name">Simulation Name</Label>
-        <Input type="text" id="name" placeholder="Simulation Name" {...register("name")} />
-        {errors.name && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="description">Description (Optional)</Label>
-        <Textarea id="description" placeholder="Description" {...register("description")} />
-        {errors.description && (
-          <p className="text-sm text-red-500">{errors.description.message}</p>
-        )}
-      </div>
+  const handleRetryFormLinks = async () => {
+    if (!creationResult?.simulationId) return;
 
-      <div>
-        <Label>Number of Applicants</Label>
-        <RadioGroup defaultValue="solo" className="flex flex-col space-y-1" onValueChange={(value) => setApplicantCount(value as "solo" | "duo")}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="solo" id="solo" {...register("applicantCount")} />
-            <Label htmlFor="solo">Solo Applicant</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="duo" id="duo" {...register("applicantCount")} />
-            <Label htmlFor="duo">Two Applicants</Label>
-          </div>
-        </RadioGroup>
-        {errors.applicantCount && (
-          <p className="text-sm text-red-500">{errors.applicantCount.message}</p>
-        )}
-      </div>
+    setIsSubmitting(true);
+    setCreationStep('Rigenerando link dei moduli...');
+    
+    try {
+      const retryResult = await simulationService.retryFormLinkGeneration(creationResult.simulationId);
+      
+      if (retryResult.success) {
+        setCreationResult(prev => prev ? {
+          ...prev,
+          formLinksGenerated: true,
+          formLinkErrors: undefined
+        } : null);
+        
+        toast({
+          title: "Successo",
+          description: "Link dei moduli generati con successo.",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: `Impossibile generare i link: ${retryResult.errors?.join(', ')}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error retrying form links:', error);
+      toast({
+        title: "Errore",
+        description: "Errore durante la rigenerazione dei link.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setCreationStep('');
+    }
+  };
 
-      <div className="space-y-2">
-        <Label htmlFor="projectContactName">Project Contact Name</Label>
-        <Input type="text" id="projectContactName" placeholder="Project Contact Name" {...register("projectContactName")} />
-        {errors.projectContactName && (
-          <p className="text-sm text-red-500">{errors.projectContactName.message}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="projectContactEmail">Project Contact Email</Label>
-        <Input type="email" id="projectContactEmail" placeholder="Project Contact Email" {...register("projectContactEmail")} />
-        {errors.projectContactEmail && (
-          <p className="text-sm text-red-500">{errors.projectContactEmail.message}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="projectContactPhone">Project Contact Phone (Optional)</Label>
-        <Input type="tel" id="projectContactPhone" placeholder="Project Contact Phone" {...register("projectContactPhone")} />
-        {errors.projectContactPhone && (
-          <p className="text-sm text-red-500">{errors.projectContactPhone.message}</p>
-        )}
-      </div>
+  const handleSubmit = async () => {
+    console.log('🚀 [CREATION WIZARD] Starting submission process');
+    
+    setIsSubmitting(true);
+    setCreationStep('Validando dati...');
+    
+    try {
+      // Enhanced validation
+      const validationErrors: string[] = [];
+      
+      if (!creationData.name?.trim()) {
+        validationErrors.push('Il nome della simulazione è obbligatorio');
+      }
+      
+      if (!creationData.participants || creationData.participants.length === 0) {
+        validationErrors.push('Almeno un partecipante è obbligatorio');
+      } else {
+        creationData.participants.forEach((participant, index) => {
+          const errors = simulationParticipantService.validateParticipant(participant);
+          if (errors.length > 0) {
+            validationErrors.push(`Partecipante ${index + 1}: ${errors.join(', ')}`);
+          }
+        });
+      }
 
-      {applicantCount === "solo" ? (
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Applicant Information</h2>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstNameSolo">First Name</Label>
-                <Input type="text" id="firstNameSolo" {...register("participants.0.firstName")} />
-                {errors.participants?.[0]?.firstName && (
-                  <p className="text-sm text-red-500">{errors.participants[0].firstName?.message}</p>
-                )}
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Errore di Validazione",
+          description: validationErrors.join('\n'),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get project contact info from primary participant
+      const primaryParticipant = creationData.participants.find(p => 
+        p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
+      );
+
+      if (!primaryParticipant) {
+        toast({
+          title: "Errore",
+          description: "Nessun partecipante principale trovato",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create simulation with enhanced setup
+      setCreationStep('Creando simulazione...');
+      console.log('📝 [CREATION WIZARD] Creating simulation with setup');
+      
+      const result = await simulationService.createSimulationWithSetup({
+        name: creationData.name.trim(),
+        description: creationData.description?.trim(),
+        brokerageId: brokerageId,
+        applicantCount: creationData.applicantCount,
+        projectContactName: `${primaryParticipant.firstName} ${primaryParticipant.lastName}`,
+        projectContactEmail: primaryParticipant.email,
+        projectContactPhone: primaryParticipant.phone || '',
+        participants: creationData.participants
+      });
+
+      setCreationResult(result);
+      console.log('✅ [CREATION WIZARD] Simulation creation completed:', result);
+
+      // Show appropriate success/warning message
+      if (result.success) {
+        if (result.formLinksGenerated) {
+          toast({
+            title: "Successo Completo",
+            description: "Simulazione creata con successo e tutti i link generati.",
+          });
+          // Immediately call success callback and close
+          onSimulationCreated();
+          handleClose();
+        } else {
+          toast({
+            title: "Simulazione Creata",
+            description: result.formLinkErrors 
+              ? "Simulazione creata ma alcuni link dei moduli sono in attesa."
+              : "Simulazione creata con successo. Link dei moduli in generazione...",
+            variant: result.formLinkErrors ? "destructive" : "default",
+          });
+          // Don't close immediately - show the result to user
+        }
+      } else {
+        toast({
+          title: "Errore Parziale",
+          description: "La simulazione potrebbe non essere stata creata completamente.",
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ [CREATION WIZARD] Error creating simulation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      toast({
+        title: "Errore di Creazione",
+        description: `Impossibile creare la simulazione: ${errorMessage}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setCreationStep('');
+    }
+  };
+
+  const handleClose = () => {
+    if (!isSubmitting) {
+      setCurrentStep(1);
+      setCreationResult(null);
+      setCreationStep('');
+      setCreationData({
+        name: '',
+        description: '',
+        applicantCount: 'one_applicant',
+        participants: [{
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          participantDesignation: 'solo_applicant'
+        }]
+      });
+      onClose();
+    }
+  };
+
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 1:
+        return creationData.name.trim().length > 0;
+      case 2:
+        return true; // applicantCount always has a default value
+      case 3:
+        return creationData.participants.every(p => 
+          p.firstName.trim().length > 0 && 
+          p.lastName.trim().length > 0 && 
+          p.email.trim().length > 0
+        );
+      case 4:
+        return true; // Confirmation step
+      default:
+        return false;
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Dettagli Simulazione</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Fornisci le informazioni di base per la nuova simulazione.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome Simulazione *</Label>
+                <Input
+                  id="name"
+                  value={creationData.name}
+                  onChange={(e) => setCreationData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Inserisci il nome della simulazione"
+                />
               </div>
-              <div>
-                <Label htmlFor="lastNameSolo">Last Name</Label>
-                <Input type="text" id="lastNameSolo" {...register("participants.0.lastName")} />
-                {errors.participants?.[0]?.lastName && (
-                  <p className="text-sm text-red-500">{errors.participants[0].lastName?.message}</p>
-                )}
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrizione</Label>
+                <Textarea
+                  id="description"
+                  value={creationData.description}
+                  onChange={(e) => setCreationData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descrivi la simulazione..."
+                  rows={3}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="emailSolo">Email</Label>
-                <Input type="email" id="emailSolo" {...register("participants.0.email")} />
-                {errors.participants?.[0]?.email && (
-                  <p className="text-sm text-red-500">{errors.participants[0].email?.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="phoneSolo">Phone (Optional)</Label>
-                <Input type="tel" id="phoneSolo" {...register("participants.0.phone")} />
-                {errors.participants?.[0]?.phone && (
-                  <p className="text-sm text-red-500">{errors.participants[0].phone?.message}</p>
-                )}
-              </div>
-            </div>
-            <input type="hidden" {...register("participants.0.participantDesignation")} value="solo_applicant" />
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">Applicants Information</h2>
-          {renderApplicantFields(1, 'applicant_one')}
-          {renderApplicantFields(2, 'applicant_two')}
-        </div>
-      )}
+        );
 
-      <Button type="submit" disabled={isCreating}>
-        {isCreating ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating...
-          </>
-        ) : (
-          "Create Simulation"
-        )}
-      </Button>
-    </form>
-  );
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Numero di Richiedenti</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Quanti richiedenti parteciperanno a questa simulazione mutuo?
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Numero Richiedenti *</Label>
+              <Select
+                value={creationData.applicantCount}
+                onValueChange={(value) => handleApplicantCountChange(value as ApplicantCount)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(APPLICANT_COUNT_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
 
-  if (isCreating) {
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Creating Simulation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {getProgressMessage(creationProgress)}
-        </CardContent>
-      </Card>
-    );
-  }
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Informazioni Partecipanti</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Inserisci i dettagli per ogni partecipante alla simulazione.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {creationData.participants.map((participant, index) => (
+                <Card key={index}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {PARTICIPANT_DESIGNATION_LABELS[participant.participantDesignation]}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Nome *</Label>
+                        <Input
+                          value={participant.firstName}
+                          onChange={(e) => handleParticipantChange(index, 'firstName', e.target.value)}
+                          placeholder="Inserisci il nome"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cognome *</Label>
+                        <Input
+                          value={participant.lastName}
+                          onChange={(e) => handleParticipantChange(index, 'lastName', e.target.value)}
+                          placeholder="Inserisci il cognome"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        value={participant.email}
+                        onChange={(e) => handleParticipantChange(index, 'email', e.target.value)}
+                        placeholder="Inserisci l'indirizzo email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefono</Label>
+                      <Input
+                        type="tel"
+                        value={participant.phone}
+                        onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
+                        placeholder="Inserisci il numero di telefono"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 4:
+        const primaryParticipant = creationData.participants.find(p => 
+          p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
+        );
+        
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Conferma e Crea</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Rivedi la configurazione della simulazione prima di completare.
+              </p>
+            </div>
+            
+            {/* Enhanced loading state */}
+            {isSubmitting && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm mb-1">
+                        Creando Simulazione...
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {creationStep || 'Elaborazione in corso...'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            <Card className="bg-accent/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Riepilogo Simulazione</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Nome:</span>
+                  <span className="font-medium">{creationData.name}</span>
+                </div>
+                {creationData.description && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Descrizione:</span>
+                    <span className="font-medium">{creationData.description}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Richiedenti:</span>
+                  <Badge variant="secondary">
+                    {APPLICANT_COUNT_LABELS[creationData.applicantCount]}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Contatto Progetto:</span>
+                  <div className="text-sm space-y-1 pl-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-3 w-3" />
+                      {primaryParticipant ? `${primaryParticipant.firstName} ${primaryParticipant.lastName}` : 'N/A'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">📧</span>
+                      {primaryParticipant?.email || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Partecipanti:</span>
+                  <div className="text-sm space-y-1 pl-2">
+                    {creationData.participants.map((participant, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <UserPlus className="h-3 w-3" />
+                        {participant.firstName} {participant.lastName} ({participant.email})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Enhanced creation result display */}
+            {creationResult && (
+              <Card className={creationResult.formLinksGenerated ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    {creationResult.formLinksGenerated ? (
+                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm mb-1">
+                        {creationResult.formLinksGenerated ? 'Simulazione Creata con Successo' : 'Simulazione Creata - Link in Sospeso'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {creationResult.message || 'Operazione completata'}
+                      </p>
+                      
+                      {/* Show creation summary */}
+                      <div className="text-sm space-y-1 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-3 w-3 text-green-600" />
+                          <span>Simulazione creata: {creationResult.simulationId}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Check className="h-3 w-3 text-green-600" />
+                          <span>Partecipanti aggiunti: {creationResult.participantsCreated}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {creationResult.formLinksGenerated ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>
+                            Link moduli: {creationResult.formLinksGenerated ? 'Generati' : 'In attesa'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {creationResult.formLinkErrors && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-red-700">Dettagli errori:</p>
+                          <ul className="text-sm text-red-600 space-y-1">
+                            {creationResult.formLinkErrors.map((error, index) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-red-400 mt-1">•</span>
+                                {error}
+                              </li>
+                            ))}
+                          </ul>
+                          <Button
+                            onClick={handleRetryFormLinks}
+                            disabled={isSubmitting}
+                            size="sm"
+                            className="mt-3"
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isSubmitting ? 'animate-spin' : ''}`} />
+                            {isSubmitting ? 'Rigenerando...' : 'Riprova Generazione Link'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Create New Simulation</CardTitle>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Fill in the details to create a new simulation.
-          </p>
-        </CardContent>
-      </CardHeader>
-      <CardContent>
-        {renderForm()}
-      </CardContent>
-    </Card>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Crea Nuova Simulazione</DialogTitle>
+          <DialogDescription>
+            Passo {currentStep} di {totalSteps}: Configura la tua simulazione
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Progress indicator */}
+        <div className="flex items-center space-x-2 mb-6">
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <div key={i} className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  i + 1 <= currentStep
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {i + 1 <= currentStep ? <Check className="h-4 w-4" /> : i + 1}
+              </div>
+              {i < totalSteps - 1 && (
+                <div
+                  className={`w-8 h-0.5 ${
+                    i + 1 < currentStep ? 'bg-primary' : 'bg-gray-200'
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step content */}
+        <div className="min-h-[300px]">
+          {renderStepContent()}
+        </div>
+
+        {/* Enhanced navigation */}
+        <div className="flex justify-between pt-4">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 1 || isSubmitting}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Indietro
+          </Button>
+          
+          {currentStep < totalSteps ? (
+            <Button
+              onClick={handleNext}
+              disabled={!isStepValid() || isSubmitting}
+              className="bg-form-green hover:bg-form-green-dark text-white"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Avanti
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              {creationResult && creationResult.success && (
+                <Button
+                  onClick={() => {
+                    onSimulationCreated();
+                    handleClose();
+                  }}
+                  variant="outline"
+                  disabled={isSubmitting}
+                >
+                  {creationResult.formLinksGenerated ? 'Chiudi' : 'Continua Comunque'}
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={(!isStepValid() || isSubmitting) && !creationResult}
+                className="bg-form-green hover:bg-form-green-dark text-white"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isSubmitting ? creationStep || 'Elaborando...' : creationResult ? 'Completa' : 'Crea Simulazione'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
