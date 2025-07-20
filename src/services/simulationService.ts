@@ -15,14 +15,16 @@ export type SimulationMemberWithProfile = SimulationMember & {
   } | null;
 };
 
-// Enhanced creation result type
+// Enhanced creation result type with clearer status
 export interface SimulationCreationResult {
   simulationId: string;
   success: boolean;
-  formLinksGenerated: boolean;
+  coreCreationSuccess: boolean;
+  formLinksStatus: 'pending' | 'generated' | 'failed';
   formLinkErrors?: string[];
   participantsCreated: number;
-  message?: string;
+  message: string;
+  canProceed: boolean; // Whether user can use the simulation
 }
 
 export const simulationService = {
@@ -53,13 +55,13 @@ export const simulationService = {
     return data;
   },
 
-  // Create a new simulation
+  // Create a new simulation (core operation only)
   async createSimulation(simulationData: {
     name: string;
     description?: string;
     brokerageId: string;
   }): Promise<string> {
-    console.log('📝 [SIMULATION SERVICE] Creating simulation:', simulationData.name);
+    console.log('[SIMULATION] Creating core simulation:', simulationData.name);
     
     // Validate input data
     if (!simulationData.name?.trim()) {
@@ -76,15 +78,15 @@ export const simulationService = {
     });
 
     if (error) {
-      console.error('❌ [SIMULATION SERVICE] Failed to create simulation:', error);
+      console.error('[SIMULATION] Failed to create core simulation:', error);
       throw error;
     }
     
-    console.log('✅ [SIMULATION SERVICE] Simulation created successfully:', data);
+    console.log('[SIMULATION] Core simulation created successfully:', data);
     return data;
   },
 
-  // Create a simulation with complete setup (improved with defensive programming)
+  // Enhanced simulation creation with separated critical/non-critical operations
   async createSimulationWithSetup(setupData: {
     name: string;
     description?: string;
@@ -101,18 +103,9 @@ export const simulationService = {
       participantDesignation: Database['public']['Enums']['participant_designation'];
     }>;
   }): Promise<SimulationCreationResult> {
-    console.log('🚀 [SIMULATION SERVICE] Starting enhanced simulation creation:', {
-      name: setupData?.name,
-      participantCount: setupData?.participants?.length || 0,
-      brokerageId: setupData?.brokerageId,
-      timestamp: new Date().toISOString()
-    });
+    console.log('[SIMULATION] Starting enhanced simulation creation');
 
-    // Phase 1: Input validation and defensive programming
-    if (!setupData) {
-      throw new Error('Setup data is required');
-    }
-
+    // Phase 1: Input validation
     const {
       name,
       description,
@@ -125,126 +118,125 @@ export const simulationService = {
     } = setupData;
 
     // Validate required fields
-    if (!name?.trim()) {
-      throw new Error('Simulation name is required');
-    }
-    if (!brokerageId) {
-      throw new Error('Brokerage ID is required');
-    }
-    if (!participants || !Array.isArray(participants) || participants.length === 0) {
-      throw new Error('At least one participant is required');
-    }
-    if (!applicantCount) {
-      throw new Error('Applicant count is required');
-    }
+    if (!name?.trim()) throw new Error('Simulation name is required');
+    if (!brokerageId) throw new Error('Brokerage ID is required');
+    if (!participants?.length) throw new Error('At least one participant is required');
+    if (!applicantCount) throw new Error('Applicant count is required');
 
     // Validate participants data
     participants.forEach((participant, index) => {
-      if (!participant?.firstName?.trim()) {
-        throw new Error(`Participant ${index + 1}: First name is required`);
-      }
-      if (!participant?.lastName?.trim()) {
-        throw new Error(`Participant ${index + 1}: Last name is required`);
-      }
-      if (!participant?.email?.trim()) {
-        throw new Error(`Participant ${index + 1}: Email is required`);
-      }
-      if (!participant?.participantDesignation) {
-        throw new Error(`Participant ${index + 1}: Participant designation is required`);
-      }
+      if (!participant?.firstName?.trim()) throw new Error(`Participant ${index + 1}: First name is required`);
+      if (!participant?.lastName?.trim()) throw new Error(`Participant ${index + 1}: Last name is required`);
+      if (!participant?.email?.trim()) throw new Error(`Participant ${index + 1}: Email is required`);
+      if (!participant?.participantDesignation) throw new Error(`Participant ${index + 1}: Participant designation is required`);
     });
 
     let simulationId: string;
     let participantsCreated = 0;
-    let formLinksGenerated = false;
+    let formLinksStatus: 'pending' | 'generated' | 'failed' = 'pending';
     let formLinkErrors: string[] = [];
 
     try {
-      // Step 1: Create the simulation (critical path)
-      console.log('📝 [SIMULATION SERVICE] Creating simulation...');
+      // CRITICAL OPERATIONS - Must succeed for simulation to be usable
+      console.log('[SIMULATION] Phase 1: Creating core simulation');
       simulationId = await this.createSimulation({
         name: name.trim(),
         description: description?.trim(),
         brokerageId
       });
-      console.log('✅ [SIMULATION SERVICE] Simulation created successfully:', simulationId);
 
-      // Step 2: Complete the setup (critical path)
-      console.log('⚙️ [SIMULATION SERVICE] Completing simulation setup...');
+      console.log('[SIMULATION] Phase 2: Completing setup');
       await this.completeSimulationSetup(simulationId, {
         applicantCount,
         projectContactName: projectContactName?.trim(),
         projectContactEmail: projectContactEmail?.trim(),
         projectContactPhone: projectContactPhone?.trim(),
       });
-      console.log('✅ [SIMULATION SERVICE] Setup completed successfully');
 
-      // Step 3: Create participants (critical path)
-      console.log('👥 [SIMULATION SERVICE] Creating participants...');
+      console.log('[SIMULATION] Phase 3: Creating participants');
       const { simulationParticipantService } = await import('@/services/simulationParticipantService');
       const createdParticipants = await simulationParticipantService.createParticipants(simulationId, participants);
       participantsCreated = createdParticipants?.length || 0;
-      console.log('✅ [SIMULATION SERVICE] Participants created successfully:', participantsCreated);
 
-      // Step 4: Generate form links (non-critical, background operation)
-      console.log('🔗 [SIMULATION SERVICE] Starting background form link generation...');
-      try {
-        const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
-        
-        // Add timeout to prevent hanging
-        const formLinkPromise = batchFormLinkGeneration.generateAllFormLinks({
-          simulationId,
-          participants: createdParticipants
-        });
-        
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Form link generation timeout')), 30000); // 30 second timeout
+      console.log('[SIMULATION] Critical operations completed successfully');
+
+      // NON-CRITICAL OPERATION - Form link generation (async, don't block)
+      console.log('[SIMULATION] Phase 4: Starting background form link generation');
+      
+      // Start form link generation in background with increased timeout
+      this.generateFormLinksBackground(simulationId, createdParticipants)
+        .then(result => {
+          console.log('[SIMULATION] Background form link generation completed:', result);
+        })
+        .catch(error => {
+          console.warn('[SIMULATION] Background form link generation failed:', error);
         });
 
-        const formLinkResult = await Promise.race([formLinkPromise, timeoutPromise]);
-
-        if (formLinkResult?.success) {
-          console.log('✅ [SIMULATION SERVICE] All form links generated successfully');
-          formLinksGenerated = true;
-        } else {
-          console.warn('⚠️ [SIMULATION SERVICE] Some form links failed to generate:', formLinkResult?.errors);
-          formLinkErrors = formLinkResult?.errors || ['Unknown form link generation error'];
-        }
-      } catch (formLinkError) {
-        console.warn('⚠️ [SIMULATION SERVICE] Form link generation failed (non-critical):', formLinkError);
-        formLinkErrors = [formLinkError instanceof Error ? formLinkError.message : 'Form link generation failed'];
-      }
-
-      // Always return success if core simulation creation succeeded
+      // Return success immediately - core simulation is ready
       const result: SimulationCreationResult = {
         simulationId,
         success: true,
-        formLinksGenerated,
-        formLinkErrors: formLinkErrors.length > 0 ? formLinkErrors : undefined,
+        coreCreationSuccess: true,
+        formLinksStatus: 'pending',
         participantsCreated,
-        message: formLinksGenerated 
-          ? 'Simulation created successfully with all form links'
-          : 'Simulation created successfully. Form link generation is pending.'
+        message: 'Simulation created successfully. Form links are being generated in the background.',
+        canProceed: true
       };
 
-      console.log('✅ [SIMULATION SERVICE] Enhanced creation completed:', result);
+      console.log('[SIMULATION] Creation completed successfully:', result);
       return result;
 
     } catch (error) {
-      console.error('❌ [SIMULATION SERVICE] Failed to create simulation with setup:', error);
+      console.error('[SIMULATION] Critical operation failed:', error);
       
       // If we have a simulationId, try to clean up
       if (simulationId) {
-        console.log('🧹 [SIMULATION SERVICE] Attempting cleanup of partially created simulation...');
+        console.log('[SIMULATION] Attempting cleanup of partially created simulation');
         try {
           await this.deleteSimulation(simulationId);
-          console.log('✅ [SIMULATION SERVICE] Cleanup completed');
+          console.log('[SIMULATION] Cleanup completed');
         } catch (cleanupError) {
-          console.warn('⚠️ [SIMULATION SERVICE] Cleanup failed:', cleanupError);
+          console.warn('[SIMULATION] Cleanup failed:', cleanupError);
         }
       }
       
       throw error;
+    }
+  },
+
+  // Background form link generation with improved error handling
+  async generateFormLinksBackground(simulationId: string, participants: any[]): Promise<void> {
+    try {
+      console.log('[SIMULATION] Starting background form link generation');
+      
+      const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
+      
+      // Increased timeout for background operation
+      const formLinkPromise = batchFormLinkGeneration.generateAllFormLinks({
+        simulationId,
+        participants
+      });
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Form link generation timeout')), 90000); // 90 seconds
+      });
+
+      const result = await Promise.race([formLinkPromise, timeoutPromise]);
+
+      if (result?.success) {
+        console.log('[SIMULATION] Background form link generation successful');
+        
+        // Update simulation to mark forms as generated
+        await supabase
+          .from('simulations')
+          .update({ forms_generated_at: new Date().toISOString() })
+          .eq('id', simulationId);
+      } else {
+        console.warn('[SIMULATION] Background form link generation had errors:', result?.errors);
+      }
+    } catch (error) {
+      console.error('[SIMULATION] Background form link generation failed:', error);
+      // Don't throw - this is background operation
     }
   },
 
@@ -358,28 +350,28 @@ export const simulationService = {
     await this.updateSimulation(simulationId, updates);
   },
 
-  // Retry form link generation for a simulation
+  // Retry form link generation for a simulation (now with better error handling)
   async retryFormLinkGeneration(simulationId: string): Promise<{
     success: boolean;
     errors?: string[];
   }> {
-    console.log('🔄 [SIMULATION SERVICE] Retrying form link generation for simulation:', simulationId);
+    console.log('[SIMULATION] Retrying form link generation for simulation:', simulationId);
     
     if (!simulationId) {
       return { success: false, errors: ['Simulation ID is required'] };
     }
     
     try {
-      // Get simulation participants with validation
+      // Get simulation participants
       const { simulationParticipantService } = await import('@/services/simulationParticipantService');
       const participants = await simulationParticipantService.getSimulationParticipants(simulationId);
       
       if (!participants || participants.length === 0) {
-        console.warn('⚠️ [SIMULATION SERVICE] No participants found for form link generation');
+        console.warn('[SIMULATION] No participants found for form link generation');
         return { success: false, errors: ['No participants found'] };
       }
 
-      // Generate form links with timeout
+      // Generate form links with increased timeout
       const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
       
       const formLinkPromise = batchFormLinkGeneration.generateAllFormLinks({
@@ -388,16 +380,16 @@ export const simulationService = {
       });
       
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Form link generation timeout')), 30000);
+        setTimeout(() => reject(new Error('Form link generation timeout')), 90000); // 90 seconds
       });
 
       const result = await Promise.race([formLinkPromise, timeoutPromise]);
       
-      console.log('✅ [SIMULATION SERVICE] Form link generation retry completed:', result);
+      console.log('[SIMULATION] Form link generation retry completed:', result);
       return result || { success: false, errors: ['Unknown error during retry'] };
       
     } catch (error) {
-      console.error('❌ [SIMULATION SERVICE] Form link generation retry failed:', error);
+      console.error('[SIMULATION] Form link generation retry failed:', error);
       return {
         success: false,
         errors: [error instanceof Error ? error.message : 'Unknown error during retry']
@@ -407,7 +399,7 @@ export const simulationService = {
 
   // Member management functions
   async removeSimulationMember(simulationId: string, memberId: string): Promise<void> {
-    console.log('🗑️ [SIMULATION SERVICE] Removing simulation member:', { simulationId, memberId });
+    console.log('[SIMULATION] Removing simulation member:', { simulationId, memberId });
     
     const { error } = await supabase
       .from('simulation_members')
@@ -416,11 +408,11 @@ export const simulationService = {
       .eq('id', memberId);
 
     if (error) {
-      console.error('❌ [SIMULATION SERVICE] Error removing simulation member:', error);
+      console.error('[SIMULATION] Error removing simulation member:', error);
       throw error;
     }
 
-    console.log('✅ [SIMULATION SERVICE] Successfully removed simulation member');
+    console.log('[SIMULATION] Successfully removed simulation member');
   },
 
   async updateSimulationMemberRole(
@@ -428,7 +420,7 @@ export const simulationService = {
     memberId: string, 
     newRole: Database['public']['Enums']['user_role']
   ): Promise<void> {
-    console.log('🔄 [SIMULATION SERVICE] Updating simulation member role:', { simulationId, memberId, newRole });
+    console.log('[SIMULATION] Updating simulation member role:', { simulationId, memberId, newRole });
     
     const { error } = await supabase
       .from('simulation_members')
@@ -437,10 +429,10 @@ export const simulationService = {
       .eq('id', memberId);
 
     if (error) {
-      console.error('❌ [SIMULATION SERVICE] Error updating simulation member role:', error);
+      console.error('[SIMULATION] Error updating simulation member role:', error);
       throw error;
     }
 
-    console.log('✅ [SIMULATION SERVICE] Successfully updated simulation member role');
+    console.log('[SIMULATION] Successfully updated simulation member role');
   }
 };

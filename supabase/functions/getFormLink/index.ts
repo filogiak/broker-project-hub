@@ -7,11 +7,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('🚀 getFormLink function started');
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+  
+  console.log(`[${requestId}] getFormLink function started`);
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('📋 Handling OPTIONS preflight request');
+    console.log(`[${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { 
       status: 200,
       headers: corsHeaders 
@@ -21,7 +24,7 @@ serve(async (req) => {
   try {
     // Only accept POST requests
     if (req.method !== 'POST') {
-      console.log(`❌ Method ${req.method} not allowed`);
+      console.log(`[${requestId}] Method ${req.method} not allowed`);
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }), 
         { 
@@ -31,9 +34,15 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const body = await req.json();
-    console.log('📥 Input values received:', {
+    // Parse request body with timeout
+    const bodyPromise = req.json();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request body parsing timeout')), 5000);
+    });
+    
+    const body = await Promise.race([bodyPromise, timeoutPromise]);
+    
+    console.log(`[${requestId}] Request body parsed:`, {
       name: body.name ? '✓' : '❌',
       email: body.email ? '✓' : '❌',
       phone: body.phone ? '✓' : '❌',
@@ -43,9 +52,12 @@ serve(async (req) => {
     // Validate required fields
     const { name, email, phone, formSlug } = body;
     if (!name || !email || !phone || !formSlug) {
-      console.log('❌ Missing required parameters');
+      console.log(`[${requestId}] Missing required parameters`);
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters: name, email, phone, formSlug' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Missing required parameters: name, email, phone, formSlug' 
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -56,16 +68,19 @@ serve(async (req) => {
     // Get API key from environment
     const apiKey = Deno.env.get('PORTALE_API_KEY');
     if (!apiKey) {
-      console.log('❌ API key not configured');
+      console.log(`[${requestId}] API key not configured`);
       return new Response(
-        JSON.stringify({ error: 'API key not configured' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'API key not configured' 
+        }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
-    console.log('🔑 API key loaded successfully');
+    console.log(`[${requestId}] API key loaded successfully`);
 
     // Construct URL with query parameters
     const baseUrl = 'https://jegdbtznkwzpqntzzlvf.functions.supabase.co/generateLinkAPI';
@@ -73,27 +88,38 @@ serve(async (req) => {
     url.searchParams.append('name', name);
     url.searchParams.append('email', email);
     url.searchParams.append('phone', phone);
-    url.searchParams.append('form-slug', formSlug); // Note: formSlug becomes form-slug
+    url.searchParams.append('form-slug', formSlug);
 
-    console.log('🔗 Built URL:', url.toString());
+    console.log(`[${requestId}] Constructed URL for external API call`);
 
-    // Make GET request to external API
-    console.log('📡 Making request to external API...');
-    const response = await fetch(url.toString(), {
+    // Make GET request to external API with timeout
+    console.log(`[${requestId}] Making request to external API...`);
+    
+    const fetchPromise = fetch(url.toString(), {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
         'Content-Type': 'application/json'
       }
     });
+    
+    const fetchTimeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('External API timeout')), 45000); // 45 seconds
+    });
 
-    console.log('📊 Response status:', response.status);
+    const response = await Promise.race([fetchPromise, fetchTimeoutPromise]);
+    const duration = Date.now() - startTime;
+    
+    console.log(`[${requestId}] External API response received in ${duration}ms - Status: ${response.status}`);
 
     // Handle different response statuses
     if (response.status === 403) {
-      console.log('🚫 Unauthorized or not found (403)');
+      console.log(`[${requestId}] Unauthorized or not found (403)`);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized or not found' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Unauthorized or not found' 
+        }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -102,14 +128,25 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
-      console.log(`❌ API request failed with status: ${response.status}`);
+      console.log(`[${requestId}] API request failed with status: ${response.status}`);
+      
+      // Try to get error details from response
+      let errorDetails = 'Unknown error';
+      try {
+        const errorResponse = await response.text();
+        errorDetails = errorResponse || `HTTP ${response.status}`;
+      } catch (e) {
+        console.warn(`[${requestId}] Could not parse error response:`, e);
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: 'API request failed', 
+          success: false,
+          error: `External API error: ${errorDetails}`,
           status: response.status 
         }),
         { 
-          status: response.status, 
+          status: response.status >= 500 ? 500 : 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -117,7 +154,9 @@ serve(async (req) => {
 
     // Parse successful response
     const data = await response.json();
-    console.log('✅ Final parsed result:', data);
+    const totalDuration = Date.now() - startTime;
+    
+    console.log(`[${requestId}] Total operation completed in ${totalDuration}ms - Success: ✓`);
 
     return new Response(
       JSON.stringify({ 
@@ -131,14 +170,34 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('💥 Error in getFormLink function:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[${requestId}] Error in getFormLink function after ${duration}ms:`, error);
+    
+    // Categorize errors for better user experience
+    let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+        statusCode = 408;
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check connectivity.';
+        statusCode = 503;
+      } else if (error.message.includes('parsing')) {
+        errorMessage = 'Invalid request format.';
+        statusCode = 400;
+      }
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error', 
-        message: error.message 
+        success: false,
+        error: errorMessage,
+        message: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
-        status: 500, 
+        status: statusCode, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );

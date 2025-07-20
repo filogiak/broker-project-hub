@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { formLinkService } from './formLinkService';
 import type { Database } from '@/integrations/supabase/types';
@@ -24,7 +25,7 @@ interface FormLinkResult {
 }
 
 export const batchFormLinkGeneration = {
-  // Generate all form links for a simulation in parallel
+  // Generate all form links for a simulation with improved error handling and performance
   async generateAllFormLinks(request: BatchFormLinkRequest): Promise<{
     success: boolean;
     results: FormLinkResult[];
@@ -33,6 +34,9 @@ export const batchFormLinkGeneration = {
     const { simulationId, participants } = request;
     const results: FormLinkResult[] = [];
     const errors: string[] = [];
+    
+    console.log('[BATCH FORM LINK] Starting form link generation for simulation:', simulationId);
+    console.log('[BATCH FORM LINK] Participants count:', participants.length);
     
     // Prepare form link generation tasks
     const linkGenerationTasks: Promise<FormLinkResult>[] = [];
@@ -43,6 +47,7 @@ export const batchFormLinkGeneration = {
     ) || participants[0];
     
     if (primaryParticipant) {
+      console.log('[BATCH FORM LINK] Adding project form link task');
       linkGenerationTasks.push(
         this.generateSingleFormLink({
           simulationId,
@@ -55,6 +60,7 @@ export const batchFormLinkGeneration = {
     
     // Generate participant-specific form links
     for (const participant of participants) {
+      console.log('[BATCH FORM LINK] Adding participant form link task for:', participant.participant_designation);
       linkGenerationTasks.push(
         this.generateSingleFormLink({
           simulationId,
@@ -65,42 +71,68 @@ export const batchFormLinkGeneration = {
       );
     }
     
-    // Execute all form link generations in parallel
-    const taskResults = await Promise.allSettled(linkGenerationTasks);
+    console.log('[BATCH FORM LINK] Total tasks to execute:', linkGenerationTasks.length);
     
-    // Process results
-    taskResults.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        results.push(result.value);
-        if (!result.value.success) {
-          errors.push(`Failed to generate link: ${result.value.error}`);
+    // Execute all form link generations in parallel with timeout
+    try {
+      const taskResults = await Promise.allSettled(linkGenerationTasks);
+      
+      // Process results with better error categorization
+      taskResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+          if (!result.value.success) {
+            const errorMsg = `${result.value.formType} form for ${result.value.participantDesignation}: ${result.value.error}`;
+            errors.push(errorMsg);
+            console.warn('[BATCH FORM LINK] Task failed:', errorMsg);
+          } else {
+            console.log('[BATCH FORM LINK] Task succeeded:', result.value.formType, result.value.participantDesignation);
+          }
+        } else {
+          const errorMsg = `Task ${index} completely failed: ${result.reason}`;
+          errors.push(errorMsg);
+          console.error('[BATCH FORM LINK] Task rejected:', errorMsg);
         }
-      } else {
-        errors.push(`Task ${index} failed: ${result.reason}`);
+      });
+      
+      const successCount = results.filter(r => r.success).length;
+      console.log('[BATCH FORM LINK] Generation summary:', {
+        total: linkGenerationTasks.length,
+        successful: successCount,
+        failed: errors.length
+      });
+      
+      // Update simulation status if all links generated successfully
+      if (errors.length === 0) {
+        try {
+          await supabase
+            .from('simulations')
+            .update({ forms_generated_at: new Date().toISOString() })
+            .eq('id', simulationId);
+          console.log('[BATCH FORM LINK] Updated simulation forms_generated_at');
+        } catch (updateError) {
+          console.error('[BATCH FORM LINK] Failed to update simulation forms_generated_at:', updateError);
+          errors.push('Failed to update simulation status');
+        }
       }
-    });
-    
-    // Update simulation to mark forms as generated
-    if (errors.length === 0) {
-      try {
-        await supabase
-          .from('simulations')
-          .update({ forms_generated_at: new Date().toISOString() })
-          .eq('id', simulationId);
-      } catch (error) {
-        console.error('Failed to update simulation forms_generated_at:', error);
-        errors.push('Failed to update simulation status');
-      }
+      
+      return {
+        success: errors.length === 0,
+        results,
+        errors,
+      };
+      
+    } catch (error) {
+      console.error('[BATCH FORM LINK] Unexpected error during batch generation:', error);
+      return {
+        success: false,
+        results: [],
+        errors: [`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+      };
     }
-    
-    return {
-      success: errors.length === 0,
-      results,
-      errors,
-    };
   },
   
-  // Generate a single form link and store it
+  // Generate a single form link with improved error handling and retry logic
   async generateSingleFormLink({
     simulationId,
     participant,
@@ -118,8 +150,12 @@ export const batchFormLinkGeneration = {
     formType: string;
     formSlug: string;
   }): Promise<FormLinkResult> {
+    const logPrefix = `[FORM LINK ${participant.participant_designation}]`;
+    
     try {
-      // Check if link already exists
+      console.log(`${logPrefix} Starting form link generation for ${formType}`);
+      
+      // Check if link already exists and is valid
       const { data: existingLink } = await supabase
         .from('form_links')
         .select('*')
@@ -131,6 +167,7 @@ export const batchFormLinkGeneration = {
       
       // If valid link exists, return it
       if (existingLink && new Date(existingLink.expires_at) > new Date()) {
+        console.log(`${logPrefix} Using existing valid form link`);
         return {
           participantDesignation: participant.participant_designation,
           formType,
@@ -139,13 +176,14 @@ export const batchFormLinkGeneration = {
         };
       }
       
-      // Generate new link via external API
-      const generatedLink = await formLinkService.getFormLink({
+      // Generate new link via external API with retry logic
+      console.log(`${logPrefix} Generating new form link via external API`);
+      const generatedLink = await this.generateLinkWithRetry({
         name: `${participant.first_name} ${participant.last_name}`,
         email: participant.email,
         phone: participant.phone || '',
         formSlug,
-      });
+      }, 3); // 3 retry attempts
       
       // Store the new link in database
       const expiresAt = new Date();
@@ -164,8 +202,10 @@ export const batchFormLinkGeneration = {
         });
       
       if (insertError) {
-        console.error('Error storing form link:', insertError);
-        // Still return the generated link
+        console.error(`${logPrefix} Error storing form link:`, insertError);
+        // Still return the generated link even if storage fails
+      } else {
+        console.log(`${logPrefix} Form link stored successfully`);
       }
       
       return {
@@ -176,7 +216,7 @@ export const batchFormLinkGeneration = {
       };
       
     } catch (error) {
-      console.error('Error generating form link:', error);
+      console.error(`${logPrefix} Error generating form link:`, error);
       return {
         participantDesignation: participant.participant_designation,
         formType,
@@ -185,6 +225,36 @@ export const batchFormLinkGeneration = {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  },
+  
+  // Generate form link with exponential backoff retry
+  async generateLinkWithRetry(
+    params: { name: string; email: string; phone: string; formSlug: string },
+    maxRetries: number
+  ): Promise<string> {
+    let lastError: Error;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[RETRY] Attempt ${attempt}/${maxRetries} for form link generation`);
+        const link = await formLinkService.getFormLink(params);
+        console.log(`[RETRY] Success on attempt ${attempt}`);
+        return link;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        console.warn(`[RETRY] Attempt ${attempt} failed:`, lastError.message);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          console.log(`[RETRY] Waiting ${delay}ms before next attempt`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    console.error(`[RETRY] All ${maxRetries} attempts failed`);
+    throw lastError!;
   },
   
   // Generate a random token

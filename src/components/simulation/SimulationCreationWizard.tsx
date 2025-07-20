@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Check, User, UserPlus, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, UserPlus, CheckCircle, Clock, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { simulationService, type SimulationCreationResult } from '@/services/simulationService';
 import { simulationParticipantService, type ParticipantData } from '@/services/simulationParticipantService';
@@ -30,6 +31,18 @@ interface SimulationCreationWizardProps {
   onSimulationCreated: () => void;
 }
 
+// Progress steps for creation process
+type CreationStep = 'validating' | 'creating' | 'setup' | 'participants' | 'form-links' | 'completed';
+
+const CREATION_STEPS: Record<CreationStep, string> = {
+  validating: 'Validating data...',
+  creating: 'Creating simulation...',
+  setup: 'Configuring setup...',
+  participants: 'Adding participants...',
+  'form-links': 'Generating form links...',
+  completed: 'Completed!'
+};
+
 const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
   one_applicant: 'Un Richiedente',
   two_applicants: 'Due Richiedenti',
@@ -46,7 +59,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [creationStep, setCreationStep] = useState<string>('');
+  const [currentCreationStep, setCurrentCreationStep] = useState<CreationStep>('validating');
   const [creationResult, setCreationResult] = useState<SimulationCreationResult | null>(null);
   const [creationData, setCreationData] = useState<SimulationCreationData>({
     name: '',
@@ -111,7 +124,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     if (!creationResult?.simulationId) return;
 
     setIsSubmitting(true);
-    setCreationStep('Rigenerando link dei moduli...');
+    setCurrentCreationStep('form-links');
     
     try {
       const retryResult = await simulationService.retryFormLinkGeneration(creationResult.simulationId);
@@ -119,7 +132,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       if (retryResult.success) {
         setCreationResult(prev => prev ? {
           ...prev,
-          formLinksGenerated: true,
+          formLinksStatus: 'generated',
           formLinkErrors: undefined
         } : null);
         
@@ -143,15 +156,15 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       });
     } finally {
       setIsSubmitting(false);
-      setCreationStep('');
+      setCurrentCreationStep('completed');
     }
   };
 
   const handleSubmit = async () => {
-    console.log('🚀 [CREATION WIZARD] Starting submission process');
+    console.log('[CREATION WIZARD] Starting submission process');
     
     setIsSubmitting(true);
-    setCreationStep('Validando dati...');
+    setCurrentCreationStep('validating');
     
     try {
       // Enhanced validation
@@ -195,9 +208,9 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
         return;
       }
 
-      // Create simulation with enhanced setup
-      setCreationStep('Creando simulazione...');
-      console.log('📝 [CREATION WIZARD] Creating simulation with setup');
+      // Create simulation with progressive status updates
+      setCurrentCreationStep('creating');
+      console.log('[CREATION WIZARD] Creating simulation with enhanced setup');
       
       const result = await simulationService.createSimulationWithSetup({
         name: creationData.name.trim(),
@@ -211,39 +224,34 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       });
 
       setCreationResult(result);
-      console.log('✅ [CREATION WIZARD] Simulation creation completed:', result);
+      setCurrentCreationStep('completed');
+      console.log('[CREATION WIZARD] Simulation creation completed:', result);
 
-      // Show appropriate success/warning message
-      if (result.success) {
-        if (result.formLinksGenerated) {
-          toast({
-            title: "Successo Completo",
-            description: "Simulazione creata con successo e tutti i link generati.",
-          });
-          // Immediately call success callback and close
+      // Show appropriate success message based on result
+      if (result.success && result.canProceed) {
+        toast({
+          title: "Simulazione Creata con Successo",
+          description: result.message,
+        });
+        
+        // Call success callback and close after short delay
+        setTimeout(() => {
           onSimulationCreated();
           handleClose();
-        } else {
-          toast({
-            title: "Simulazione Creata",
-            description: result.formLinkErrors 
-              ? "Simulazione creata ma alcuni link dei moduli sono in attesa."
-              : "Simulazione creata con successo. Link dei moduli in generazione...",
-            variant: result.formLinkErrors ? "destructive" : "default",
-          });
-          // Don't close immediately - show the result to user
-        }
+        }, 2000);
       } else {
         toast({
-          title: "Errore Parziale",
-          description: "La simulazione potrebbe non essere stata creata completamente.",
+          title: "Errore di Creazione",
+          description: result.message || "Impossibile creare la simulazione",
           variant: "destructive",
         });
       }
       
     } catch (error) {
-      console.error('❌ [CREATION WIZARD] Error creating simulation:', error);
+      console.error('[CREATION WIZARD] Error creating simulation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      setCurrentCreationStep('completed');
       
       toast({
         title: "Errore di Creazione",
@@ -252,7 +260,6 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       });
     } finally {
       setIsSubmitting(false);
-      setCreationStep('');
     }
   };
 
@@ -260,7 +267,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     if (!isSubmitting) {
       setCurrentStep(1);
       setCreationResult(null);
-      setCreationStep('');
+      setCurrentCreationStep('validating');
       setCreationData({
         name: '',
         description: '',
@@ -294,6 +301,46 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       default:
         return false;
     }
+  };
+
+  const renderCreationProgress = () => {
+    if (!isSubmitting && !creationResult) return null;
+
+    const getStepIcon = (step: CreationStep) => {
+      if (step === currentCreationStep && isSubmitting) {
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+      }
+      if (creationResult?.coreCreationSuccess && ['validating', 'creating', 'setup', 'participants'].includes(step)) {
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      }
+      if (step === 'form-links' && creationResult?.formLinksStatus === 'generated') {
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      }
+      if (step === 'form-links' && creationResult?.formLinksStatus === 'pending') {
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      }
+      return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />;
+    };
+
+    return (
+      <Card className="border-blue-200 bg-blue-50 mb-4">
+        <CardContent className="pt-6">
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm mb-3">Progresso Creazione</h4>
+            {Object.entries(CREATION_STEPS).map(([step, label]) => (
+              <div key={step} className="flex items-center gap-3">
+                {getStepIcon(step as CreationStep)}
+                <span className={`text-sm ${
+                  step === currentCreationStep ? 'font-medium text-blue-700' : 'text-gray-600'
+                }`}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderStepContent = () => {
@@ -437,24 +484,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
               </p>
             </div>
             
-            {/* Enhanced loading state */}
-            {isSubmitting && (
-              <Card className="border-blue-200 bg-blue-50">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">
-                        Creando Simulazione...
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {creationStep || 'Elaborazione in corso...'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Progressive creation status */}
+            {renderCreationProgress()}
             
             <Card className="bg-accent/50">
               <CardHeader className="pb-3">
@@ -506,47 +537,54 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
 
             {/* Enhanced creation result display */}
             {creationResult && (
-              <Card className={creationResult.formLinksGenerated ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+              <Card className={creationResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    {creationResult.formLinksGenerated ? (
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    {creationResult.success ? (
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                     ) : (
-                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div className="h-5 w-5 rounded-full bg-red-100 border-2 border-red-300 mt-0.5" />
                     )}
                     <div className="flex-1">
                       <h4 className="font-medium text-sm mb-1">
-                        {creationResult.formLinksGenerated ? 'Simulazione Creata con Successo' : 'Simulazione Creata - Link in Sospeso'}
+                        {creationResult.success ? 'Simulazione Creata con Successo' : 'Errore nella Creazione'}
                       </h4>
                       <p className="text-sm text-muted-foreground mb-2">
-                        {creationResult.message || 'Operazione completata'}
+                        {creationResult.message}
                       </p>
                       
                       {/* Show creation summary */}
-                      <div className="text-sm space-y-1 mb-3">
-                        <div className="flex items-center gap-2">
-                          <Check className="h-3 w-3 text-green-600" />
-                          <span>Simulazione creata: {creationResult.simulationId}</span>
+                      {creationResult.success && (
+                        <div className="text-sm space-y-1 mb-3">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <span>Simulazione creata: {creationResult.simulationId}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <span>Partecipanti aggiunti: {creationResult.participantsCreated}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {creationResult.formLinksStatus === 'generated' ? (
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                            ) : creationResult.formLinksStatus === 'pending' ? (
+                              <Clock className="h-3 w-3 text-yellow-600" />
+                            ) : (
+                              <div className="h-3 w-3 rounded-full bg-red-100 border border-red-300" />
+                            )}
+                            <span>
+                              Link moduli: {
+                                creationResult.formLinksStatus === 'generated' ? 'Generati' :
+                                creationResult.formLinksStatus === 'pending' ? 'In generazione...' : 'Falliti'
+                              }
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="h-3 w-3 text-green-600" />
-                          <span>Partecipanti aggiunti: {creationResult.participantsCreated}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {creationResult.formLinksGenerated ? (
-                            <Check className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                          )}
-                          <span>
-                            Link moduli: {creationResult.formLinksGenerated ? 'Generati' : 'In attesa'}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                       
                       {creationResult.formLinkErrors && (
                         <div className="space-y-2">
-                          <p className="text-sm font-medium text-red-700">Dettagli errori:</p>
+                          <p className="text-sm font-medium text-red-700">Dettagli errori link:</p>
                           <ul className="text-sm text-red-600 space-y-1">
                             {creationResult.formLinkErrors.map((error, index) => (
                               <li key={index} className="flex items-start gap-2">
@@ -555,15 +593,17 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                               </li>
                             ))}
                           </ul>
-                          <Button
-                            onClick={handleRetryFormLinks}
-                            disabled={isSubmitting}
-                            size="sm"
-                            className="mt-3"
-                          >
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isSubmitting ? 'animate-spin' : ''}`} />
-                            {isSubmitting ? 'Rigenerando...' : 'Riprova Generazione Link'}
-                          </Button>
+                          {creationResult.canProceed && (
+                            <Button
+                              onClick={handleRetryFormLinks}
+                              disabled={isSubmitting}
+                              size="sm"
+                              className="mt-3"
+                            >
+                              <RefreshCw className={`h-4 w-4 mr-2 ${isSubmitting ? 'animate-spin' : ''}`} />
+                              {isSubmitting ? 'Rigenerando...' : 'Riprova Generazione Link'}
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -641,7 +681,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
             </Button>
           ) : (
             <div className="flex gap-2">
-              {creationResult && creationResult.success && (
+              {creationResult && creationResult.success && creationResult.canProceed && (
                 <Button
                   onClick={() => {
                     onSimulationCreated();
@@ -650,16 +690,16 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                   variant="outline"
                   disabled={isSubmitting}
                 >
-                  {creationResult.formLinksGenerated ? 'Chiudi' : 'Continua Comunque'}
+                  Chiudi
                 </Button>
               )}
               <Button
                 onClick={handleSubmit}
-                disabled={(!isStepValid() || isSubmitting) && !creationResult}
+                disabled={!isStepValid() || isSubmitting}
                 className="bg-form-green hover:bg-form-green-dark text-white"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {isSubmitting ? creationStep || 'Elaborando...' : creationResult ? 'Completa' : 'Crea Simulazione'}
+                {isSubmitting ? CREATION_STEPS[currentCreationStep] : 'Crea Simulazione'}
               </Button>
             </div>
           )}
