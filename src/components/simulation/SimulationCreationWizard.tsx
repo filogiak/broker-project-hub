@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Check, User, UserPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, UserPlus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { simulationService } from '@/services/simulationService';
 import { simulationParticipantService, type ParticipantData } from '@/services/simulationParticipantService';
@@ -46,6 +47,11 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [creationResult, setCreationResult] = useState<{
+    simulationId?: string;
+    formLinksGenerated?: boolean;
+    formLinkErrors?: string[];
+  } | null>(null);
   const [creationData, setCreationData] = useState<SimulationCreationData>({
     name: '',
     description: '',
@@ -106,6 +112,43 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     }
   };
 
+  const handleRetryFormLinks = async () => {
+    if (!creationResult?.simulationId) return;
+
+    setIsSubmitting(true);
+    try {
+      const retryResult = await simulationService.retryFormLinkGeneration(creationResult.simulationId);
+      
+      if (retryResult.success) {
+        setCreationResult(prev => prev ? {
+          ...prev,
+          formLinksGenerated: true,
+          formLinkErrors: undefined
+        } : null);
+        
+        toast({
+          title: "Successo",
+          description: "Link dei moduli generati con successo.",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: `Impossibile generare i link: ${retryResult.errors?.join(', ')}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error retrying form links:', error);
+      toast({
+        title: "Errore",
+        description: "Errore durante la rigenerazione dei link.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -133,7 +176,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       );
 
       // Create simulation with complete setup
-      const simulationId = await simulationService.createSimulationWithSetup({
+      const result = await simulationService.createSimulationWithSetup({
         name: creationData.name,
         description: creationData.description,
         brokerageId: brokerageId,
@@ -144,13 +187,30 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
         participants: creationData.participants
       });
 
-      toast({
-        title: "Successo",
-        description: "Simulazione creata con successo.",
-      });
+      setCreationResult(result);
 
-      onSimulationCreated();
-      handleClose();
+      // Show appropriate success message
+      if (result.formLinksGenerated) {
+        toast({
+          title: "Successo",
+          description: "Simulazione creata con successo e tutti i link generati.",
+        });
+        onSimulationCreated();
+        handleClose();
+      } else {
+        toast({
+          title: "Simulazione Creata",
+          description: result.formLinkErrors 
+            ? "Simulazione creata ma alcuni link dei moduli non sono stati generati."
+            : "Simulazione creata con successo. Generazione dei link in corso...",
+          variant: result.formLinkErrors ? "destructive" : "default",
+        });
+        // Don't close immediately if there were form link issues
+        if (!result.formLinkErrors) {
+          onSimulationCreated();
+          handleClose();
+        }
+      }
     } catch (error) {
       console.error('Error creating simulation:', error);
       toast({
@@ -166,6 +226,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   const handleClose = () => {
     if (!isSubmitting) {
       setCurrentStep(1);
+      setCreationResult(null);
       setCreationData({
         name: '',
         description: '',
@@ -389,6 +450,53 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
                 </div>
               </CardContent>
             </Card>
+
+            {/* Show creation result if available */}
+            {creationResult && (
+              <Card className={creationResult.formLinksGenerated ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    {creationResult.formLinksGenerated ? (
+                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm mb-1">
+                        {creationResult.formLinksGenerated ? 'Simulazione Creata con Successo' : 'Simulazione Creata - Link in Sospeso'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {creationResult.formLinksGenerated 
+                          ? 'La simulazione e tutti i link dei moduli sono stati generati correttamente.'
+                          : 'La simulazione è stata creata ma alcuni link dei moduli non sono stati generati.'}
+                      </p>
+                      {creationResult.formLinkErrors && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-red-700">Errori:</p>
+                          <ul className="text-sm text-red-600 space-y-1">
+                            {creationResult.formLinkErrors.map((error, index) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-red-400 mt-1">•</span>
+                                {error}
+                              </li>
+                            ))}
+                          </ul>
+                          <Button
+                            onClick={handleRetryFormLinks}
+                            disabled={isSubmitting}
+                            size="sm"
+                            className="mt-3"
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isSubmitting ? 'animate-spin' : ''}`} />
+                            {isSubmitting ? 'Rigenerando...' : 'Riprova Generazione Link'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
 
@@ -457,13 +565,27 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={!isStepValid() || isSubmitting}
-              className="bg-form-green hover:bg-form-green-dark text-white"
-            >
-              {isSubmitting ? 'Creando...' : 'Crea Simulazione'}
-            </Button>
+            <div className="flex gap-2">
+              {creationResult && !creationResult.formLinksGenerated && (
+                <Button
+                  onClick={() => {
+                    onSimulationCreated();
+                    handleClose();
+                  }}
+                  variant="outline"
+                  disabled={isSubmitting}
+                >
+                  Continua Comunque
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={(!isStepValid() || isSubmitting) && !creationResult}
+                className="bg-form-green hover:bg-form-green-dark text-white"
+              >
+                {isSubmitting ? 'Creando...' : creationResult ? 'Chiudi' : 'Crea Simulazione'}
+              </Button>
+            </div>
           )}
         </div>
       </DialogContent>

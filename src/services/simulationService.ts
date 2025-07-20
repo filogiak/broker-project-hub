@@ -60,7 +60,7 @@ export const simulationService = {
     return data;
   },
 
-  // Create a simulation with complete setup (new streamlined method)
+  // Create a simulation with complete setup (improved version with graceful form link handling)
   async createSimulationWithSetup(setupData: {
     name: string;
     description?: string;
@@ -76,39 +76,78 @@ export const simulationService = {
       phone?: string;
       participantDesignation: Database['public']['Enums']['participant_designation'];
     }>;
-  }): Promise<string> {
-    // Create the simulation first
-    const simulationId = await this.createSimulation({
+  }): Promise<{
+    simulationId: string;
+    formLinksGenerated: boolean;
+    formLinkErrors?: string[];
+  }> {
+    console.log('🚀 [SIMULATION SERVICE] Starting simulation creation with setup:', {
       name: setupData.name,
-      description: setupData.description,
+      participantCount: setupData.participants.length,
       brokerageId: setupData.brokerageId
     });
 
-    // Complete the setup immediately
-    await this.completeSimulationSetup(simulationId, {
-      applicantCount: setupData.applicantCount,
-      projectContactName: setupData.projectContactName,
-      projectContactEmail: setupData.projectContactEmail,
-      projectContactPhone: setupData.projectContactPhone,
-    });
+    try {
+      // Step 1: Create the simulation first
+      console.log('📝 [SIMULATION SERVICE] Creating simulation...');
+      const simulationId = await this.createSimulation({
+        name: setupData.name,
+        description: setupData.description,
+        brokerageId: setupData.brokerageId
+      });
+      console.log('✅ [SIMULATION SERVICE] Simulation created successfully:', simulationId);
 
-    // Create participants
-    const { simulationParticipantService } = await import('@/services/simulationParticipantService');
-    const createdParticipants = await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+      // Step 2: Complete the setup
+      console.log('⚙️ [SIMULATION SERVICE] Completing simulation setup...');
+      await this.completeSimulationSetup(simulationId, {
+        applicantCount: setupData.applicantCount,
+        projectContactName: setupData.projectContactName,
+        projectContactEmail: setupData.projectContactEmail,
+        projectContactPhone: setupData.projectContactPhone,
+      });
+      console.log('✅ [SIMULATION SERVICE] Setup completed successfully');
 
-    // Generate all form links in parallel after participants are created
-    const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
-    const formLinkResult = await batchFormLinkGeneration.generateAllFormLinks({
-      simulationId,
-      participants: createdParticipants
-    });
+      // Step 3: Create participants
+      console.log('👥 [SIMULATION SERVICE] Creating participants...');
+      const { simulationParticipantService } = await import('@/services/simulationParticipantService');
+      const createdParticipants = await simulationParticipantService.createParticipants(simulationId, setupData.participants);
+      console.log('✅ [SIMULATION SERVICE] Participants created successfully:', createdParticipants.length);
 
-    if (!formLinkResult.success) {
-      console.error('Some form links failed to generate:', formLinkResult.errors);
-      // Continue anyway - links can be regenerated later if needed
+      // Step 4: Generate form links (NON-BLOCKING - don't fail if this fails)
+      console.log('🔗 [SIMULATION SERVICE] Starting form link generation...');
+      let formLinksGenerated = false;
+      let formLinkErrors: string[] = [];
+
+      try {
+        const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
+        const formLinkResult = await batchFormLinkGeneration.generateAllFormLinks({
+          simulationId,
+          participants: createdParticipants
+        });
+
+        if (formLinkResult.success) {
+          console.log('✅ [SIMULATION SERVICE] All form links generated successfully');
+          formLinksGenerated = true;
+        } else {
+          console.warn('⚠️ [SIMULATION SERVICE] Some form links failed to generate:', formLinkResult.errors);
+          formLinkErrors = formLinkResult.errors;
+        }
+      } catch (formLinkError) {
+        console.error('❌ [SIMULATION SERVICE] Form link generation failed completely:', formLinkError);
+        formLinkErrors = [formLinkError instanceof Error ? formLinkError.message : 'Unknown form link generation error'];
+      }
+
+      // Always return success if simulation and participants were created successfully
+      return {
+        simulationId,
+        formLinksGenerated,
+        formLinkErrors: formLinkErrors.length > 0 ? formLinkErrors : undefined
+      };
+
+    } catch (error) {
+      console.error('❌ [SIMULATION SERVICE] Failed to create simulation with setup:', error);
+      throw error;
     }
-
-    return simulationId;
   },
 
   // Update a simulation
@@ -219,6 +258,41 @@ export const simulationService = {
     };
 
     await this.updateSimulation(simulationId, updates);
+  },
+
+  // Retry form link generation for a simulation
+  async retryFormLinkGeneration(simulationId: string): Promise<{
+    success: boolean;
+    errors?: string[];
+  }> {
+    console.log('🔄 [SIMULATION SERVICE] Retrying form link generation for simulation:', simulationId);
+    
+    try {
+      // Get simulation participants
+      const { simulationParticipantService } = await import('@/services/simulationParticipantService');
+      const participants = await simulationParticipantService.getSimulationParticipants(simulationId);
+      
+      if (participants.length === 0) {
+        console.warn('⚠️ [SIMULATION SERVICE] No participants found for form link generation');
+        return { success: false, errors: ['No participants found'] };
+      }
+
+      // Generate form links
+      const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
+      const result = await batchFormLinkGeneration.generateAllFormLinks({
+        simulationId,
+        participants
+      });
+
+      console.log('✅ [SIMULATION SERVICE] Form link generation retry completed:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ [SIMULATION SERVICE] Form link generation retry failed:', error);
+      return {
+        success: false,
+        errors: [error instanceof Error ? error.message : 'Unknown error during retry']
+      };
+    }
   },
 
   // Member management functions
