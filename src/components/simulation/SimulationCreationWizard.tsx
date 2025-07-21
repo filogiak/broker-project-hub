@@ -28,7 +28,7 @@ interface SimulationCreationWizardProps {
   isOpen: boolean;
   onClose: () => void;
   brokerageId: string;
-  onSimulationCreated: () => void;
+  onSimulationCreated: () => void; // Simple callback, no parameters needed
 }
 
 const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
@@ -106,8 +106,9 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     }
   };
 
+  // SINGLE creation function used by progress screen
   const createSimulation = async (): Promise<{ simulationId: string; success: boolean }> => {
-    console.log('[WIZARD] Starting simulation creation process');
+    console.log('[WIZARD] Starting SINGLE simulation creation process');
 
     const primaryParticipant = creationData.participants.find(p => 
       p.participantDesignation === 'applicant_one' || p.participantDesignation === 'solo_applicant'
@@ -140,6 +141,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     setShowProgress(true);
   };
 
+  // SIMPLIFIED completion handler - just calls parent callback
   const handleCreationComplete = (success: boolean, simulationId?: string) => {
     console.log('[WIZARD] Creation completed:', { success, simulationId });
     
@@ -147,7 +149,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     
     if (success) {
       // Call the parent callback to refresh the simulations list
-      onSimulationCreated();
+      console.log('[WIZARD] Calling parent onSimulationCreated callback');
+      onSimulationCreated(); // This will trigger reloadSimulationData directly
       
       // Close the wizard
       handleClose();
@@ -410,7 +413,6 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
             </DialogDescription>
           </DialogHeader>
 
-          {/* Progress indicator */}
           <div className="flex items-center space-x-2 mb-6">
             {Array.from({ length: totalSteps }, (_, i) => (
               <div key={i} className="flex items-center">
@@ -434,12 +436,10 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
             ))}
           </div>
 
-          {/* Step content */}
           <div className="min-h-[300px]">
             {renderStepContent()}
           </div>
 
-          {/* Navigation */}
           <div className="flex justify-between pt-4">
             <Button
               variant="outline"
@@ -472,7 +472,6 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
         </DialogContent>
       </Dialog>
 
-      {/* Progress Screen */}
       <SimulationCreationProgress
         isOpen={showProgress}
         onComplete={handleCreationComplete}

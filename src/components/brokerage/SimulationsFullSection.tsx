@@ -34,20 +34,20 @@ interface SimulationsFullSectionProps {
   simulations: SimulationWithParticipants[];
   participants: SimulationParticipant[];
   brokerageId: string;
-  onCreateSimulation: (simulationData: any) => Promise<void>;
   onDeleteSimulation: (simulationId: string) => Promise<void>;
   onOpenSimulation: (simulationId: string) => void;
   onRetryFormLinks?: (simulationId: string) => Promise<void>;
+  onReloadData: () => Promise<void>;
 }
 
 const SimulationsFullSection = ({ 
   simulations, 
   participants,
   brokerageId, 
-  onCreateSimulation, 
   onDeleteSimulation, 
   onOpenSimulation,
-  onRetryFormLinks
+  onRetryFormLinks,
+  onReloadData
 }: SimulationsFullSectionProps) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,10 +64,9 @@ const SimulationsFullSection = ({
     });
   };
 
-  const handleCreateSimulation = async () => {
-    // The wizard now handles the entire creation process
-    // We just need to trigger a refresh of the parent data
-    await onCreateSimulation({});
+  const handleSimulationCreated = async () => {
+    console.log('[SIMULATIONS SECTION] Simulation created, reloading data...');
+    await onReloadData();
     setIsCreateModalOpen(false);
   };
 
@@ -90,14 +89,11 @@ const SimulationsFullSection = ({
     }
   };
 
-  // Get participants for each simulation
   const getSimulationParticipants = (simulationId: string) => {
     return participants.filter(p => p.simulation_id === simulationId);
   };
 
-  // Check if simulation has missing form links
   const hasFormLinkIssues = (simulation: Simulation) => {
-    // Check if forms_generated_at is null or if it's been more than 5 minutes since creation
     const createdAt = new Date(simulation.created_at);
     const now = new Date();
     const timeDiff = now.getTime() - createdAt.getTime();
@@ -106,12 +102,10 @@ const SimulationsFullSection = ({
     return !simulation.forms_generated_at && timeDiff > fiveMinutes;
   };
 
-  // Filter simulations based on search query
   const filteredSimulations = simulations.filter((simulation) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     
-    // Get participant names for search
     const simulationParticipants = getSimulationParticipants(simulation.id);
     const { primaryParticipant, secondaryParticipant } = getParticipantDisplayNames(simulationParticipants);
     
@@ -123,7 +117,6 @@ const SimulationsFullSection = ({
     );
   });
 
-  // Sort simulations by creation date (most recent first)
   const sortedSimulations = [...filteredSimulations].sort((a, b) => 
     new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
   );
@@ -147,7 +140,6 @@ const SimulationsFullSection = ({
               </span>
             </h2>
             <div className="flex items-center gap-2">
-              {/* Search functionality */}
               <div className="flex items-center">
                 {isSearchExpanded && (
                   <div className="flex items-center mr-2">
@@ -189,7 +181,6 @@ const SimulationsFullSection = ({
             </div>
           </div>
 
-          {/* Simulations List */}
           {sortedSimulations.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4 font-dm-sans">
@@ -294,15 +285,13 @@ const SimulationsFullSection = ({
             </div>
           )}
 
-          {/* Create Simulation Wizard */}
           <SimulationCreationWizard
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             brokerageId={brokerageId}
-            onSimulationCreated={handleCreateSimulation}
+            onSimulationCreated={handleSimulationCreated}
           />
 
-          {/* Delete Confirmation Dialog */}
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>

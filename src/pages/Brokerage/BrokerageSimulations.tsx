@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +24,6 @@ const BrokerageSimulations = () => {
   const [participants, setParticipants] = useState<SimulationParticipant[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Enhanced parallel participant loading with better error handling
   const loadParticipantsInParallel = async (simulationsData: Simulation[]) => {
     console.log('👥 [BROKERAGE SIMULATIONS] Loading participants for', simulationsData.length, 'simulations in parallel');
     
@@ -61,7 +59,7 @@ const BrokerageSimulations = () => {
     }
   };
 
-  // Optimized data reload function
+  // CENTRALIZED data reload function - this is what fixes the refresh issue
   const reloadSimulationData = async () => {
     if (!brokerage) return;
     
@@ -143,70 +141,6 @@ const BrokerageSimulations = () => {
     loadData();
   }, [user, brokerageId, navigate, toast]);
 
-  // Enhanced simulation creation handler with proper error handling
-  const handleCreateSimulation = async (simulationData: any) => {
-    if (!brokerage) return;
-
-    console.log('🚀 [BROKERAGE SIMULATIONS] Creating simulation with enhanced handling:', simulationData.name);
-    
-    try {
-      const result = await simulationService.createSimulationWithSetup({
-        name: simulationData.name,
-        description: simulationData.description,
-        brokerageId: brokerage.id,
-        applicantCount: simulationData.applicantCount,
-        projectContactName: simulationData.projectContactName,
-        projectContactEmail: simulationData.projectContactEmail,  
-        projectContactPhone: simulationData.projectContactPhone,
-        participants: simulationData.participants,
-      });
-
-      console.log('✅ [BROKERAGE SIMULATIONS] Enhanced simulation creation result:', result);
-
-      // Handle the result based on the actual response structure
-      if (result.success && result.coreCreationSuccess) {
-        // Immediately reload data to show the new simulation
-        await reloadSimulationData();
-        
-        // Show appropriate success message based on form link status
-        if (result.formLinksStatus === 'generated') {
-          toast({
-            title: "Simulazione Creata con Successo",
-            description: `${simulationData.name} è stata creata con tutti i link dei form.`,
-          });
-        } else if (result.formLinksStatus === 'pending') {
-          toast({
-            title: "Simulazione Creata",
-            description: `${simulationData.name} è stata creata. I link dei form sono in generazione in background.`,
-          });
-        } else if (result.formLinksStatus === 'failed') {
-          toast({
-            title: "Simulazione Creata",
-            description: `${simulationData.name} è stata creata, ma alcuni link dei form sono in attesa di generazione.`,
-            variant: "default", // Not destructive since core creation succeeded
-          });
-        }
-      } else {
-        // Core creation failed
-        toast({
-          title: "Errore di Creazione",
-          description: result.message || "Impossibile creare la simulazione",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('❌ [BROKERAGE SIMULATIONS] Error creating simulation:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-      
-      toast({
-        title: "Errore di Creazione",
-        description: `Impossibile creare la simulazione: ${errorMessage}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Enhanced retry form link generation
   const handleRetryFormLinks = async (simulationId: string) => {
     console.log('🔄 [BROKERAGE SIMULATIONS] Retrying form link generation for:', simulationId);
     
@@ -315,10 +249,10 @@ const BrokerageSimulations = () => {
             simulations={simulations}
             participants={participants}
             brokerageId={brokerage?.id || ''}
-            onCreateSimulation={handleCreateSimulation}
             onDeleteSimulation={handleDeleteSimulation}
             onOpenSimulation={handleOpenSimulation}
             onRetryFormLinks={handleRetryFormLinks}
+            onReloadData={reloadSimulationData} // Pass the centralized reload function
           />
         </SidebarInset>
       </div>
