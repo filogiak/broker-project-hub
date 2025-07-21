@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, FolderOpen, MoreVertical, Trash2, ExternalLink, Search, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,8 +64,10 @@ const SimulationsFullSection = ({
     });
   };
 
-  const handleCreateSimulation = async (simulationData: any) => {
-    await onCreateSimulation(simulationData);
+  const handleCreateSimulation = async () => {
+    // The wizard now handles the entire creation process
+    // We just need to trigger a refresh of the parent data
+    await onCreateSimulation({});
     setIsCreateModalOpen(false);
   };
 
@@ -298,7 +299,7 @@ const SimulationsFullSection = ({
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             brokerageId={brokerageId}
-            onSimulationCreated={() => handleCreateSimulation({})}
+            onSimulationCreated={handleCreateSimulation}
           />
 
           {/* Delete Confirmation Dialog */}
