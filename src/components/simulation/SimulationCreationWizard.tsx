@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ interface SimulationCreationWizardProps {
   isOpen: boolean;
   onClose: () => void;
   brokerageId: string;
-  onSimulationCreated: () => void; // Simple callback, no parameters needed
+  onSimulationCreated: () => void;
 }
 
 const APPLICANT_COUNT_LABELS: Record<ApplicantCount, string> = {
@@ -61,6 +61,32 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   });
 
   const totalSteps = 4;
+
+  // Reset wizard state whenever it opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[WIZARD] Dialog opened, resetting state');
+      resetWizardState();
+    }
+  }, [isOpen]);
+
+  const resetWizardState = () => {
+    console.log('[WIZARD] Resetting all wizard state');
+    setCurrentStep(1);
+    setShowProgress(false);
+    setCreationData({
+      name: '',
+      description: '',
+      applicantCount: 'one_applicant',
+      participants: [{
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        participantDesignation: 'solo_applicant'
+      }]
+    });
+  };
 
   const generateParticipants = (count: ApplicantCount): ParticipantData[] => {
     const designations: ParticipantDesignation[] = 
@@ -141,25 +167,30 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
     setShowProgress(true);
   };
 
-  // SIMPLIFIED completion handler - just calls parent callback
+  // IMPROVED completion handler with proper state reset
   const handleCreationComplete = (success: boolean, simulationId?: string) => {
     console.log('[WIZARD] Creation completed:', { success, simulationId });
     
+    // First, hide the progress screen
     setShowProgress(false);
     
     if (success) {
+      // Reset wizard state completely before calling callbacks
+      resetWizardState();
+      
       // Call the parent callback to refresh the simulations list
       console.log('[WIZARD] Calling parent onSimulationCreated callback');
-      onSimulationCreated(); // This will trigger reloadSimulationData directly
+      onSimulationCreated();
       
       // Close the wizard
-      handleClose();
+      onClose();
       
       toast({
         title: "Simulazione Creata",
         description: `${creationData.name} è stata creata con successo.`,
       });
     } else {
+      // On failure, just hide progress but keep wizard data for retry
       toast({
         title: "Errore di Creazione",
         description: "Impossibile creare la simulazione. Riprova più tardi.",
@@ -170,19 +201,8 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
 
   const handleClose = () => {
     if (!showProgress) {
-      setCurrentStep(1);
-      setCreationData({
-        name: '',
-        description: '',
-        applicantCount: 'one_applicant',
-        participants: [{
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          participantDesignation: 'solo_applicant'
-        }]
-      });
+      console.log('[WIZARD] Closing wizard manually');
+      resetWizardState();
       onClose();
     }
   };
