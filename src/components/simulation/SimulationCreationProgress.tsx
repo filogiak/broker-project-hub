@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -163,8 +162,7 @@ const SimulationCreationProgress = ({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="sm:max-w-[500px] [&>button]:hidden" 
-        hideCloseButton
+        className="sm:max-w-[500px] [&>button]:hidden"
       >
         <div className="space-y-6 p-6">
           <div className="text-center">
