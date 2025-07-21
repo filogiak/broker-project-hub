@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -15,6 +14,7 @@ import { useSimulationData, useSimulationMembers } from '@/hooks/useSimulationDa
 import { useAuth } from '@/hooks/useAuth';
 import { simulationService } from '@/services/simulationService';
 import { useToast } from '@/hooks/use-toast';
+import { PageLoader } from '@/components/ui/page-loader';
 
 const SimulationMembers = () => {
   const { simulationId } = useParams();
@@ -43,14 +43,7 @@ const SimulationMembers = () => {
         <div className="min-h-screen flex w-full">
           <SimulationSidebar />
           <SidebarInset>
-            <div className="flex-1 p-8">
-              <div className="animate-pulse space-y-6">
-                <div className="bg-white border border-[#BEB8AE] rounded-[12px] p-6">
-                  <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-96"></div>
-                </div>
-              </div>
-            </div>
+            <PageLoader message="Loading members..." />
           </SidebarInset>
         </div>
       </SidebarProvider>

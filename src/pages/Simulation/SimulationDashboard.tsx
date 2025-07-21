@@ -6,6 +6,8 @@ import SimulationSidebar from '@/components/simulation/SimulationSidebar';
 import SimulationHeaderCard from '@/components/simulation/SimulationHeaderCard';
 import { useSimulationData } from '@/hooks/useSimulationData';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { PageLoader } from '@/components/ui/page-loader';
 
 const SimulationDashboard = () => {
   const { simulationId } = useParams();
@@ -26,14 +28,7 @@ const SimulationDashboard = () => {
         <div className="min-h-screen flex w-full">
           <SimulationSidebar />
           <SidebarInset>
-            <div className="flex-1 p-8">
-              <div className="animate-pulse space-y-6">
-                <div className="bg-white border border-[#BEB8AE] rounded-[12px] p-6">
-                  <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-96"></div>
-                </div>
-              </div>
-            </div>
+            <PageLoader message="Loading simulation..." />
           </SidebarInset>
         </div>
       </SidebarProvider>

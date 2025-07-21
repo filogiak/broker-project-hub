@@ -1,9 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { accessDiscoveryService } from '@/services/accessDiscoveryService';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 interface BrokerageAccessRouteProps {
   children: React.ReactNode;
@@ -53,11 +53,7 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
   }, [user, brokerageId, authLoading, selectedRole]);
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Checking access...</div>
-      </div>
-    );
+    return <LoadingOverlay message="Checking access..." />;
   }
 
   if (!user) {
@@ -79,11 +75,7 @@ const BrokerageAccessRoute: React.FC<BrokerageAccessRouteProps> = ({
   }
 
   // Still loading
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-lg">Loading...</div>
-    </div>
-  );
+  return <LoadingOverlay message="Loading..." />;
 };
 
 export default BrokerageAccessRoute;

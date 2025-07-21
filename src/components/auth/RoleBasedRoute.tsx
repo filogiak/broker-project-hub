@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -23,11 +23,7 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   const { selectedRole } = useRoleSelection();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <LoadingOverlay message="Verifying permissions..." />;
   }
 
   if (!user) {
