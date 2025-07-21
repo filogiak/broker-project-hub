@@ -8,6 +8,7 @@ import BrokerageSidebar from '@/components/brokerage/BrokerageSidebar';
 import SimulationsFullSection from '@/components/brokerage/SimulationsFullSection';
 import { useAuth } from '@/hooks/useAuth';
 import { getBrokerageByAccess } from '@/services/brokerageService';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import type { Database } from '@/integrations/supabase/types';
 
 type Simulation = Database['public']['Tables']['simulations']['Row'];
@@ -209,9 +210,7 @@ const BrokerageSimulations = () => {
         <div className="min-h-screen flex w-full">
           <BrokerageSidebar />
           <SidebarInset>
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="text-lg text-form-green font-dm-sans">Loading...</div>
-            </div>
+            <LoadingOverlay message="Loading simulations..." />
           </SidebarInset>
         </div>
       </SidebarProvider>

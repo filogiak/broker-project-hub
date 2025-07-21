@@ -1,27 +1,30 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
 import { getProjectInvitations, InvitationWithStatus } from '@/services/projectInvitationService';
 import { useToast } from '@/hooks/use-toast';
+import { PageLoader } from '@/components/ui/page-loader';
 import InvitationCard from './InvitationCard';
 import AddMemberModal from './AddMemberModal';
+
 interface ProjectInvitationsModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
 }
+
 const ProjectInvitationsModal: React.FC<ProjectInvitationsModalProps> = ({
   isOpen,
   onClose,
   projectId
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [invitations, setInvitations] = useState<InvitationWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
   const loadInvitations = async () => {
     setLoading(true);
     try {
@@ -38,20 +41,24 @@ const ProjectInvitationsModal: React.FC<ProjectInvitationsModalProps> = ({
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (isOpen && projectId) {
       loadInvitations();
     }
   }, [isOpen, projectId]);
+
   const handleMemberAdded = () => {
     setIsAddMemberModalOpen(false);
     loadInvitations(); // Refresh invitations list
   };
+
   const getInvitationsSummary = () => {
     const pending = invitations.filter(inv => inv.status === 'pending').length;
     const accepted = invitations.filter(inv => inv.status === 'accepted').length;
     const expired = invitations.filter(inv => inv.status === 'expired').length;
     const failed = invitations.filter(inv => inv.status === 'email_failed').length;
+
     return {
       pending,
       accepted,
@@ -60,8 +67,11 @@ const ProjectInvitationsModal: React.FC<ProjectInvitationsModalProps> = ({
       total: invitations.length
     };
   };
+
   const summary = getInvitationsSummary();
-  return <>
+
+  return (
+    <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
@@ -79,11 +89,21 @@ const ProjectInvitationsModal: React.FC<ProjectInvitationsModalProps> = ({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button onClick={loadInvitations} disabled={loading} variant="outline" size="sm" className="flex items-center gap-2">
+                <Button 
+                  onClick={loadInvitations} 
+                  disabled={loading} 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                   Aggiorna
                 </Button>
-                <Button onClick={() => setIsAddMemberModalOpen(true)} className="gomutuo-button-primary flex items-center gap-2" size="sm">
+                <Button 
+                  onClick={() => setIsAddMemberModalOpen(true)} 
+                  className="gomutuo-button-primary flex items-center gap-2" 
+                  size="sm"
+                >
                   <Plus className="h-4 w-4" />
                   Nuovo Invito
                 </Button>
@@ -92,21 +112,37 @@ const ProjectInvitationsModal: React.FC<ProjectInvitationsModalProps> = ({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2">
-            {loading ? <div className="flex items-center justify-center py-8">
-                <div className="text-lg text-form-green font-dm-sans">Caricamento inviti...</div>
-              </div> : invitations.length === 0 ? <div className="text-center py-8">
+            {loading ? (
+              <PageLoader message="Caricamento inviti..." size="medium" />
+            ) : invitations.length === 0 ? (
+              <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4 font-dm-sans">
                   Nessun invito trovato per questo progetto.
                 </p>
-                
-              </div> : <div className="space-y-3">
-                {invitations.map(invitation => <InvitationCard key={invitation.id} invitation={invitation} onInvitationUpdated={loadInvitations} />)}
-              </div>}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {invitations.map(invitation => (
+                  <InvitationCard 
+                    key={invitation.id} 
+                    invitation={invitation} 
+                    onInvitationUpdated={loadInvitations} 
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
-      <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} projectId={projectId} onMemberAdded={handleMemberAdded} />
-    </>;
+      <AddMemberModal 
+        isOpen={isAddMemberModalOpen} 
+        onClose={() => setIsAddMemberModalOpen(false)} 
+        projectId={projectId} 
+        onMemberAdded={handleMemberAdded} 
+      />
+    </>
+  );
 };
+
 export default ProjectInvitationsModal;

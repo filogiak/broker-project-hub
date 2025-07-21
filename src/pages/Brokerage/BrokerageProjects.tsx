@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -8,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getBrokerageByAccess } from '@/services/brokerageService';
 import { createProject, deleteProject, getBrokerageProjects } from '@/services/projectService';
 import { useToast } from '@/hooks/use-toast';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import type { Database } from '@/integrations/supabase/types';
 
 type Brokerage = Database['public']['Tables']['brokerages']['Row'];
@@ -117,9 +117,7 @@ const BrokerageProjects = () => {
         <div className="min-h-screen flex w-full">
           <BrokerageSidebar />
           <SidebarInset>
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="text-lg text-form-green font-dm-sans">Loading...</div>
-            </div>
+            <LoadingOverlay message="Loading projects..." />
           </SidebarInset>
         </div>
       </SidebarProvider>

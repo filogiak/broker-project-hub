@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -11,6 +10,7 @@ import { createProject, deleteProject } from '@/services/projectService';
 import { getUserProjects } from '@/services/userProjectService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import type { Database } from '@/integrations/supabase/types';
 import type { BrokerageWithAccess } from '@/services/brokerageService';
 
@@ -29,7 +29,6 @@ const BrokerageOwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle session errors
   useEffect(() => {
     if (sessionError) {
       console.error('🚨 Session error detected:', sessionError);
@@ -261,11 +260,9 @@ const BrokerageOwnerDashboard = () => {
     navigate(`/project/${projectId}`);
   };
 
-  // Determine which component to render based on the current path
   const renderCurrentPage = () => {
     const currentPath = location.pathname;
     
-    // For other routes, redirect to the specific page components
     if (currentPath.endsWith('/projects')) {
       navigate(`/brokerage/${brokerageId}/projects`);
       return null;
@@ -279,7 +276,6 @@ const BrokerageOwnerDashboard = () => {
       navigate(`/brokerage/${brokerageId}/simulations`);
       return null;
     } else {
-      // Default to dashboard
       return (
         <BrokerageDashboard
           brokerage={brokerage!}
@@ -298,11 +294,7 @@ const BrokerageOwnerDashboard = () => {
         <div className="min-h-screen flex w-full bg-background-light">
           <BrokerageSidebar />
           <SidebarInset>
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="text-lg text-form-green font-dm-sans">
-                {authLoading ? 'Checking authentication...' : 'Loading dashboard...'}
-              </div>
-            </div>
+            <LoadingOverlay message={authLoading ? 'Checking authentication...' : 'Loading dashboard...'} />
           </SidebarInset>
         </div>
       </SidebarProvider>

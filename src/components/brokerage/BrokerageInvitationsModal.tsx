@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
 import { getBrokerageInvitations } from '@/services/brokerageService';
 import { useToast } from '@/hooks/use-toast';
+import { PageLoader } from '@/components/ui/page-loader';
 import BrokerageInvitationCard from './BrokerageInvitationCard';
 import BrokerageAddMemberModal from './BrokerageAddMemberModal';
 import type { Database } from '@/integrations/supabase/types';
@@ -170,9 +171,7 @@ const BrokerageInvitationsModal: React.FC<BrokerageInvitationsModalProps> = ({
 
           <div className="flex-1 overflow-y-auto pr-2">
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-lg text-form-green font-dm-sans">Caricamento inviti...</div>
-              </div>
+              <PageLoader message="Caricamento inviti..." size="medium" />
             ) : invitations.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4 font-dm-sans">

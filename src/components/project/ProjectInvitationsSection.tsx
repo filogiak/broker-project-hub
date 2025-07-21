@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ChevronRight, Mail } from 'lucide-react';
 import { getProjectInvitations, InvitationWithStatus } from '@/services/projectInvitationService';
 import ProjectInvitationsModal from './ProjectInvitationsModal';
+import { InlineLoader } from '@/components/ui/inline-loader';
 
 interface ProjectInvitationsSectionProps {
   projectId: string;
@@ -44,9 +45,12 @@ const ProjectInvitationsSection: React.FC<ProjectInvitationsSectionProps> = ({ p
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
                 <Mail className="h-4 w-4 text-form-green" />
               </div>
-              <span className="font-dm-sans text-white font-medium text-base">
-                Caricamento inviti...
-              </span>
+              <div className="flex items-center gap-2">
+                <InlineLoader size="small" />
+                <span className="font-dm-sans text-white font-medium text-base">
+                  Caricamento inviti...
+                </span>
+              </div>
             </div>
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
               <ChevronRight className="h-3 w-3 text-form-green" />
