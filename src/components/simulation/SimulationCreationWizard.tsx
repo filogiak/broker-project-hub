@@ -234,11 +234,9 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
           description: result.message,
         });
         
-        // Call success callback and close after short delay
-        setTimeout(() => {
-          onSimulationCreated();
-          handleClose();
-        }, 2000);
+        // Call success callback and close immediately - no delay to prevent race conditions
+        onSimulationCreated();
+        handleClose();
       } else {
         toast({
           title: "Errore di Creazione",
