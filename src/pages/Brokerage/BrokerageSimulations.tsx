@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +61,31 @@ const BrokerageSimulations = () => {
     }
   };
 
+  // Optimized data reload function
+  const reloadSimulationData = async () => {
+    if (!brokerage) return;
+    
+    try {
+      console.log('🔄 [BROKERAGE SIMULATIONS] Reloading simulation data...');
+      
+      // Load simulations and participants in parallel for better performance
+      const [simulationsData, allParticipants] = await Promise.all([
+        simulationService.getBrokerageSimulations(brokerage.id),
+        (async () => {
+          const updatedSimulations = await simulationService.getBrokerageSimulations(brokerage.id);
+          return loadParticipantsInParallel(updatedSimulations || []);
+        })()
+      ]);
+
+      setSimulations(simulationsData || []);
+      setParticipants(allParticipants);
+      
+      console.log('✅ [BROKERAGE SIMULATIONS] Data reloaded successfully');
+    } catch (error) {
+      console.error('❌ [BROKERAGE SIMULATIONS] Error reloading data:', error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!user?.id) {
@@ -117,7 +143,7 @@ const BrokerageSimulations = () => {
     loadData();
   }, [user, brokerageId, navigate, toast]);
 
-  // Enhanced simulation creation handler with optimistic updates
+  // Enhanced simulation creation handler with proper error handling
   const handleCreateSimulation = async (simulationData: any) => {
     if (!brokerage) return;
 
@@ -137,42 +163,34 @@ const BrokerageSimulations = () => {
 
       console.log('✅ [BROKERAGE SIMULATIONS] Enhanced simulation creation result:', result);
 
-      // Optimized data reloading - only if creation was successful
-      if (result.success) {
-        console.log('🔄 [BROKERAGE SIMULATIONS] Performing optimized data reload...');
+      // Handle the result based on the actual response structure
+      if (result.success && result.coreCreationSuccess) {
+        // Immediately reload data to show the new simulation
+        await reloadSimulationData();
         
-        // Load simulations and participants in parallel for better performance
-        const [simulationsData, allParticipants] = await Promise.all([
-          simulationService.getBrokerageSimulations(brokerage.id),
-          // Reload participants for all simulations including the new one
-          (async () => {
-            const updatedSimulations = await simulationService.getBrokerageSimulations(brokerage.id);
-            return loadParticipantsInParallel(updatedSimulations || []);
-          })()
-        ]);
-
-        setSimulations(simulationsData || []);
-        setParticipants(allParticipants);
-        
-        // Enhanced success messaging
-        if (result.formLinksGenerated) {
+        // Show appropriate success message based on form link status
+        if (result.formLinksStatus === 'generated') {
           toast({
             title: "Simulazione Creata con Successo",
             description: `${simulationData.name} è stata creata con tutti i link dei form.`,
           });
-        } else {
+        } else if (result.formLinksStatus === 'pending') {
           toast({
             title: "Simulazione Creata",
-            description: result.formLinkErrors 
-              ? `${simulationData.name} è stata creata ma alcuni link dei form sono in attesa di generazione.`
-              : `${simulationData.name} è stata creata. I link dei form sono in generazione.`,
-            variant: result.formLinkErrors ? "destructive" : "default",
+            description: `${simulationData.name} è stata creata. I link dei form sono in generazione in background.`,
+          });
+        } else if (result.formLinksStatus === 'failed') {
+          toast({
+            title: "Simulazione Creata",
+            description: `${simulationData.name} è stata creata, ma alcuni link dei form sono in attesa di generazione.`,
+            variant: "default", // Not destructive since core creation succeeded
           });
         }
       } else {
+        // Core creation failed
         toast({
-          title: "Errore Parziale",
-          description: "La simulazione potrebbe non essere stata creata completamente.",
+          title: "Errore di Creazione",
+          description: result.message || "Impossibile creare la simulazione",
           variant: "destructive",
         });
       }
@@ -183,6 +201,37 @@ const BrokerageSimulations = () => {
       toast({
         title: "Errore di Creazione",
         description: `Impossibile creare la simulazione: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Enhanced retry form link generation
+  const handleRetryFormLinks = async (simulationId: string) => {
+    console.log('🔄 [BROKERAGE SIMULATIONS] Retrying form link generation for:', simulationId);
+    
+    try {
+      const result = await simulationService.retryFormLinkGeneration(simulationId);
+      
+      if (result.success) {
+        toast({
+          title: "Link dei Form Rigenerati",
+          description: "I link dei form sono stati generati con successo.",
+        });
+        // Reload data to reflect any changes
+        await reloadSimulationData();
+      } else {
+        toast({
+          title: "Errore Rigenerazione",
+          description: result.errors?.join(', ') || "Impossibile rigenerare i link dei form",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('❌ [BROKERAGE SIMULATIONS] Error retrying form links:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile rigenerare i link dei form.",
         variant: "destructive",
       });
     }
@@ -269,6 +318,7 @@ const BrokerageSimulations = () => {
             onCreateSimulation={handleCreateSimulation}
             onDeleteSimulation={handleDeleteSimulation}
             onOpenSimulation={handleOpenSimulation}
+            onRetryFormLinks={handleRetryFormLinks}
           />
         </SidebarInset>
       </div>

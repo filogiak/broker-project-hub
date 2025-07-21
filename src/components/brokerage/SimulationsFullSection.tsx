@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, FolderOpen, MoreVertical, Trash2, ExternalLink, Search, X } from 'lucide-react';
+import { Plus, FolderOpen, MoreVertical, Trash2, ExternalLink, Search, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,6 +38,7 @@ interface SimulationsFullSectionProps {
   onCreateSimulation: (simulationData: any) => Promise<void>;
   onDeleteSimulation: (simulationId: string) => Promise<void>;
   onOpenSimulation: (simulationId: string) => void;
+  onRetryFormLinks?: (simulationId: string) => Promise<void>;
 }
 
 const SimulationsFullSection = ({ 
@@ -46,7 +47,8 @@ const SimulationsFullSection = ({
   brokerageId, 
   onCreateSimulation, 
   onDeleteSimulation, 
-  onOpenSimulation 
+  onOpenSimulation,
+  onRetryFormLinks
 }: SimulationsFullSectionProps) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,9 +83,26 @@ const SimulationsFullSection = ({
     }
   };
 
+  const handleRetryFormLinks = async (simulationId: string) => {
+    if (onRetryFormLinks) {
+      await onRetryFormLinks(simulationId);
+    }
+  };
+
   // Get participants for each simulation
   const getSimulationParticipants = (simulationId: string) => {
     return participants.filter(p => p.simulation_id === simulationId);
+  };
+
+  // Check if simulation has missing form links
+  const hasFormLinkIssues = (simulation: Simulation) => {
+    // Check if forms_generated_at is null or if it's been more than 5 minutes since creation
+    const createdAt = new Date(simulation.created_at);
+    const now = new Date();
+    const timeDiff = now.getTime() - createdAt.getTime();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    return !simulation.forms_generated_at && timeDiff > fiveMinutes;
   };
 
   // Filter simulations based on search query
@@ -181,6 +200,7 @@ const SimulationsFullSection = ({
               {sortedSimulations.map((simulation) => {
                 const simulationParticipants = getSimulationParticipants(simulation.id);
                 const { primaryParticipant, secondaryParticipant } = getParticipantDisplayNames(simulationParticipants);
+                const hasIssues = hasFormLinkIssues(simulation);
                 
                 return (
                   <Card 
@@ -199,6 +219,13 @@ const SimulationsFullSection = ({
                             <h3 className="font-semibold text-black font-dm-sans text-lg">
                               {simulation.name}
                             </h3>
+                            {hasIssues && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-amber-600">
+                                  Form links in attesa di generazione
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="text-left">
@@ -239,6 +266,15 @@ const SimulationsFullSection = ({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {hasIssues && onRetryFormLinks && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRetryFormLinks(simulation.id)}
+                                  className="text-amber-600"
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-2" />
+                                  Rigenera Form Links
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => handleDeleteClick(simulation.id)}
                                 className="text-destructive"
