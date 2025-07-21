@@ -6,6 +6,7 @@ interface FormLinkRequest {
   email: string;
   phone: string;
   formSlug: string;
+  simulationId?: string; // Add simulation context for RLS
 }
 
 interface FormLinkResponse {
@@ -19,10 +20,11 @@ interface FormLinkResponse {
 export const formLinkService = {
   async getFormLink(request: FormLinkRequest): Promise<string> {
     const startTime = Date.now();
-    console.log('[FORM LINK SERVICE] Starting form link generation:', {
+    console.log('[FORM LINK SERVICE] Starting form link generation with context:', {
       name: request.name,
       email: request.email,
       formSlug: request.formSlug,
+      simulationId: request.simulationId,
       timestamp: new Date().toISOString()
     });
 
@@ -34,14 +36,18 @@ export const formLinkService = {
         }, 60000);
       });
 
-      // Create the actual API call promise
+      // Enhanced request body with simulation context
+      const requestBody = {
+        name: request.name,
+        email: request.email,
+        phone: request.phone,
+        formSlug: request.formSlug,
+        simulationId: request.simulationId, // Pass context for RLS
+      };
+
+      // Create the actual API call promise with enhanced error handling
       const apiCallPromise = supabase.functions.invoke<FormLinkResponse>('getFormLink', {
-        body: {
-          name: request.name,
-          email: request.email,
-          phone: request.phone,
-          formSlug: request.formSlug,
-        },
+        body: requestBody,
       });
 
       // Race between timeout and API call
@@ -52,7 +58,22 @@ export const formLinkService = {
 
       if (error) {
         console.error('[FORM LINK SERVICE] Error calling getFormLink function:', error);
-        throw new Error(`Failed to generate form link: ${error.message || 'Unknown error'}`);
+        
+        // Enhanced error classification
+        let errorMessage = 'Failed to generate form link';
+        if (error.message) {
+          if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
+            errorMessage = 'Database access denied. Please ensure you have proper permissions.';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (error.message.includes('network')) {
+            errorMessage = 'Network error. Please check your connection.';
+          } else {
+            errorMessage = `Form link generation failed: ${error.message}`;
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       if (!data?.success || !data?.data?.link) {
@@ -67,13 +88,16 @@ export const formLinkService = {
       const duration = Date.now() - startTime;
       console.error(`[FORM LINK SERVICE] Form link generation failed after ${duration}ms:`, error);
       
-      // Provide more specific error messages
+      // Provide more specific error messages for better UX
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
           throw new Error('Form link generation timed out. Please try again.');
         }
         if (error.message.includes('network') || error.message.includes('fetch')) {
           throw new Error('Network error during form link generation. Please check your connection.');
+        }
+        if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
+          throw new Error('Database permission error. Please contact support if this persists.');
         }
         throw error;
       }

@@ -25,7 +25,7 @@ interface FormLinkResult {
 }
 
 export const batchFormLinkGeneration = {
-  // Generate all form links for a simulation with improved error handling and performance
+  // Generate all form links for a simulation with enhanced context and error handling
   async generateAllFormLinks(request: BatchFormLinkRequest): Promise<{
     success: boolean;
     results: FormLinkResult[];
@@ -35,7 +35,7 @@ export const batchFormLinkGeneration = {
     const results: FormLinkResult[] = [];
     const errors: string[] = [];
     
-    console.log('[BATCH FORM LINK] Starting form link generation for simulation:', simulationId);
+    console.log('[BATCH FORM LINK] Starting form link generation with enhanced context for simulation:', simulationId);
     console.log('[BATCH FORM LINK] Participants count:', participants.length);
     
     // Prepare form link generation tasks
@@ -47,7 +47,7 @@ export const batchFormLinkGeneration = {
     ) || participants[0];
     
     if (primaryParticipant) {
-      console.log('[BATCH FORM LINK] Adding project form link task');
+      console.log('[BATCH FORM LINK] Adding project form link task with simulation context');
       linkGenerationTasks.push(
         this.generateSingleFormLink({
           simulationId,
@@ -77,21 +77,21 @@ export const batchFormLinkGeneration = {
     try {
       const taskResults = await Promise.allSettled(linkGenerationTasks);
       
-      // Process results with better error categorization
+      // Process results with better error categorization and isolation
       taskResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
           if (!result.value.success) {
             const errorMsg = `${result.value.formType} form for ${result.value.participantDesignation}: ${result.value.error}`;
             errors.push(errorMsg);
-            console.warn('[BATCH FORM LINK] Task failed:', errorMsg);
+            console.warn('[BATCH FORM LINK] Task failed (isolated):', errorMsg);
           } else {
             console.log('[BATCH FORM LINK] Task succeeded:', result.value.formType, result.value.participantDesignation);
           }
         } else {
           const errorMsg = `Task ${index} completely failed: ${result.reason}`;
           errors.push(errorMsg);
-          console.error('[BATCH FORM LINK] Task rejected:', errorMsg);
+          console.error('[BATCH FORM LINK] Task rejected (isolated):', errorMsg);
         }
       });
       
@@ -132,7 +132,7 @@ export const batchFormLinkGeneration = {
     }
   },
   
-  // Generate a single form link with improved error handling and retry logic
+  // Generate a single form link with enhanced context passing and error isolation
   async generateSingleFormLink({
     simulationId,
     participant,
@@ -153,7 +153,7 @@ export const batchFormLinkGeneration = {
     const logPrefix = `[FORM LINK ${participant.participant_designation}]`;
     
     try {
-      console.log(`${logPrefix} Starting form link generation for ${formType}`);
+      console.log(`${logPrefix} Starting form link generation for ${formType} with simulation context`);
       
       // Check if link already exists and is valid
       const { data: existingLink } = await supabase
@@ -176,16 +176,17 @@ export const batchFormLinkGeneration = {
         };
       }
       
-      // Generate new link via external API with retry logic
-      console.log(`${logPrefix} Generating new form link via external API`);
+      // Generate new link via external API with enhanced context and retry logic
+      console.log(`${logPrefix} Generating new form link via external API with simulation context`);
       const generatedLink = await this.generateLinkWithRetry({
         name: `${participant.first_name} ${participant.last_name}`,
         email: participant.email,
         phone: participant.phone || '',
         formSlug,
+        simulationId, // Pass simulation context for RLS
       }, 3); // 3 retry attempts
       
-      // Store the new link in database
+      // Store the new link in database with proper context
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiry
       
@@ -202,7 +203,7 @@ export const batchFormLinkGeneration = {
         });
       
       if (insertError) {
-        console.error(`${logPrefix} Error storing form link:`, insertError);
+        console.error(`${logPrefix} Error storing form link (non-blocking):`, insertError);
         // Still return the generated link even if storage fails
       } else {
         console.log(`${logPrefix} Form link stored successfully`);
@@ -216,7 +217,7 @@ export const batchFormLinkGeneration = {
       };
       
     } catch (error) {
-      console.error(`${logPrefix} Error generating form link:`, error);
+      console.error(`${logPrefix} Error generating form link (isolated):`, error);
       return {
         participantDesignation: participant.participant_designation,
         formType,
@@ -227,22 +228,28 @@ export const batchFormLinkGeneration = {
     }
   },
   
-  // Generate form link with exponential backoff retry
+  // Generate form link with exponential backoff retry and enhanced context
   async generateLinkWithRetry(
-    params: { name: string; email: string; phone: string; formSlug: string },
+    params: { name: string; email: string; phone: string; formSlug: string; simulationId?: string },
     maxRetries: number
   ): Promise<string> {
     let lastError: Error;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[RETRY] Attempt ${attempt}/${maxRetries} for form link generation`);
+        console.log(`[RETRY] Attempt ${attempt}/${maxRetries} for form link generation with context`);
         const link = await formLinkService.getFormLink(params);
         console.log(`[RETRY] Success on attempt ${attempt}`);
         return link;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        console.warn(`[RETRY] Attempt ${attempt} failed:`, lastError.message);
+        console.warn(`[RETRY] Attempt ${attempt} failed (isolated):`, lastError.message);
+        
+        // Don't retry on certain types of errors
+        if (lastError.message.includes('permission') || lastError.message.includes('406')) {
+          console.error(`[RETRY] Non-retryable error encountered:`, lastError.message);
+          throw lastError;
+        }
         
         if (attempt < maxRetries) {
           // Exponential backoff: 1s, 2s, 4s

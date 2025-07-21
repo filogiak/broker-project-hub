@@ -55,7 +55,7 @@ export const simulationService = {
     return data;
   },
 
-  // Create a new simulation (core operation only)
+  // Create a new simulation (core operation only) - FIXED: Removed duplicate validation
   async createSimulation(simulationData: {
     name: string;
     description?: string;
@@ -63,18 +63,15 @@ export const simulationService = {
   }): Promise<string> {
     console.log('[SIMULATION] Creating core simulation:', simulationData.name);
     
-    // Validate input data
-    if (!simulationData.name?.trim()) {
-      throw new Error('Simulation name is required');
-    }
+    // Basic validation only - UI validation is primary source of truth
     if (!simulationData.brokerageId) {
       throw new Error('Brokerage ID is required');
     }
 
     const { data, error } = await supabase.rpc('safe_create_simulation', {
-      p_name: simulationData.name.trim(),
+      p_name: simulationData.name || '', // Don't throw on empty, let RPC handle it
       p_brokerage_id: simulationData.brokerageId,
-      p_description: simulationData.description?.trim() || null,
+      p_description: simulationData.description || null,
     });
 
     if (error) {
@@ -86,7 +83,7 @@ export const simulationService = {
     return data;
   },
 
-  // Enhanced simulation creation with separated critical/non-critical operations
+  // Enhanced simulation creation with better error separation
   async createSimulationWithSetup(setupData: {
     name: string;
     description?: string;
@@ -105,7 +102,7 @@ export const simulationService = {
   }): Promise<SimulationCreationResult> {
     console.log('[SIMULATION] Starting enhanced simulation creation');
 
-    // Phase 1: Input validation
+    // Phase 1: Basic validation only - UI is primary validator
     const {
       name,
       description,
@@ -117,19 +114,10 @@ export const simulationService = {
       participants
     } = setupData;
 
-    // Validate required fields
-    if (!name?.trim()) throw new Error('Simulation name is required');
+    // Minimal validation - don't duplicate UI validation
     if (!brokerageId) throw new Error('Brokerage ID is required');
     if (!participants?.length) throw new Error('At least one participant is required');
     if (!applicantCount) throw new Error('Applicant count is required');
-
-    // Validate participants data
-    participants.forEach((participant, index) => {
-      if (!participant?.firstName?.trim()) throw new Error(`Participant ${index + 1}: First name is required`);
-      if (!participant?.lastName?.trim()) throw new Error(`Participant ${index + 1}: Last name is required`);
-      if (!participant?.email?.trim()) throw new Error(`Participant ${index + 1}: Email is required`);
-      if (!participant?.participantDesignation) throw new Error(`Participant ${index + 1}: Participant designation is required`);
-    });
 
     let simulationId: string;
     let participantsCreated = 0;
@@ -140,17 +128,17 @@ export const simulationService = {
       // CRITICAL OPERATIONS - Must succeed for simulation to be usable
       console.log('[SIMULATION] Phase 1: Creating core simulation');
       simulationId = await this.createSimulation({
-        name: name.trim(),
-        description: description?.trim(),
+        name: name || 'Untitled Simulation', // Defensive fallback
+        description: description,
         brokerageId
       });
 
       console.log('[SIMULATION] Phase 2: Completing setup');
       await this.completeSimulationSetup(simulationId, {
         applicantCount,
-        projectContactName: projectContactName?.trim(),
-        projectContactEmail: projectContactEmail?.trim(),
-        projectContactPhone: projectContactPhone?.trim(),
+        projectContactName: projectContactName,
+        projectContactEmail: projectContactEmail,
+        projectContactPhone: projectContactPhone,
       });
 
       console.log('[SIMULATION] Phase 3: Creating participants');
@@ -160,16 +148,16 @@ export const simulationService = {
 
       console.log('[SIMULATION] Critical operations completed successfully');
 
-      // NON-CRITICAL OPERATION - Form link generation (async, don't block)
+      // NON-CRITICAL OPERATION - Form link generation (fully async, isolated errors)
       console.log('[SIMULATION] Phase 4: Starting background form link generation');
       
-      // Start form link generation in background with increased timeout
+      // Start form link generation in background with proper error isolation
       this.generateFormLinksBackground(simulationId, createdParticipants)
         .then(result => {
           console.log('[SIMULATION] Background form link generation completed:', result);
         })
         .catch(error => {
-          console.warn('[SIMULATION] Background form link generation failed:', error);
+          console.warn('[SIMULATION] Background form link generation failed (non-blocking):', error);
         });
 
       // Return success immediately - core simulation is ready
@@ -189,6 +177,21 @@ export const simulationService = {
     } catch (error) {
       console.error('[SIMULATION] Critical operation failed:', error);
       
+      // Enhanced error classification for better UX
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Don't expose internal database errors to users
+        if (errorMessage.includes('duplicate key') || errorMessage.includes('constraint')) {
+          errorMessage = 'A simulation with this configuration already exists';
+        } else if (errorMessage.includes('permission') || errorMessage.includes('not authorized')) {
+          errorMessage = 'You do not have permission to create simulations';
+        } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+          errorMessage = 'Network error. Please try again.';
+        }
+      }
+      
       // If we have a simulationId, try to clean up
       if (simulationId) {
         console.log('[SIMULATION] Attempting cleanup of partially created simulation');
@@ -200,18 +203,24 @@ export const simulationService = {
         }
       }
       
-      throw error;
+      throw new Error(errorMessage);
     }
   },
 
-  // Background form link generation with improved error handling
+  // Background form link generation with improved error isolation and context setting
   async generateFormLinksBackground(simulationId: string, participants: any[]): Promise<void> {
     try {
-      console.log('[SIMULATION] Starting background form link generation');
+      console.log('[SIMULATION] Starting background form link generation with proper context');
+      
+      // Ensure we have simulation context for RLS
+      const simulation = await this.getSimulation(simulationId);
+      if (!simulation) {
+        throw new Error(`Simulation ${simulationId} not found for form link generation`);
+      }
       
       const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
       
-      // Increased timeout for background operation
+      // Enhanced form link generation with simulation context
       const formLinkPromise = batchFormLinkGeneration.generateAllFormLinks({
         simulationId,
         participants
@@ -232,11 +241,11 @@ export const simulationService = {
           .update({ forms_generated_at: new Date().toISOString() })
           .eq('id', simulationId);
       } else {
-        console.warn('[SIMULATION] Background form link generation had errors:', result?.errors);
+        console.warn('[SIMULATION] Background form link generation had errors (non-blocking):', result?.errors);
       }
     } catch (error) {
-      console.error('[SIMULATION] Background form link generation failed:', error);
-      // Don't throw - this is background operation
+      console.error('[SIMULATION] Background form link generation failed (isolated):', error);
+      // Don't throw - this is background operation and should not affect main flow
     }
   },
 
@@ -350,7 +359,7 @@ export const simulationService = {
     await this.updateSimulation(simulationId, updates);
   },
 
-  // Retry form link generation for a simulation (now with better error handling)
+  // Retry form link generation with enhanced context and error handling
   async retryFormLinkGeneration(simulationId: string): Promise<{
     success: boolean;
     errors?: string[];
@@ -362,6 +371,12 @@ export const simulationService = {
     }
     
     try {
+      // Ensure simulation exists and user has access
+      const simulation = await this.getSimulation(simulationId);
+      if (!simulation) {
+        return { success: false, errors: ['Simulation not found or access denied'] };
+      }
+      
       // Get simulation participants
       const { simulationParticipantService } = await import('@/services/simulationParticipantService');
       const participants = await simulationParticipantService.getSimulationParticipants(simulationId);
@@ -371,7 +386,7 @@ export const simulationService = {
         return { success: false, errors: ['No participants found'] };
       }
 
-      // Generate form links with increased timeout
+      // Generate form links with proper context and increased timeout
       const { batchFormLinkGeneration } = await import('@/services/batchFormLinkGeneration');
       
       const formLinkPromise = batchFormLinkGeneration.generateAllFormLinks({

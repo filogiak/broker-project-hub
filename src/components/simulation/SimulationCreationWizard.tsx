@@ -161,15 +161,16 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
   };
 
   const handleSubmit = async () => {
-    console.log('[CREATION WIZARD] Starting submission process');
+    console.log('[CREATION WIZARD] Starting submission process with enhanced validation');
     
     setIsSubmitting(true);
     setCurrentCreationStep('validating');
     
     try {
-      // Enhanced validation
+      // Enhanced validation with better error messages
       const validationErrors: string[] = [];
       
+      // Primary validation - this is the authoritative source
       if (!creationData.name?.trim()) {
         validationErrors.push('Il nome della simulazione è obbligatorio');
       }
@@ -186,6 +187,7 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       }
 
       if (validationErrors.length > 0) {
+        console.warn('[CREATION WIZARD] Validation failed:', validationErrors);
         toast({
           title: "Errore di Validazione",
           description: validationErrors.join('\n'),
@@ -208,12 +210,12 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
         return;
       }
 
-      // Create simulation with progressive status updates
+      // Create simulation with progressive status updates and enhanced error handling
       setCurrentCreationStep('creating');
-      console.log('[CREATION WIZARD] Creating simulation with enhanced setup');
+      console.log('[CREATION WIZARD] Creating simulation with validated data');
       
       const result = await simulationService.createSimulationWithSetup({
-        name: creationData.name.trim(),
+        name: creationData.name.trim(), // Ensure trimmed name is passed
         description: creationData.description?.trim(),
         brokerageId: brokerageId,
         applicantCount: creationData.applicantCount,
@@ -225,19 +227,34 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
 
       setCreationResult(result);
       setCurrentCreationStep('completed');
-      console.log('[CREATION WIZARD] Simulation creation completed:', result);
+      console.log('[CREATION WIZARD] Simulation creation completed with result:', result);
 
-      // Show appropriate success message based on result
+      // Enhanced success handling based on result
       if (result.success && result.canProceed) {
-        toast({
-          title: "Simulazione Creata con Successo",
-          description: result.message,
-        });
+        // Show success message based on form link status
+        if (result.formLinksStatus === 'generated') {
+          toast({
+            title: "Simulazione Creata con Successo",
+            description: `${creationData.name} è stata creata con tutti i link dei form.`,
+          });
+        } else if (result.formLinksStatus === 'pending') {
+          toast({
+            title: "Simulazione Creata",
+            description: `${creationData.name} è stata creata. I link dei form sono in generazione in background.`,
+          });
+        } else {
+          toast({
+            title: "Simulazione Creata",
+            description: `${creationData.name} è stata creata con successo.`,
+          });
+        }
         
         // Call success callback and close immediately - no delay to prevent race conditions
         onSimulationCreated();
         handleClose();
       } else {
+        // Core creation failed - show clear error
+        console.error('[CREATION WIZARD] Core creation failed:', result);
         toast({
           title: "Errore di Creazione",
           description: result.message || "Impossibile creare la simulazione",
@@ -247,7 +264,21 @@ const SimulationCreationWizard = ({ isOpen, onClose, brokerageId, onSimulationCr
       
     } catch (error) {
       console.error('[CREATION WIZARD] Error creating simulation:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      // Enhanced error classification for better UX
+      let errorMessage = 'Errore sconosciuto';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Provide user-friendly error messages
+        if (errorMessage.includes('name') && errorMessage.includes('required')) {
+          errorMessage = 'Il nome della simulazione è obbligatorio';
+        } else if (errorMessage.includes('permission') || errorMessage.includes('not authorized')) {
+          errorMessage = 'Non hai i permessi per creare simulazioni';
+        } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+          errorMessage = 'Errore di rete. Riprova più tardi.';
+        }
+      }
       
       setCurrentCreationStep('completed');
       
