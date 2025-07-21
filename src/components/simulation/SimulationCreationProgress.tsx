@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -38,6 +39,23 @@ const SimulationCreationProgress = ({
 
   const [stepStatuses, setStepStatuses] = useState(steps);
 
+  // Reset all progress state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[PROGRESS] Dialog opened, resetting all state');
+      resetProgressState();
+    }
+  }, [isOpen]);
+
+  const resetProgressState = () => {
+    console.log('[PROGRESS] Resetting all progress state');
+    setProgress(0);
+    setCurrentStep(0);
+    setIsProcessing(false);
+    setFinalResult(null);
+    setStepStatuses(steps.map(step => ({ ...step, status: 'pending' as const })));
+  };
+
   const updateStepStatus = (stepIndex: number, status: ProgressStep['status']) => {
     setStepStatuses(prev => prev.map((step, index) => 
       index === stepIndex ? { ...step, status } : step
@@ -45,8 +63,12 @@ const SimulationCreationProgress = ({
   };
 
   const startCreationProcess = async () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      console.log('[PROGRESS] Already processing, skipping');
+      return;
+    }
     
+    console.log('[PROGRESS] Starting creation process');
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(0);
@@ -140,11 +162,13 @@ const SimulationCreationProgress = ({
     }
   };
 
+  // Start creation process when dialog opens and state is reset
   useEffect(() => {
     if (isOpen && !isProcessing && !finalResult) {
+      console.log('[PROGRESS] Conditions met, starting creation process');
       startCreationProcess();
     }
-  }, [isOpen]);
+  }, [isOpen, isProcessing, finalResult]);
 
   const getStepIcon = (step: ProgressStep) => {
     switch (step.status) {
