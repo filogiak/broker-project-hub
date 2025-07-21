@@ -18,8 +18,6 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 
 // Role-specific dashboard pages
 import SimulationCollaboratorDashboard from '@/pages/Dashboard/SimulationCollaboratorDashboard';
-import RealEstateAgentDashboard from '@/pages/Dashboard/RealEstateAgentDashboard';
-import BrokerAssistantDashboard from '@/pages/Dashboard/BrokerAssistantDashboard';
 import MortgageApplicantDashboard from '@/pages/Dashboard/MortgageApplicantDashboard';
 
 // Brokerage pages
@@ -63,6 +61,7 @@ import SimulationSettings from '@/pages/Simulation/SimulationSettings';
 // Import broker assistant pages
 import BrokerAssistantInvitations from '@/pages/BrokerAssistant/BrokerAssistantInvitations';
 import BrokerAssistantSettings from '@/pages/BrokerAssistant/BrokerAssistantSettings';
+import BrokerAssistantOrganizations from '@/pages/BrokerAssistant/BrokerAssistantOrganizations';
 import { BrokerAssistantLayout } from '@/components/broker/BrokerAssistantLayout';
 import { RealEstateAgentLayout } from '@/components/agent/RealEstateAgentLayout';
 
@@ -106,7 +105,7 @@ const AppRouter = () => {
         </ProtectedRoute>
       ),
     },
-    // Role-specific dashboard routes
+    // Role-specific dashboard routes - Updated to use new layouts consistently
     {
       path: '/dashboard/simulation-collaborator',
       element: (
@@ -119,7 +118,9 @@ const AppRouter = () => {
       path: '/dashboard/real-estate-agent',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <RealEstateAgentDashboard />
+          <RealEstateAgentLayout>
+            <AgentDashboard />
+          </RealEstateAgentLayout>
         </RoleBasedRoute>
       ),
     },
@@ -127,7 +128,9 @@ const AppRouter = () => {
       path: '/dashboard/broker-assistant',
       element: (
         <RoleBasedRoute allowedRoles={['broker_assistant']}>
-          <BrokerAssistantDashboard />
+          <BrokerAssistantLayout>
+            <BrokerAssistantOrganizations />
+          </BrokerAssistantLayout>
         </RoleBasedRoute>
       ),
     },
@@ -251,6 +254,7 @@ const AppRouter = () => {
       path: '/auth/callback',
       element: <VerificationCallback />,
     },
+    // Legacy broker routes - keeping for backward compatibility
     {
       path: '/broker',
       element: (
@@ -267,6 +271,7 @@ const AppRouter = () => {
         </RoleBasedRoute>
       ),
     },
+    // Legacy agent route - redirect to new layout
     {
       path: '/agent',
       element: (
@@ -332,7 +337,7 @@ const AppRouter = () => {
       ),
     },
     
-    // Real Estate Agent routes with new layout
+    // Real Estate Agent routes with consistent new layout
     {
       path: '/agent/dashboard',
       element: (

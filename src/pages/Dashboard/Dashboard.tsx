@@ -80,7 +80,7 @@ const Dashboard = () => {
   // Determine which dashboard to show based on user roles
   const roles = user.roles || [];
 
-  // Role-based dashboard routing
+  // Role-based dashboard routing - Updated to use new layout system
   if (roles.includes('brokerage_owner')) {
     // Check if user has a brokerage_id in their profile
     if (user.brokerageId) {
@@ -93,12 +93,13 @@ const Dashboard = () => {
     }
   }
 
+  // Updated routing to use new layout system
   if (roles.includes('real_estate_agent')) {
-    return <Navigate to="/agent" replace />;
+    return <Navigate to="/agent/dashboard" replace />;
   }
 
   if (roles.includes('broker_assistant')) {
-    return <Navigate to="/broker-assistant" replace />;
+    return <Navigate to="/dashboard/broker-assistant" replace />;
   }
 
   // For simulation_collaborator or mortgage_applicant, show appropriate dashboard

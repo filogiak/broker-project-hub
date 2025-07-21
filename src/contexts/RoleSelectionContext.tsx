@@ -27,6 +27,16 @@ interface RoleSelectionProviderProps {
   children: ReactNode;
 }
 
+// Role priority order for multi-role users
+const rolePriority: Record<UserRole, number> = {
+  'superadmin': 1,
+  'brokerage_owner': 2,
+  'real_estate_agent': 3, // Prioritize real estate agent over simulation collaborator
+  'broker_assistant': 4,
+  'simulation_collaborator': 5, // Lower priority
+  'mortgage_applicant': 6,
+};
+
 export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) => {
   const { user } = useAuth();
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(null);
@@ -131,7 +141,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
     }
   }, [user?.id, availableRoles]);
 
-  // Initialize selected role from localStorage or default to first role with active membership
+  // Initialize selected role with improved priority logic
   useEffect(() => {
     if (availableRoles.length > 0) {
       const storedRole = localStorage.getItem('selectedRole') as UserRole | null;
@@ -139,9 +149,22 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
       if (storedRole && availableRoles.includes(storedRole)) {
         setSelectedRoleState(storedRole);
       } else {
-        // Find first role with active membership, or first role if none have memberships
-        const roleWithMembership = rolesWithContext.find(r => r.hasActiveMembership);
-        const defaultRole = roleWithMembership?.role || availableRoles[0];
+        // Find the highest priority role with active membership
+        const activeRoles = rolesWithContext.filter(r => r.hasActiveMembership);
+        let defaultRole: UserRole;
+        
+        if (activeRoles.length > 0) {
+          // Sort by priority and pick the highest priority active role
+          defaultRole = activeRoles.sort((a, b) => 
+            rolePriority[a.role] - rolePriority[b.role]
+          )[0].role;
+        } else {
+          // If no active memberships, use highest priority role available
+          defaultRole = availableRoles.sort((a, b) => 
+            rolePriority[a] - rolePriority[b]
+          )[0];
+        }
+        
         setSelectedRoleState(defaultRole);
       }
     }
