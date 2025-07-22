@@ -17,15 +17,6 @@ const roleDisplayNames: Record<UserRole, string> = {
   simulation_collaborator: 'Simulation Collaborator',
 };
 
-const roleDashboardPaths: Record<UserRole, string> = {
-  superadmin: '/admin',
-  brokerage_owner: '/dashboard', // Will redirect to brokerage
-  broker_assistant: '/dashboard/broker-assistant',
-  mortgage_applicant: '/dashboard/mortgage-applicant',
-  real_estate_agent: '/agent/dashboard',
-  simulation_collaborator: '/dashboard/simulation-collaborator',
-};
-
 export function RoleSwitcher() {
   const { selectedRole, setSelectedRole, isMultiRole, availableRoles } = useRoleSelection();
   const navigate = useNavigate();
@@ -39,11 +30,12 @@ export function RoleSwitcher() {
     console.log('🔄 [ROLE SWITCHER] Switching to role:', newRole);
     setSelectedRole(newRole);
     
-    // Navigate to the appropriate dashboard for the selected role
-    const dashboardPath = roleDashboardPaths[newRole];
-    if (dashboardPath) {
-      navigate(dashboardPath);
-    }
+    // Use the same navigation pattern as UserProfileBox - navigate to /dashboard
+    // and let the routing logic determine the final destination
+    // Add a small delay to ensure role state is set before navigation
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 100);
   };
 
   return (
