@@ -1,10 +1,11 @@
+
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
-import RoleSelector from '@/components/dashboard/RoleSelector';
+import { RoleSwitcher } from '@/components/ui/role-switcher';
 import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
 import AccessibleBrokerages from '@/components/dashboard/AccessibleBrokerages';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,7 +94,7 @@ const SimulationCollaboratorDashboard = () => {
     return (
       <MainLayout title="Simulation Collaborator Dashboard" userEmail={user?.email} onLogout={handleLogout}>
         <div className="max-w-6xl mx-auto space-y-6">
-          {isMultiRole && <RoleSelector />}
+          <RoleSwitcher />
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-lg">Loading your simulations...</div>
           </div>
@@ -105,8 +106,8 @@ const SimulationCollaboratorDashboard = () => {
   return (
     <MainLayout title="Simulation Collaborator Dashboard" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Role Selector for multi-role users */}
-        {isMultiRole && <RoleSelector />}
+        {/* Role Switcher for multi-role users */}
+        <RoleSwitcher />
 
         <div className="flex items-center gap-3 mb-6">
           <FlaskConical className="h-8 w-8 text-primary" />
