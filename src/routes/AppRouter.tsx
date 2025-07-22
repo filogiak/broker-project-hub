@@ -19,6 +19,7 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 // Role-specific dashboard pages
 import SimulationCollaboratorDashboard from '@/pages/Dashboard/SimulationCollaboratorDashboard';
 import MortgageApplicantDashboard from '@/pages/Dashboard/MortgageApplicantDashboard';
+import BrokerAssistantDashboard from '@/pages/Dashboard/BrokerAssistantDashboard';
 
 // Brokerage pages
 import BrokerageOwnerDashboard from '@/pages/Brokerage/BrokerageOwnerDashboard';
@@ -128,9 +129,7 @@ const AppRouter = () => {
       path: '/dashboard/broker-assistant',
       element: (
         <RoleBasedRoute allowedRoles={['broker_assistant']}>
-          <BrokerAssistantLayout>
-            <BrokerAssistantOrganizations />
-          </BrokerAssistantLayout>
+          <BrokerAssistantDashboard />
         </RoleBasedRoute>
       ),
     },
