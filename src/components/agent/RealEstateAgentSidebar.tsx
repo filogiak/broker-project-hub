@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import UserProfileBox from '@/components/ui/user-profile-box';
 import { Logo } from '@/components/ui/logo';
+import { RoleSwitcher } from '@/components/ui/role-switcher';
 
 export function RealEstateAgentSidebar() {
   const location = useLocation();
@@ -94,6 +95,12 @@ export function RealEstateAgentSidebar() {
 
       <SidebarFooter className="p-4">
         <UserProfileBox user={user} />
+        <div className="mt-3 mb-4">
+          <div className="text-xs text-gray-500 mb-2">Ruolo attivo:</div>
+          <div className="scale-90 origin-left">
+            <RoleSwitcher />
+          </div>
+        </div>
         <div className="border-t border-form-border pt-4">
           <div className="text-xs text-gray-500 text-center">
             GoMutuo.it Real Estate Agent
