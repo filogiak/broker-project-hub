@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -31,11 +32,12 @@ const SimulationInvitationModal = ({ isOpen, onClose, simulationId, onMemberAdde
   const [suggestedEmails, setSuggestedEmails] = useState<string[]>([]);
   const { toast } = useToast();
 
-  // Simulation-specific roles
+  // Updated role options to include mortgage_applicant
   const roleOptions = [
     { value: 'simulation_collaborator' as UserRole, label: 'Simulation Collaborator' },
     { value: 'real_estate_agent' as UserRole, label: 'Real Estate Agent' },
     { value: 'broker_assistant' as UserRole, label: 'Broker Assistant' },
+    { value: 'mortgage_applicant' as UserRole, label: 'Mortgage Applicant' },
   ];
 
   useEffect(() => {

@@ -2,219 +2,247 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { getUserProjects } from '@/services/userProjectService';
-import MainLayout from '@/components/layout/MainLayout';
-import PendingInvitationsWidget from '@/components/dashboard/PendingInvitationsWidget';
-import AccessibleBrokerages from '@/components/dashboard/AccessibleBrokerages';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { FileText, CheckCircle, Clock, Upload, User } from 'lucide-react';
-import { logout } from '@/services/authService';
+import { Badge } from '@/components/ui/badge';
+import { FileText, Users, Calendar, FlaskConical } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MortgageApplicantDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['user-projects', user?.id],
-    queryFn: () => getUserProjects(user?.id || ''),
+  // Fetch user's project memberships
+  const { data: projectMemberships = [], isLoading: projectsLoading } = useQuery({
+    queryKey: ['mortgage-applicant-projects', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('project_members')
+        .select(`
+          id,
+          role,
+          joined_at,
+          participant_designation,
+          project_id,
+          projects (
+            id,
+            name,
+            description,
+            status,
+            applicant_count,
+            created_at,
+            brokerage_id,
+            brokerages (
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('role', 'mortgage_applicant');
+
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!user?.id,
   });
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      window.location.href = '/auth';
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  // Fetch user's simulation memberships
+  const { data: simulationMemberships = [], isLoading: simulationsLoading } = useQuery({
+    queryKey: ['mortgage-applicant-simulations', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('simulation_members')
+        .select(`
+          id,
+          role,
+          joined_at,
+          participant_designation,
+          simulation_id,
+          simulations (
+            id,
+            name,
+            description,
+            status,
+            applicant_count,
+            created_at,
+            brokerage_id,
+            brokerages (
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('role', 'mortgage_applicant');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/project/${projectId}`);
   };
 
-  if (isLoading) {
+  const handleSimulationClick = (simulationId: string) => {
+    navigate(`/simulation/${simulationId}`);
+  };
+
+  if (projectsLoading || simulationsLoading) {
     return (
-      <MainLayout title="My Applications" userEmail={user?.email} onLogout={handleLogout}>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading your applications...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-form-green mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
-  // Mock data for demonstration
-  const mockProgress = 65;
-  const mockTasks = [
-    { id: 1, title: 'Upload Income Verification', status: 'pending', priority: 'high' },
-    { id: 2, title: 'Submit Bank Statements', status: 'completed', priority: 'high' },
-    { id: 3, title: 'Property Appraisal Documents', status: 'pending', priority: 'medium' },
-    { id: 4, title: 'Employment Verification', status: 'completed', priority: 'high' },
-  ];
-
   return (
-    <MainLayout title="My Applications" userEmail={user?.email} onLogout={handleLogout}>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <User className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold text-primary">My Mortgage Applications</h1>
-            <p className="text-muted-foreground">Track your application progress and submit required documents</p>
-          </div>
-        </div>
+    <div className="p-8 space-y-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2 font-dm-sans">
+          Welcome, {user?.email}
+        </h1>
+        <p className="text-gray-600 font-dm-sans">
+          Manage your mortgage applications and simulations
+        </p>
+      </div>
 
-        {/* Application Status */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Applications</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{projects.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Active applications
+      {/* Projects Section */}
+      <Card className="bg-white border border-[#BEB8AE] rounded-[12px]">
+        <CardHeader>
+          <CardTitle className="font-dm-sans text-xl text-black flex items-center gap-2">
+            <FileText className="h-5 w-5 text-form-green" />
+            My Projects
+          </CardTitle>
+          <CardDescription className="font-dm-sans">
+            Projects where you are a mortgage applicant
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {projectMemberships.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">No projects yet</p>
+              <p className="text-sm text-gray-500">
+                You'll see projects here when you're invited to participate in mortgage applications.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {mockTasks.filter(t => t.status === 'completed').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Out of {mockTasks.length} total tasks
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {mockTasks.filter(t => t.status === 'pending').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Requiring attention
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Application Progress</CardTitle>
-            <CardDescription>
-              Your overall progress across all mortgage applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Overall Completion</span>
-                <span className="text-sm text-muted-foreground">{mockProgress}%</span>
-              </div>
-              <Progress value={mockProgress} className="w-full" />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Pending Invitations Widget */}
-        <PendingInvitationsWidget />
-
-        {/* Accessible Brokerages */}
-        <AccessibleBrokerages />
-
-        {/* Pending Tasks */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Tasks</CardTitle>
-            <CardDescription>
-              Documents and information needed to continue your application
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockTasks.filter(task => task.status === 'pending').map((task) => (
-                <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">{task.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={task.priority === 'high' ? 'destructive' : 'secondary'} className="text-xs">
-                          {task.priority} priority
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Button size="sm">
-                    Upload
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Applications List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Applications</CardTitle>
-            <CardDescription>
-              View and manage your mortgage applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {projects.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Applications Yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  You don't have any active mortgage applications. Contact your lender to get started.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {projects.map((project) => (
-                  <div key={project.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+          ) : (
+            <div className="grid gap-4">
+              {projectMemberships.map((membership) => {
+                const project = membership.projects;
+                return (
+                  <div
+                    key={membership.id}
+                    className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleProjectClick(project.id)}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
+                      <div>
                         <h3 className="font-semibold text-lg">{project.name}</h3>
-                        {project.description && (
-                          <p className="text-muted-foreground text-sm mt-1">{project.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary">{project.status}</Badge>
-                          {project.project_type && (
-                            <Badge variant="outline">{project.project_type.replace('_', ' ')}</Badge>
+                        <p className="text-gray-600 text-sm">{project.description}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {project.brokerages?.name}
+                          </span>
+                          {membership.joined_at && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Joined {new Date(membership.joined_at).toLocaleDateString('it-IT')}
+                            </span>
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          View Application
-                        </Button>
-                        <Button size="sm">
-                          Continue
-                        </Button>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant="secondary">{project.status}</Badge>
+                        {membership.participant_designation && (
+                          <Badge variant="outline" className="text-xs">
+                            {membership.participant_designation.replace('_', ' ')}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </MainLayout>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Simulations Section */}
+      <Card className="bg-white border border-[#BEB8AE] rounded-[12px]">
+        <CardHeader>
+          <CardTitle className="font-dm-sans text-xl text-black flex items-center gap-2">
+            <FlaskConical className="h-5 w-5 text-form-green" />
+            My Simulations
+          </CardTitle>
+          <CardDescription className="font-dm-sans">
+            Simulations where you are practicing as a mortgage applicant
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {simulationMemberships.length === 0 ? (
+            <div className="text-center py-8">
+              <FlaskConical className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">No simulations yet</p>
+              <p className="text-sm text-gray-500">
+                You'll see simulations here when you're invited to practice mortgage applications.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {simulationMemberships.map((membership) => {
+                const simulation = membership.simulations;
+                return (
+                  <div
+                    key={membership.id}
+                    className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleSimulationClick(simulation.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">{simulation.name}</h3>
+                        <p className="text-gray-600 text-sm">{simulation.description}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {simulation.brokerages?.name}
+                          </span>
+                          {membership.joined_at && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Joined {new Date(membership.joined_at).toLocaleDateString('it-IT')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant="secondary">{simulation.status}</Badge>
+                        {membership.participant_designation && (
+                          <Badge variant="outline" className="text-xs">
+                            {membership.participant_designation.replace('_', ' ')}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

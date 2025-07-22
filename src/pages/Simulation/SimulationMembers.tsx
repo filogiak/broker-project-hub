@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -95,11 +96,31 @@ const SimulationMembers = () => {
     refetch();
   };
 
-  // Check if current user can manage members
-  const canManageMembers = user && members?.some(member => 
-    member.user_id === user.id && 
-    (member.role === 'brokerage_owner' || member.role === 'simulation_collaborator')
-  );
+  // Check if current user can manage members (exclude mortgage applicants from management)
+  const currentUserMember = members?.find(member => member.user_id === user.id);
+  const canManageMembers = user && currentUserMember && 
+    (currentUserMember.role === 'brokerage_owner' || 
+     currentUserMember.role === 'simulation_collaborator' ||
+     currentUserMember.role === 'broker_assistant' ||
+     currentUserMember.role === 'real_estate_agent');
+
+  // Helper function to get role display name
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'brokerage_owner':
+        return 'Brokerage Owner';
+      case 'simulation_collaborator':
+        return 'Simulation Collaborator';
+      case 'real_estate_agent':
+        return 'Real Estate Agent';
+      case 'broker_assistant':
+        return 'Broker Assistant';
+      case 'mortgage_applicant':
+        return 'Mortgage Applicant';
+      default:
+        return role.replace('_', ' ');
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -121,23 +142,24 @@ const SimulationMembers = () => {
                       Gestisci i partecipanti alla simulazione
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline"
-                      onClick={() => setIsInvitationsModalOpen(true)}
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Gestisci Inviti
-                    </Button>
-                    <Button 
-                      className="bg-form-green hover:bg-form-green-hover text-white"
-                      onClick={() => setIsInvitationModalOpen(true)}
-                      disabled={!canManageMembers}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Invita Partecipante
-                    </Button>
-                  </div>
+                  {canManageMembers && (
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setIsInvitationsModalOpen(true)}
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        Gestisci Inviti
+                      </Button>
+                      <Button 
+                        className="bg-form-green hover:bg-form-green-hover text-white"
+                        onClick={() => setIsInvitationModalOpen(true)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Invita Partecipante
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -155,14 +177,15 @@ const SimulationMembers = () => {
                     <p className="text-gray-600 mb-6">
                       Invita altri utenti a collaborare a questa simulazione.
                     </p>
-                    <Button 
-                      className="bg-form-green hover:bg-form-green-hover text-white"
-                      onClick={() => setIsInvitationModalOpen(true)}
-                      disabled={!canManageMembers}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Invita Primo Partecipante
-                    </Button>
+                    {canManageMembers && (
+                      <Button 
+                        className="bg-form-green hover:bg-form-green-hover text-white"
+                        onClick={() => setIsInvitationModalOpen(true)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Invita Primo Partecipante
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -189,7 +212,7 @@ const SimulationMembers = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary">
-                              {member.role.replace('_', ' ')}
+                              {getRoleDisplayName(member.role)}
                             </Badge>
                             {member.joined_at && (
                               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -199,11 +222,13 @@ const SimulationMembers = () => {
                                 </span>
                               </div>
                             )}
-                            <SimulationMemberActionMenu
-                              member={member}
-                              onDelete={handleRemoveMember}
-                              canDelete={canManageMembers && member.user_id !== user?.id}
-                            />
+                            {canManageMembers && member.user_id !== user?.id && (
+                              <SimulationMemberActionMenu
+                                member={member}
+                                onDelete={handleRemoveMember}
+                                canDelete={true}
+                              />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -216,19 +241,23 @@ const SimulationMembers = () => {
         </SidebarInset>
       </div>
 
-      {/* Modals */}
-      <SimulationInvitationModal
-        isOpen={isInvitationModalOpen}
-        onClose={() => setIsInvitationModalOpen(false)}
-        simulationId={simulationId!}
-        onMemberAdded={handleMemberAdded}
-      />
+      {/* Modals - only show if user can manage members */}
+      {canManageMembers && (
+        <>
+          <SimulationInvitationModal
+            isOpen={isInvitationModalOpen}
+            onClose={() => setIsInvitationModalOpen(false)}
+            simulationId={simulationId!}
+            onMemberAdded={handleMemberAdded}
+          />
 
-      <SimulationInvitationsModal
-        isOpen={isInvitationsModalOpen}
-        onClose={() => setIsInvitationsModalOpen(false)}
-        simulationId={simulationId!}
-      />
+          <SimulationInvitationsModal
+            isOpen={isInvitationsModalOpen}
+            onClose={() => setIsInvitationsModalOpen(false)}
+            simulationId={simulationId!}
+          />
+        </>
+      )}
     </SidebarProvider>
   );
 };

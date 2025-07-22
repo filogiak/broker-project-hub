@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { FileText, Users, Settings, ArrowLeft, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSimulationMembers } from '@/hooks/useSimulationData';
 import UserProfileBox from '@/components/ui/user-profile-box';
 import { Logo } from '@/components/ui/logo';
 
@@ -19,6 +20,11 @@ const SimulationSidebar = () => {
   const navigate = useNavigate();
   const { simulationId } = useParams();
   const { user } = useAuth();
+  const { data: members = [] } = useSimulationMembers(simulationId || '');
+
+  // Check if current user is a mortgage applicant
+  const currentUserMember = members.find(member => member.user_id === user?.id);
+  const isMortgageApplicant = currentUserMember?.role === 'mortgage_applicant';
 
   const menuItems = [
     {
@@ -26,20 +32,28 @@ const SimulationSidebar = () => {
       icon: FileText,
       path: `/simulation/${simulationId}/questionnaire`,
       isActive: window.location.pathname === `/simulation/${simulationId}/questionnaire` || window.location.pathname === `/simulation/${simulationId}`,
+      showForMortgageApplicant: true,
     },
     {
       title: 'Partecipanti',
       icon: Users,
       path: `/simulation/${simulationId}/members`,
       isActive: window.location.pathname === `/simulation/${simulationId}/members`,
+      showForMortgageApplicant: true,
     },
     {
       title: 'Impostazioni',
       icon: Settings,
       path: `/simulation/${simulationId}/settings`,
       isActive: window.location.pathname === `/simulation/${simulationId}/settings`,
+      showForMortgageApplicant: false, // Hide settings for mortgage applicants
     },
   ];
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item => 
+    !isMortgageApplicant || item.showForMortgageApplicant
+  );
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -72,11 +86,13 @@ const SimulationSidebar = () => {
             <FlaskConical className="h-4 w-4 text-form-green" />
             <span className="text-sm font-medium text-form-green">Simulazione</span>
           </div>
-          <p className="text-xs text-gray-600">Gestisci la tua simulazione</p>
+          <p className="text-xs text-gray-600">
+            {isMortgageApplicant ? 'Completa il questionario' : 'Gestisci la tua simulazione'}
+          </p>
         </div>
 
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 onClick={() => handleNavigation(item.path)}
