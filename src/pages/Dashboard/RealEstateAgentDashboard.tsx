@@ -16,9 +16,9 @@ import { logout } from '@/services/authService';
 
 const RealEstateAgentDashboard = () => {
   const { user } = useAuth();
-  const { selectedRole, isMultiRole } = useRoleSelection();
+  const { selectedRole } = useRoleSelection();
 
-  // Fetch projects for the user (simplified without role-specific filtering)
+  // Fetch projects for the user
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['user-projects', user?.id],
     queryFn: async () => {
@@ -41,7 +41,7 @@ const RealEstateAgentDashboard = () => {
     return (
       <MainLayout title="Agent Dashboard" userEmail={user?.email} onLogout={handleLogout}>
         <div className="max-w-6xl mx-auto space-y-6">
-          {isMultiRole && <RoleSwitcher />}
+          <RoleSwitcher />
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-lg">Loading your projects...</div>
           </div>
@@ -53,8 +53,8 @@ const RealEstateAgentDashboard = () => {
   return (
     <MainLayout title="Agent Dashboard" userEmail={user?.email} onLogout={handleLogout}>
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Role Switcher for multi-role users */}
-        {isMultiRole && <RoleSwitcher />}
+        {/* Role Switcher - removed conditional wrapper */}
+        <RoleSwitcher />
 
         <div className="flex items-center gap-3 mb-6">
           <Home className="h-8 w-8 text-primary" />
