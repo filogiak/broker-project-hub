@@ -2,7 +2,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import AdminPermissionCheck from '@/components/admin/AdminPermissionCheck';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import type { Database } from '@/integrations/supabase/types';
@@ -21,7 +20,6 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   fallbackPath = '/dashboard' 
 }) => {
   const { user, loading } = useAuth();
-  const { selectedRole } = useRoleSelection();
 
   if (loading) {
     return <LoadingOverlay message="Verifying permissions..." />;
@@ -33,7 +31,6 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
 
   console.log('🔒 [ROLE ROUTE] User:', user.email);
   console.log('🔒 [ROLE ROUTE] User roles:', user.roles);
-  console.log('🔒 [ROLE ROUTE] Selected role:', selectedRole);
   console.log('🔒 [ROLE ROUTE] Allowed roles:', allowedRoles);
 
   // Check if user has any of the allowed roles
@@ -42,13 +39,6 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   if (!hasAnyAllowedRole) {
     console.log('🔒 [ROLE ROUTE] User does not have any allowed role, redirecting to:', fallbackPath);
     return <Navigate to={fallbackPath} replace />;
-  }
-
-  // If selectedRole is set and it's one of the allowed roles, we're good
-  if (selectedRole && allowedRoles.includes(selectedRole)) {
-    console.log('🔒 [ROLE ROUTE] Selected role matches allowed roles, granting access');
-  } else {
-    console.log('🔒 [ROLE ROUTE] Selected role does not match, but user has allowed role - continuing');
   }
 
   // Only use AdminPermissionCheck for superadmin routes
