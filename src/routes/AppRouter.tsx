@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { RoleAwareLayout } from '@/components/layout/RoleAwareLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import BrokerageAccessRoute from '@/components/auth/BrokerageAccessRoute';
@@ -103,67 +102,55 @@ const AppRouter = () => {
       path: '/dashboard',
       element: (
         <ProtectedRoute>
-          <RoleAwareLayout>
-            <Dashboard />
-          </RoleAwareLayout>
+          <Dashboard />
         </ProtectedRoute>
       ),
     },
-    // Role-specific dashboard routes - Wrapped with RoleAwareLayout to provide context
+    // Role-specific dashboard routes - No more RoleAwareLayout wrapper
     {
       path: '/dashboard/simulation-collaborator',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['simulation_collaborator']}>
-            <SimulationCollaboratorDashboard />
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['simulation_collaborator']}>
+          <SimulationCollaboratorDashboard />
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/dashboard/real-estate-agent',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentDashboard />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentDashboard />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/dashboard/broker-assistant',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['broker_assistant']}>
-            <BrokerAssistantDashboard />
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantDashboard />
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/dashboard/broker-assistant/invitations',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['broker_assistant']}>
-            <BrokerAssistantLayout>
-              <BrokerAssistantInvitations />
-            </BrokerAssistantLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantLayout>
+            <BrokerAssistantInvitations />
+          </BrokerAssistantLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/dashboard/broker-assistant/settings',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['broker_assistant']}>
-            <BrokerAssistantLayout>
-              <BrokerAssistantSettings />
-            </BrokerAssistantLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['broker_assistant']}>
+          <BrokerAssistantLayout>
+            <BrokerAssistantSettings />
+          </BrokerAssistantLayout>
+        </RoleBasedRoute>
       ),
     },
     {
@@ -350,73 +337,61 @@ const AppRouter = () => {
     {
       path: '/agent/dashboard',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentDashboard />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentDashboard />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/agent/organizzazioni',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentOrganizations />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentOrganizations />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/agent/progetti',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentProjects />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentProjects />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/agent/simulazioni',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentSimulations />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentSimulations />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/agent/inviti',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentInvitations />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentInvitations />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {
       path: '/agent/impostazioni',
       element: (
-        <RoleAwareLayout>
-          <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-            <RealEstateAgentLayout>
-              <AgentSettings />
-            </RealEstateAgentLayout>
-          </RoleBasedRoute>
-        </RoleAwareLayout>
+        <RoleBasedRoute allowedRoles={['real_estate_agent']}>
+          <RealEstateAgentLayout>
+            <AgentSettings />
+          </RealEstateAgentLayout>
+        </RoleBasedRoute>
       ),
     },
     {

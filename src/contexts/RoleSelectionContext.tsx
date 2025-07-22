@@ -1,6 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -37,35 +37,10 @@ const rolePriority: Record<UserRole, number> = {
   'mortgage_applicant': 6,
 };
 
-// Route-to-role mapping
-const getExpectedRoleFromPath = (pathname: string): UserRole | null => {
-  if (pathname.startsWith('/agent/') || pathname === '/dashboard/real-estate-agent') {
-    return 'real_estate_agent';
-  }
-  if (pathname.startsWith('/dashboard/broker-assistant')) {
-    return 'broker_assistant';
-  }
-  if (pathname.startsWith('/dashboard/simulation-collaborator')) {
-    return 'simulation_collaborator';
-  }
-  if (pathname.startsWith('/dashboard/mortgage-applicant')) {
-    return 'mortgage_applicant';
-  }
-  if (pathname.startsWith('/brokerage/')) {
-    return 'brokerage_owner';
-  }
-  if (pathname.startsWith('/admin')) {
-    return 'superadmin';
-  }
-  return null;
-};
-
 export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) => {
   const { user } = useAuth();
-  const location = useLocation();
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(null);
   const [rolesWithContext, setRolesWithContext] = useState<RoleWithContext[]>([]);
-  const [lastManualChange, setLastManualChange] = useState<number>(0);
 
   const availableRoles = useMemo(() => user?.roles || [], [user?.roles]);
   const isMultiRole = useMemo(() => availableRoles.length > 1, [availableRoles.length]);
@@ -166,40 +141,19 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
     }
   }, [user?.id, availableRoles]);
 
-  // Updated auto-sync logic that doesn't interfere with manual changes
+  // Initialize selected role - simplified logic without route interference
   useEffect(() => {
-    if (availableRoles.length === 0) return;
-
-    const expectedRole = getExpectedRoleFromPath(location.pathname);
-    const timeSinceLastManualChange = Date.now() - lastManualChange;
-    
-    console.log('🔄 [ROLE SYNC] Route changed:', location.pathname);
-    console.log('🔄 [ROLE SYNC] Expected role for route:', expectedRole);
-    console.log('🔄 [ROLE SYNC] Available roles:', availableRoles);
-    console.log('🔄 [ROLE SYNC] Current selected role:', selectedRole);
-    console.log('🔄 [ROLE SYNC] Time since last manual change:', timeSinceLastManualChange);
-
-    // If route expects a specific role and user has that role
-    if (expectedRole && availableRoles.includes(expectedRole)) {
-      // Only auto-sync if no recent manual change (within 10 seconds) AND no selected role yet
-      if (timeSinceLastManualChange > 10000 && !selectedRole) {
-        console.log('🔄 [ROLE SYNC] Setting role based on route (initial load):', expectedRole);
-        setSelectedRoleState(expectedRole);
-        localStorage.setItem('selectedRole', expectedRole);
-      } else if (timeSinceLastManualChange <= 10000) {
-        console.log('🔄 [ROLE SYNC] Skipping auto-sync due to recent manual change');
-      } else {
-        console.log('🔄 [ROLE SYNC] Role already selected, not overriding');
-      }
+    if (availableRoles.length === 0) {
+      setSelectedRoleState(null);
       return;
     }
 
-    // If no route-specific role, use stored role or default (only if no selected role)
+    // If no role selected, check stored role or use default
     if (!selectedRole) {
       const storedRole = localStorage.getItem('selectedRole') as UserRole | null;
       
       if (storedRole && availableRoles.includes(storedRole)) {
-        console.log('🔄 [ROLE SYNC] Using stored role:', storedRole);
+        console.log('🔄 [ROLE INIT] Using stored role:', storedRole);
         setSelectedRoleState(storedRole);
       } else {
         // Find the highest priority role with active membership
@@ -218,12 +172,12 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
           )[0];
         }
         
-        console.log('🔄 [ROLE SYNC] Using default role:', defaultRole);
+        console.log('🔄 [ROLE INIT] Using default role:', defaultRole);
         setSelectedRoleState(defaultRole);
         localStorage.setItem('selectedRole', defaultRole);
       }
     }
-  }, [location.pathname, availableRoles, rolesWithContext, selectedRole, lastManualChange]);
+  }, [availableRoles, rolesWithContext, selectedRole]);
 
   // Refresh roles when user changes
   useEffect(() => {
@@ -235,7 +189,6 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
       console.log('🔄 [ROLE SELECTOR] Manual role change to:', role);
       setSelectedRoleState(role);
       localStorage.setItem('selectedRole', role);
-      setLastManualChange(Date.now()); // Track manual changes with current timestamp
     }
   }, [availableRoles]);
 

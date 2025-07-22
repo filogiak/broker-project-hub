@@ -29,11 +29,8 @@ export function RoleSwitcher() {
   const handleRoleChange = (newRole: UserRole) => {
     console.log('🔄 [ROLE SWITCHER] Switching to role:', newRole);
     
-    // Set the role first
+    // Set the role and navigate to dashboard to trigger routing
     setSelectedRole(newRole);
-    
-    // Navigate immediately to /dashboard and let Dashboard.tsx handle the routing
-    // Use replace to avoid history buildup
     navigate('/dashboard', { replace: true });
   };
 

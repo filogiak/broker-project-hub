@@ -79,16 +79,26 @@ const Dashboard = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Get available roles and selected role
+  // Get available roles from user
   const roles = user.roles || [];
   console.log('🎯 [DASHBOARD] Available roles:', roles);
   console.log('🎯 [DASHBOARD] Selected role:', selectedRole);
 
-  // Use selectedRole if available and valid, otherwise fall back to first available role
-  const effectiveRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0];
+  // Wait for role selection to be initialized
+  if (!selectedRole && roles.length > 0) {
+    console.log('🎯 [DASHBOARD] Waiting for role selection initialization...');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg font-medium">Initializing...</div>
+      </div>
+    );
+  }
+
+  // Use selectedRole for routing - this is now purely driven by user selection
+  const effectiveRole = selectedRole;
   console.log('🎯 [DASHBOARD] Effective role for routing:', effectiveRole);
 
-  // Role-based dashboard routing - Updated to use effectiveRole
+  // Role-based dashboard routing - purely driven by selected role
   if (effectiveRole === 'brokerage_owner') {
     // Check if user has a brokerage_id in their profile
     if (user.brokerageId) {
@@ -101,7 +111,6 @@ const Dashboard = () => {
     }
   }
 
-  // Updated routing to use effective role
   if (effectiveRole === 'real_estate_agent') {
     return <Navigate to="/agent/dashboard" replace />;
   }
@@ -119,7 +128,7 @@ const Dashboard = () => {
     return <MortgageApplicantDashboard />;
   }
 
-  // Default dashboard for users without specific roles
+  // Default dashboard for users without specific roles or fallback
   return (
     <MainLayout title="Dashboard" userEmail={user.email}>
       <div className="container mx-auto py-8">
