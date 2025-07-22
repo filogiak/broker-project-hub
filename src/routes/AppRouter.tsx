@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { RoleSelectionProvider } from '@/contexts/RoleSelectionContext';
+import { RoleAwareLayout } from '@/components/layout/RoleAwareLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import BrokerageAccessRoute from '@/components/auth/BrokerageAccessRoute';
@@ -103,7 +103,9 @@ const AppRouter = () => {
       path: '/dashboard',
       element: (
         <ProtectedRoute>
-          <Dashboard />
+          <RoleAwareLayout>
+            <Dashboard />
+          </RoleAwareLayout>
         </ProtectedRoute>
       ),
     },
@@ -112,7 +114,9 @@ const AppRouter = () => {
       path: '/dashboard/simulation-collaborator',
       element: (
         <RoleBasedRoute allowedRoles={['simulation_collaborator']}>
-          <SimulationCollaboratorDashboard />
+          <RoleAwareLayout>
+            <SimulationCollaboratorDashboard />
+          </RoleAwareLayout>
         </RoleBasedRoute>
       ),
     },
@@ -120,9 +124,11 @@ const AppRouter = () => {
       path: '/dashboard/real-estate-agent',
       element: (
         <RoleBasedRoute allowedRoles={['real_estate_agent']}>
-          <RealEstateAgentLayout>
-            <AgentDashboard />
-          </RealEstateAgentLayout>
+          <RoleAwareLayout>
+            <RealEstateAgentLayout>
+              <AgentDashboard />
+            </RealEstateAgentLayout>
+          </RoleAwareLayout>
         </RoleBasedRoute>
       ),
     },
@@ -130,7 +136,9 @@ const AppRouter = () => {
       path: '/dashboard/broker-assistant',
       element: (
         <RoleBasedRoute allowedRoles={['broker_assistant']}>
-          <BrokerAssistantDashboard />
+          <RoleAwareLayout>
+            <BrokerAssistantDashboard />
+          </RoleAwareLayout>
         </RoleBasedRoute>
       ),
     },
@@ -406,9 +414,7 @@ const AppRouter = () => {
 
   return (
     <AuthErrorBoundary>
-      <RoleSelectionProvider>
-        <RouterProvider router={router} />
-      </RoleSelectionProvider>
+      <RouterProvider router={router} />
     </AuthErrorBoundary>
   );
 };
