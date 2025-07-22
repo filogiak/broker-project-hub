@@ -2,7 +2,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -35,36 +34,24 @@ export function RoleSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-vibe-green-light rounded-lg border border-form-green/20">
-      <span className="text-sm font-medium text-form-green font-dm-sans min-w-[60px]">
-        Role:
-      </span>
-      <div className="flex items-center gap-2 flex-1">
-        <Select
-          value={selectedRole || ''}
-          onValueChange={(value) => handleRoleChange(value as UserRole)}
-        >
-          <SelectTrigger className="gomutuo-form-input h-auto py-2 flex-1 max-w-sm">
-            <SelectValue placeholder="Select a role" />
-          </SelectTrigger>
-          <SelectContent className="z-50">
-            {availableRoles.map((role) => (
-              <SelectItem key={role} value={role} className="py-2">
-                <span className="font-medium font-dm-sans text-sm">
-                  {roleDisplayNames[role]}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Badge 
-          variant="secondary" 
-          className="gomutuo-selection-tag whitespace-nowrap"
-        >
-          {availableRoles.length} roles
-        </Badge>
-      </div>
+    <div className="w-full">
+      <Select
+        value={selectedRole || ''}
+        onValueChange={(value) => handleRoleChange(value as UserRole)}
+      >
+        <SelectTrigger className="gomutuo-form-input h-auto py-2 w-full text-xs">
+          <SelectValue placeholder="Seleziona un ruolo" />
+        </SelectTrigger>
+        <SelectContent className="z-50 bg-white border border-form-border shadow-lg min-w-[200px]">
+          {availableRoles.map((role) => (
+            <SelectItem key={role} value={role} className="py-2 px-3">
+              <span className="font-medium font-dm-sans text-xs text-gray-900">
+                {roleDisplayNames[role]}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
