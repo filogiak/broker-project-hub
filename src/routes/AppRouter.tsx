@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { RoleSelectionProvider } from '@/contexts/RoleSelectionContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RoleBasedRoute from '@/components/auth/RoleBasedRoute';
 import BrokerageAccessRoute from '@/components/auth/BrokerageAccessRoute';
@@ -405,7 +406,9 @@ const AppRouter = () => {
 
   return (
     <AuthErrorBoundary>
-      <RouterProvider router={router} />
+      <RoleSelectionProvider>
+        <RouterProvider router={router} />
+      </RoleSelectionProvider>
     </AuthErrorBoundary>
   );
 };
