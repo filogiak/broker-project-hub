@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -31,14 +32,38 @@ interface RoleSelectionProviderProps {
 const rolePriority: Record<UserRole, number> = {
   'superadmin': 1,
   'brokerage_owner': 2,
-  'real_estate_agent': 3, // Prioritize real estate agent over simulation collaborator
+  'real_estate_agent': 3,
   'broker_assistant': 4,
-  'simulation_collaborator': 5, // Lower priority
+  'simulation_collaborator': 5,
   'mortgage_applicant': 6,
+};
+
+// Route-to-role mapping
+const getExpectedRoleFromPath = (pathname: string): UserRole | null => {
+  if (pathname.startsWith('/agent/') || pathname === '/dashboard/real-estate-agent') {
+    return 'real_estate_agent';
+  }
+  if (pathname.startsWith('/dashboard/broker-assistant')) {
+    return 'broker_assistant';
+  }
+  if (pathname.startsWith('/dashboard/simulation-collaborator')) {
+    return 'simulation_collaborator';
+  }
+  if (pathname.startsWith('/dashboard/mortgage-applicant')) {
+    return 'mortgage_applicant';
+  }
+  if (pathname.startsWith('/brokerage/')) {
+    return 'brokerage_owner';
+  }
+  if (pathname.startsWith('/admin')) {
+    return 'superadmin';
+  }
+  return null;
 };
 
 export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) => {
   const { user } = useAuth();
+  const location = useLocation();
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(null);
   const [rolesWithContext, setRolesWithContext] = useState<RoleWithContext[]>([]);
 
@@ -141,12 +166,31 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
     }
   }, [user?.id, availableRoles]);
 
-  // Initialize selected role with improved priority logic
+  // Auto-sync role based on current route
   useEffect(() => {
-    if (availableRoles.length > 0) {
+    if (availableRoles.length === 0) return;
+
+    const expectedRole = getExpectedRoleFromPath(location.pathname);
+    
+    console.log('🔄 [ROLE SYNC] Route changed:', location.pathname);
+    console.log('🔄 [ROLE SYNC] Expected role for route:', expectedRole);
+    console.log('🔄 [ROLE SYNC] Available roles:', availableRoles);
+    console.log('🔄 [ROLE SYNC] Current selected role:', selectedRole);
+
+    // If route expects a specific role and user has that role
+    if (expectedRole && availableRoles.includes(expectedRole)) {
+      console.log('🔄 [ROLE SYNC] Setting role based on route:', expectedRole);
+      setSelectedRoleState(expectedRole);
+      localStorage.setItem('selectedRole', expectedRole);
+      return;
+    }
+
+    // If no route-specific role, use stored role or default
+    if (!selectedRole) {
       const storedRole = localStorage.getItem('selectedRole') as UserRole | null;
       
       if (storedRole && availableRoles.includes(storedRole)) {
+        console.log('🔄 [ROLE SYNC] Using stored role:', storedRole);
         setSelectedRoleState(storedRole);
       } else {
         // Find the highest priority role with active membership
@@ -165,10 +209,12 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
           )[0];
         }
         
+        console.log('🔄 [ROLE SYNC] Using default role:', defaultRole);
         setSelectedRoleState(defaultRole);
+        localStorage.setItem('selectedRole', defaultRole);
       }
     }
-  }, [availableRoles, rolesWithContext]);
+  }, [location.pathname, availableRoles, rolesWithContext, selectedRole]);
 
   // Refresh roles when user changes
   useEffect(() => {
@@ -177,6 +223,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
 
   const setSelectedRole = useCallback((role: UserRole) => {
     if (availableRoles.includes(role)) {
+      console.log('🔄 [ROLE SELECTOR] Manual role change to:', role);
       setSelectedRoleState(role);
       localStorage.setItem('selectedRole', role);
     }
