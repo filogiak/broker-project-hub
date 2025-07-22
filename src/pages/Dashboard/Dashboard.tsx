@@ -1,5 +1,6 @@
 
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSelection } from '@/contexts/RoleSelectionContext';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -12,6 +13,7 @@ import MortgageApplicantDashboard from './MortgageApplicantDashboard';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
+  const { selectedRole } = useRoleSelection();
   const navigate = useNavigate();
   const [processingInvitation, setProcessingInvitation] = useState(false);
 
@@ -77,11 +79,17 @@ const Dashboard = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Determine which dashboard to show based on user roles
+  // Get available roles and selected role
   const roles = user.roles || [];
+  console.log('🎯 [DASHBOARD] Available roles:', roles);
+  console.log('🎯 [DASHBOARD] Selected role:', selectedRole);
 
-  // Role-based dashboard routing - Updated to use new layout system
-  if (roles.includes('brokerage_owner')) {
+  // Use selectedRole if available and valid, otherwise fall back to role priority
+  const effectiveRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0];
+  console.log('🎯 [DASHBOARD] Effective role for routing:', effectiveRole);
+
+  // Role-based dashboard routing - Updated to use selectedRole
+  if (effectiveRole === 'brokerage_owner') {
     // Check if user has a brokerage_id in their profile
     if (user.brokerageId) {
       return <Navigate to={`/brokerage/${user.brokerageId}`} replace />;
@@ -93,21 +101,21 @@ const Dashboard = () => {
     }
   }
 
-  // Updated routing to use new layout system
-  if (roles.includes('real_estate_agent')) {
+  // Updated routing to use selected role and new layout system
+  if (effectiveRole === 'real_estate_agent') {
     return <Navigate to="/agent/dashboard" replace />;
   }
 
-  if (roles.includes('broker_assistant')) {
+  if (effectiveRole === 'broker_assistant') {
     return <Navigate to="/dashboard/broker-assistant" replace />;
   }
 
   // For simulation_collaborator or mortgage_applicant, show appropriate dashboard
-  if (roles.includes('simulation_collaborator')) {
+  if (effectiveRole === 'simulation_collaborator') {
     return <SimulationCollaboratorDashboard />;
   }
 
-  if (roles.includes('mortgage_applicant')) {
+  if (effectiveRole === 'mortgage_applicant') {
     return <MortgageApplicantDashboard />;
   }
 

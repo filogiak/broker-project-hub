@@ -66,6 +66,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
   const location = useLocation();
   const [selectedRole, setSelectedRoleState] = useState<UserRole | null>(null);
   const [rolesWithContext, setRolesWithContext] = useState<RoleWithContext[]>([]);
+  const [lastManualChange, setLastManualChange] = useState<number>(0);
 
   const availableRoles = useMemo(() => user?.roles || [], [user?.roles]);
   const isMultiRole = useMemo(() => availableRoles.length > 1, [availableRoles.length]);
@@ -166,26 +167,33 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
     }
   }, [user?.id, availableRoles]);
 
-  // Auto-sync role based on current route
+  // Auto-sync role based on current route - with less aggressive override
   useEffect(() => {
     if (availableRoles.length === 0) return;
 
     const expectedRole = getExpectedRoleFromPath(location.pathname);
+    const timeSinceLastManualChange = Date.now() - lastManualChange;
     
     console.log('🔄 [ROLE SYNC] Route changed:', location.pathname);
     console.log('🔄 [ROLE SYNC] Expected role for route:', expectedRole);
     console.log('🔄 [ROLE SYNC] Available roles:', availableRoles);
     console.log('🔄 [ROLE SYNC] Current selected role:', selectedRole);
+    console.log('🔄 [ROLE SYNC] Time since last manual change:', timeSinceLastManualChange);
 
     // If route expects a specific role and user has that role
     if (expectedRole && availableRoles.includes(expectedRole)) {
-      console.log('🔄 [ROLE SYNC] Setting role based on route:', expectedRole);
-      setSelectedRoleState(expectedRole);
-      localStorage.setItem('selectedRole', expectedRole);
+      // Only auto-sync if no recent manual change (within 5 seconds)
+      if (timeSinceLastManualChange > 5000) {
+        console.log('🔄 [ROLE SYNC] Setting role based on route:', expectedRole);
+        setSelectedRoleState(expectedRole);
+        localStorage.setItem('selectedRole', expectedRole);
+      } else {
+        console.log('🔄 [ROLE SYNC] Skipping auto-sync due to recent manual change');
+      }
       return;
     }
 
-    // If no route-specific role, use stored role or default
+    // If no route-specific role, use stored role or default (only if no selected role)
     if (!selectedRole) {
       const storedRole = localStorage.getItem('selectedRole') as UserRole | null;
       
@@ -214,7 +222,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
         localStorage.setItem('selectedRole', defaultRole);
       }
     }
-  }, [location.pathname, availableRoles, rolesWithContext, selectedRole]);
+  }, [location.pathname, availableRoles, rolesWithContext, selectedRole, lastManualChange]);
 
   // Refresh roles when user changes
   useEffect(() => {
@@ -226,6 +234,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
       console.log('🔄 [ROLE SELECTOR] Manual role change to:', role);
       setSelectedRoleState(role);
       localStorage.setItem('selectedRole', role);
+      setLastManualChange(Date.now()); // Track manual changes
     }
   }, [availableRoles]);
 
