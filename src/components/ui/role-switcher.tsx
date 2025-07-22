@@ -28,14 +28,13 @@ export function RoleSwitcher() {
 
   const handleRoleChange = (newRole: UserRole) => {
     console.log('🔄 [ROLE SWITCHER] Switching to role:', newRole);
+    
+    // Set the role first
     setSelectedRole(newRole);
     
-    // Use the same navigation pattern as UserProfileBox - navigate to /dashboard
-    // and let the routing logic determine the final destination
-    // Add a small delay to ensure role state is set before navigation
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 100);
+    // Navigate immediately to /dashboard and let Dashboard.tsx handle the routing
+    // Use replace to avoid history buildup
+    navigate('/dashboard', { replace: true });
   };
 
   return (

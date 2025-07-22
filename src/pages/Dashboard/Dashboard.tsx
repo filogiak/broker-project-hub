@@ -13,7 +13,7 @@ import MortgageApplicantDashboard from './MortgageApplicantDashboard';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
-  const { selectedRole } = useRoleSelection();
+  const { selectedRole, availableRoles } = useRoleSelection();
   const navigate = useNavigate();
   const [processingInvitation, setProcessingInvitation] = useState(false);
 
@@ -84,11 +84,11 @@ const Dashboard = () => {
   console.log('🎯 [DASHBOARD] Available roles:', roles);
   console.log('🎯 [DASHBOARD] Selected role:', selectedRole);
 
-  // Use selectedRole if available and valid, otherwise fall back to role priority
+  // Use selectedRole if available and valid, otherwise fall back to first available role
   const effectiveRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0];
   console.log('🎯 [DASHBOARD] Effective role for routing:', effectiveRole);
 
-  // Role-based dashboard routing - Updated to use selectedRole
+  // Role-based dashboard routing - Updated to use effectiveRole
   if (effectiveRole === 'brokerage_owner') {
     // Check if user has a brokerage_id in their profile
     if (user.brokerageId) {
@@ -101,7 +101,7 @@ const Dashboard = () => {
     }
   }
 
-  // Updated routing to use selected role and new layout system
+  // Updated routing to use effective role
   if (effectiveRole === 'real_estate_agent') {
     return <Navigate to="/agent/dashboard" replace />;
   }

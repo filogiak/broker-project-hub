@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'react-router-dom';
@@ -167,7 +166,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
     }
   }, [user?.id, availableRoles]);
 
-  // Auto-sync role based on current route - with less aggressive override
+  // Updated auto-sync logic that doesn't interfere with manual changes
   useEffect(() => {
     if (availableRoles.length === 0) return;
 
@@ -182,13 +181,15 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
 
     // If route expects a specific role and user has that role
     if (expectedRole && availableRoles.includes(expectedRole)) {
-      // Only auto-sync if no recent manual change (within 5 seconds)
-      if (timeSinceLastManualChange > 5000) {
-        console.log('🔄 [ROLE SYNC] Setting role based on route:', expectedRole);
+      // Only auto-sync if no recent manual change (within 10 seconds) AND no selected role yet
+      if (timeSinceLastManualChange > 10000 && !selectedRole) {
+        console.log('🔄 [ROLE SYNC] Setting role based on route (initial load):', expectedRole);
         setSelectedRoleState(expectedRole);
         localStorage.setItem('selectedRole', expectedRole);
-      } else {
+      } else if (timeSinceLastManualChange <= 10000) {
         console.log('🔄 [ROLE SYNC] Skipping auto-sync due to recent manual change');
+      } else {
+        console.log('🔄 [ROLE SYNC] Role already selected, not overriding');
       }
       return;
     }
@@ -234,7 +235,7 @@ export const RoleSelectionProvider = ({ children }: RoleSelectionProviderProps) 
       console.log('🔄 [ROLE SELECTOR] Manual role change to:', role);
       setSelectedRoleState(role);
       localStorage.setItem('selectedRole', role);
-      setLastManualChange(Date.now()); // Track manual changes
+      setLastManualChange(Date.now()); // Track manual changes with current timestamp
     }
   }, [availableRoles]);
 
